@@ -21,6 +21,7 @@ export type Database = {
           average_score: number
           class: string
           created_at: string
+          gender: string
           id: string
           profile_pic: string | null
           status: string
@@ -31,6 +32,7 @@ export type Database = {
           average_score: number
           class: string
           created_at?: string
+          gender?: string
           id?: string
           profile_pic?: string | null
           status?: string
@@ -41,6 +43,7 @@ export type Database = {
           average_score?: number
           class?: string
           created_at?: string
+          gender?: string
           id?: string
           profile_pic?: string | null
           status?: string
