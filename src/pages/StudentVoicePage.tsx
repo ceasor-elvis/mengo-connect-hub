@@ -4,13 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquare, Send, CheckCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { MessageSquare, Send, CheckCircle, Upload } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function StudentVoicePage() {
-  const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -22,14 +23,47 @@ export default function StudentVoicePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title || !form.description || !form.category) {
-      toast({ title: "Please fill in all required fields", variant: "destructive" });
+      toast.error("Please fill in all required fields");
       return;
     }
     setLoading(true);
-    // TODO: Save to Supabase once Cloud is enabled
-    await new Promise((r) => setTimeout(r, 1000));
-    setLoading(false);
-    setSubmitted(true);
+
+    try {
+      let file_url: string | null = null;
+
+      // Upload file if provided
+      if (file) {
+        const ext = file.name.split(".").pop();
+        const filePath = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from("student-voice-files")
+          .upload(filePath, file);
+        if (uploadErr) throw uploadErr;
+
+        const { data: urlData } = supabase.storage
+          .from("student-voice-files")
+          .getPublicUrl(filePath);
+        file_url = urlData.publicUrl;
+      }
+
+      const { error } = await supabase.from("student_voices").insert({
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        submitted_by: form.studentName || null,
+        submitted_class: form.studentClass || null,
+        file_url,
+      });
+
+      if (error) throw error;
+
+      setSubmitted(true);
+      toast.success("Your submission has been received!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -41,9 +75,12 @@ export default function StudentVoicePage() {
         <h2 className="mt-6 font-serif text-3xl font-bold text-foreground">Thank You!</h2>
         <p className="mt-3 max-w-md text-muted-foreground">
           Your submission has been received and will be reviewed by the Student Council.
-          We appreciate your voice!
         </p>
-        <Button className="mt-8" onClick={() => { setSubmitted(false); setForm({ title: "", description: "", category: "", studentName: "", studentClass: "" }); }}>
+        <Button className="mt-8" onClick={() => {
+          setSubmitted(false);
+          setFile(null);
+          setForm({ title: "", description: "", category: "", studentName: "", studentClass: "" });
+        }}>
           Submit Another
         </Button>
       </div>
@@ -81,9 +118,9 @@ export default function StudentVoicePage() {
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="projects">Projects</SelectItem>
-                <SelectItem value="ideas">Ideas</SelectItem>
-                <SelectItem value="complaints">Complaints</SelectItem>
+                <SelectItem value="Projects">Projects</SelectItem>
+                <SelectItem value="Ideas">Ideas</SelectItem>
+                <SelectItem value="Complaints">Complaints</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -97,6 +134,28 @@ export default function StudentVoicePage() {
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
+          </div>
+
+          {/* File upload */}
+          <div className="space-y-2">
+            <Label>Attach File (optional — image or PDF)</Label>
+            <div className="flex items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-4 py-3 text-sm text-muted-foreground hover:bg-muted transition-colors flex-1">
+                <Upload className="h-4 w-4" />
+                {file ? file.name : "Choose file…"}
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  className="hidden"
+                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                />
+              </label>
+              {file && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => setFile(null)}>
+                  Remove
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -120,9 +179,9 @@ export default function StudentVoicePage() {
             </div>
           </div>
 
-          <Button type="submit" variant="gold" size="lg" className="w-full" disabled={loading}>
+          <Button type="submit" size="lg" className="w-full" disabled={loading}>
             <Send className="mr-2 h-4 w-4" />
-            {loading ? "Submitting..." : "Submit"}
+            {loading ? "Submitting..." : "Submit Your Voice"}
           </Button>
         </form>
       </div>
