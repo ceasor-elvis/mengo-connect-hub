@@ -1,20 +1,21 @@
 import { Users, Award, Shield } from "lucide-react";
+import mengoBadge from "@/assets/mengo-badge.jpg";
 
 const CABINET_MEMBERS = [
-  { name: "Chairperson", position: "Chairperson", initials: "CH" },
-  { name: "Vice Chairperson", position: "Vice Chairperson", initials: "VC" },
-  { name: "Speaker", position: "Speaker", initials: "SP" },
-  { name: "Deputy Speaker", position: "Deputy Speaker", initials: "DS" },
-  { name: "General Secretary", position: "General Secretary", initials: "GS" },
-  { name: "Asst. General Secretary", position: "Assistant General Secretary", initials: "AG" },
-  { name: "Secretary Finance", position: "Secretary Finance", initials: "SF" },
-  { name: "Secretary Welfare", position: "Secretary Welfare", initials: "SW" },
-  { name: "Secretary Health", position: "Secretary Health", initials: "SH" },
-  { name: "Secretary Women Affairs", position: "Secretary Women Affairs", initials: "WA" },
-  { name: "Secretary Publicity", position: "Secretary Publicity", initials: "PB" },
-  { name: "Secretary PWDs", position: "Secretary Persons with Disabilities", initials: "PD" },
-  { name: "Patron", position: "Patron", initials: "PT" },
-  { name: "Electoral Commission", position: "Electoral Commission", initials: "EC" },
+  { name: "Ssekandi Brian", position: "Chairperson", initials: "SB" },
+  { name: "Nakato Grace", position: "Vice Chairperson", initials: "NG" },
+  { name: "Lwanga David", position: "Speaker", initials: "LD" },
+  { name: "Namutebi Sarah", position: "Deputy Speaker", initials: "NS" },
+  { name: "Kato Emmanuel", position: "General Secretary", initials: "KE" },
+  { name: "Achieng Patricia", position: "Asst. General Secretary", initials: "AP" },
+  { name: "Mugisha Ronald", position: "Secretary Finance", initials: "MR" },
+  { name: "Nambi Irene", position: "Secretary Welfare", initials: "NI" },
+  { name: "Okello Joseph", position: "Secretary Health", initials: "OJ" },
+  { name: "Babirye Esther", position: "Secretary Women Affairs", initials: "BE" },
+  { name: "Ssenoga Peter", position: "Secretary Publicity", initials: "SP" },
+  { name: "Tumwine Alex", position: "Secretary PWDs", initials: "TA" },
+  { name: "Mr. Kasozi John", position: "Patron", initials: "KJ" },
+  { name: "Mukasa Henry", position: "Electoral Commission", initials: "MH" },
 ];
 
 export function CabinetGrid() {
@@ -57,12 +58,11 @@ export function WhoWeAre() {
     <section className="bg-muted/50 py-20">
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-3xl text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gold/10">
-            <Award className="h-7 w-7 text-gold" />
-          </div>
+          <img src={mengoBadge} alt="Mengo Senior School Badge" className="mx-auto mb-6 h-24 w-24 rounded-full border-4 border-gold object-cover shadow-lg" />
           <h2 className="font-serif text-3xl font-bold text-foreground md:text-4xl">
             Who We Are
           </h2>
+          <p className="mt-2 text-sm font-medium text-gold italic">"Akwana Akira Ayomba"</p>
           <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
             The Mengo Senior School Student Council is the elected body representing the voice of every
             student. We bridge the gap between the student body and the school administration, championing

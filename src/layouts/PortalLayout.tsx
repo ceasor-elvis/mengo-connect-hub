@@ -1,14 +1,17 @@
-import { LayoutDashboard, Calendar, FileText, AlertTriangle, Users, Settings } from "lucide-react";
+import { LayoutDashboard, Calendar, FileText, AlertTriangle, Users, Settings, MessageSquare, DollarSign, Vote } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import schoolCrest from "@/assets/school-crest.png";
+import mengoBadge from "@/assets/mengo-badge.jpg";
 
 const sidebarLinks = [
   { label: "Dashboard", path: "/portal", icon: LayoutDashboard },
+  { label: "Student Voices", path: "/portal/student-voices", icon: MessageSquare },
   { label: "Issues", path: "/portal/issues", icon: AlertTriangle },
   { label: "Programmes", path: "/portal/programmes", icon: Calendar },
   { label: "Rota", path: "/portal/rota", icon: Users },
   { label: "Documents", path: "/portal/documents", icon: FileText },
+  { label: "Requisitions", path: "/portal/requisitions", icon: DollarSign },
+  { label: "Elections", path: "/portal/elections", icon: Vote },
   { label: "Settings", path: "/portal/settings", icon: Settings },
 ];
 
@@ -20,7 +23,7 @@ export default function PortalLayout() {
       {/* Sidebar */}
       <aside className="hidden w-64 flex-col border-r bg-sidebar md:flex">
         <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
-          <img src={schoolCrest} alt="Crest" className="h-8 w-8" />
+          <img src={mengoBadge} alt="Crest" className="h-8 w-8 rounded-full object-cover" />
           <span className="font-serif text-sm font-bold text-sidebar-foreground">Mengo Council</span>
         </div>
         <nav className="flex-1 space-y-1 p-3">
