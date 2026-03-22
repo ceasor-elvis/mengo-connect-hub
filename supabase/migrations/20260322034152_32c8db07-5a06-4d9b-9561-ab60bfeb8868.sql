@@ -1,0 +1,1 @@
+ALTER TABLE public.applications ADD COLUMN gender text NOT NULL DEFAULT 'male';
