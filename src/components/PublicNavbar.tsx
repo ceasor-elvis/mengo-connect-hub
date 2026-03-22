@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
-import schoolCrest from "@/assets/school-crest.png";
+import mengoBadge from "@/assets/mengo-badge.jpg";
 
 const navLinks = [
   { label: "Home", path: "/" },
@@ -17,7 +17,7 @@ export function PublicNavbar() {
     <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-3">
-          <img src={schoolCrest} alt="Mengo Senior School Crest" className="h-10 w-10" />
+          <img src={mengoBadge} alt="Mengo Senior School" className="h-10 w-10 rounded-full object-cover" />
           <span className="font-serif text-lg font-bold text-primary">Mengo Councillors</span>
         </Link>
 

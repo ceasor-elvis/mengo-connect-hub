@@ -9,6 +9,13 @@ import HomePage from "@/pages/HomePage";
 import StudentVoicePage from "@/pages/StudentVoicePage";
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/portal/DashboardPage";
+import IssuesPage from "@/pages/portal/IssuesPage";
+import ProgrammesPage from "@/pages/portal/ProgrammesPage";
+import RotaPage from "@/pages/portal/RotaPage";
+import DocumentsPage from "@/pages/portal/DocumentsPage";
+import RequisitionsPage from "@/pages/portal/RequisitionsPage";
+import ElectionsPage from "@/pages/portal/ElectionsPage";
+import StudentVoicesPage from "@/pages/portal/StudentVoicesPage";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -27,9 +34,16 @@ const App = () => (
             <Route path="/login" element={<LoginPage />} />
           </Route>
 
-          {/* Portal routes (protected once auth is enabled) */}
+          {/* Portal routes */}
           <Route path="/portal" element={<PortalLayout />}>
             <Route index element={<DashboardPage />} />
+            <Route path="student-voices" element={<StudentVoicesPage />} />
+            <Route path="issues" element={<IssuesPage />} />
+            <Route path="programmes" element={<ProgrammesPage />} />
+            <Route path="rota" element={<RotaPage />} />
+            <Route path="documents" element={<DocumentsPage />} />
+            <Route path="requisitions" element={<RequisitionsPage />} />
+            <Route path="elections" element={<ElectionsPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

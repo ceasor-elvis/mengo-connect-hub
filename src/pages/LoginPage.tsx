@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, LogIn } from "lucide-react";
-import schoolCrest from "@/assets/school-crest.png";
+import mengoBadge from "@/assets/mengo-badge.jpg";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function LoginPage() {
   const { toast } = useToast();
@@ -21,17 +22,21 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
-    // TODO: Supabase auth once Cloud is enabled
-    await new Promise((r) => setTimeout(r, 1000));
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    toast({ title: "Login functionality coming soon", description: "Lovable Cloud needs to be enabled first." });
+    if (error) {
+      toast({ title: "Login failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Welcome back!" });
+      navigate("/portal");
+    }
   };
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <img src={schoolCrest} alt="Mengo Crest" className="mx-auto mb-4 h-16 w-16" />
+          <img src={mengoBadge} alt="Mengo Crest" className="mx-auto mb-4 h-20 w-20 rounded-full border-4 border-gold object-cover shadow-lg" />
           <h1 className="font-serif text-2xl font-bold text-foreground">Councillor Portal</h1>
           <p className="mt-2 text-sm text-muted-foreground">Sign in to access your dashboard</p>
         </div>
