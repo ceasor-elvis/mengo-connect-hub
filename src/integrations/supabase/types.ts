@@ -25,6 +25,7 @@ export type Database = {
           id: string
           profile_pic: string | null
           status: string
+          stream: string | null
         }
         Insert: {
           applicant_name: string
@@ -36,6 +37,7 @@ export type Database = {
           id?: string
           profile_pic?: string | null
           status?: string
+          stream?: string | null
         }
         Update: {
           applicant_name?: string
@@ -47,6 +49,7 @@ export type Database = {
           id?: string
           profile_pic?: string | null
           status?: string
+          stream?: string | null
         }
         Relationships: []
       }
