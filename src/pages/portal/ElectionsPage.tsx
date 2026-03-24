@@ -118,7 +118,7 @@ export default function ElectionsPage() {
 
   const grantAccess = async () => {
     if (!grantUserId || !user) return;
-    const { error } = await supabase.from("ec_access_grants").insert({
+    const { error } = await (supabase as any).from("ec_access_grants").insert({
       granted_to: grantUserId,
       granted_by: user.id,
     } as any);
