@@ -113,6 +113,27 @@ export type Database = {
         }
         Relationships: []
       }
+      ec_access_grants: {
+        Row: {
+          created_at: string
+          granted_by: string
+          granted_to: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by: string
+          granted_to: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string
+          granted_to?: string
+          id?: string
+        }
+        Relationships: []
+      }
       issues: {
         Row: {
           created_at: string
