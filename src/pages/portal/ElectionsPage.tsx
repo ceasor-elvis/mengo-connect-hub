@@ -1,336 +1,370 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Vote, UserCheck, UserX, Settings2, Download } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Vote, UserCheck, UserX, Settings2, Download, Plus, Users, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import jsPDF from "jspdf";
 
 interface Applicant {
-  id: number;
-  name: string;
+  id: string;
+  applicant_name: string;
   class: string;
-  average: number;
-  gender: "male" | "female";
-  status: "pending" | "qualified" | "disqualified";
+  stream?: string;
+  average_score: number;
+  gender: string;
+  status: string;
 }
 
-const INITIAL_APPLICANTS: Applicant[] = [
-  { id: 1, name: "Mugwanya Paul", class: "S.2 South", average: 82, gender: "male", status: "pending" },
-  { id: 2, name: "Nalongo Faith", class: "S.2 North", average: 75, gender: "female", status: "pending" },
-  { id: 3, name: "Bbosa Martin", class: "S.2 East", average: 68, gender: "male", status: "pending" },
-  { id: 4, name: "Nakabugo Diana", class: "S.2 West", average: 91, gender: "female", status: "pending" },
-  { id: 5, name: "Wasswa Timothy", class: "S.2 South", average: 64, gender: "male", status: "pending" },
-  { id: 6, name: "Kabanda Mercy", class: "S.2 North", average: 78, gender: "female", status: "pending" },
-  { id: 7, name: "Okiror Samuel", class: "S.2 East", average: 88, gender: "male", status: "pending" },
-  { id: 8, name: "Nalubega Rose", class: "S.2 West", average: 72, gender: "female", status: "pending" },
-  { id: 9, name: "Kizza Derrick", class: "S.2 South", average: 80, gender: "male", status: "pending" },
-  { id: 10, name: "Namusisi Gloria", class: "S.2 North", average: 85, gender: "female", status: "pending" },
-];
+const ROLE_LABELS: Record<string, string> = {
+  patron: "Patron", chairperson: "Chairperson", vice_chairperson: "Vice Chairperson",
+  speaker: "Speaker", deputy_speaker: "Deputy Speaker", general_secretary: "General Secretary",
+  assistant_general_secretary: "Asst. Gen. Secretary", secretary_finance: "Secretary Finance",
+  secretary_welfare: "Secretary Welfare", secretary_health: "Secretary Health",
+  secretary_women_affairs: "Secretary Women Affairs", secretary_publicity: "Secretary Publicity",
+  secretary_pwd: "Secretary PWD", electoral_commission: "Electoral Commission",
+};
 
 export default function ElectionsPage() {
+  const { user, roles, hasAnyRole } = useAuth();
+  const isTopHead = hasAnyRole(["patron", "chairperson", "speaker", "electoral_commission"]);
+
   const [minAverage, setMinAverage] = useState(70);
   const [electionTitle, setElectionTitle] = useState("S.2 Councillors 2026");
-  const [applicants, setApplicants] = useState<Applicant[]>(INITIAL_APPLICANTS);
+  const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+
+  // Add candidate form
+  const [newName, setNewName] = useState("");
+  const [newClass, setNewClass] = useState("");
+  const [newStream, setNewStream] = useState("");
+  const [newGender, setNewGender] = useState("male");
+  const [newAverage, setNewAverage] = useState("");
+
+  // EC access delegation
+  const [grants, setGrants] = useState<any[]>([]);
+  const [allProfiles, setAllProfiles] = useState<any[]>([]);
+  const [grantUserId, setGrantUserId] = useState("");
+
+  const fetchApplicants = async () => {
+    const { data } = await supabase.from("applications").select("*").order("created_at", { ascending: false });
+    setApplicants(data || []);
+    setLoading(false);
+  };
+
+  const fetchGrants = async () => {
+    const { data } = await (supabase as any).from("ec_access_grants").select("*");
+    setGrants(data || []);
+  };
+
+  const fetchProfiles = async () => {
+    const { data } = await supabase.from("profiles").select("id, user_id, full_name");
+    setAllProfiles(data || []);
+  };
+
+  useEffect(() => {
+    fetchApplicants();
+    if (isTopHead) { fetchGrants(); fetchProfiles(); }
+  }, []);
 
   const qualified = applicants.filter((a) => a.status === "qualified").length;
   const disqualified = applicants.filter((a) => a.status === "disqualified").length;
 
-  const handleAutoScreen = () => {
-    setApplicants((prev) =>
-      prev.map((a) => ({
-        ...a,
-        status: a.average >= minAverage ? "qualified" : "disqualified",
-      }))
-    );
-    toast.success(`Screened all applicants at ${minAverage}% minimum average`);
+  const handleAddCandidate = async () => {
+    if (!newName || !newClass || !newGender || !newAverage) {
+      toast.error("Fill all required fields"); return;
+    }
+    const { error } = await supabase.from("applications").insert({
+      applicant_name: newName,
+      class: newClass,
+      stream: newStream || null,
+      gender: newGender,
+      average_score: Number(newAverage),
+      status: "pending",
+    } as any);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Candidate added!");
+    setAddOpen(false);
+    setNewName(""); setNewClass(""); setNewStream(""); setNewGender("male"); setNewAverage("");
+    fetchApplicants();
   };
 
-  const toggleStatus = (id: number) => {
-    setApplicants((prev) =>
-      prev.map((a) =>
-        a.id === id
-          ? { ...a, status: a.status === "qualified" ? "disqualified" : "qualified" }
-          : a
-      )
-    );
+  const handleAutoScreen = async () => {
+    const updates = applicants.map(a => ({
+      ...a,
+      status: a.average_score >= minAverage ? "qualified" : "disqualified",
+    }));
+    for (const a of updates) {
+      await supabase.from("applications").update({ status: a.status }).eq("id", a.id);
+    }
+    toast.success(`Screened at ${minAverage}% minimum`);
+    fetchApplicants();
+  };
+
+  const toggleStatus = async (id: string, current: string) => {
+    const next = current === "qualified" ? "disqualified" : "qualified";
+    await supabase.from("applications").update({ status: next }).eq("id", id);
+    fetchApplicants();
+  };
+
+  const grantAccess = async () => {
+    if (!grantUserId || !user) return;
+    const { error } = await (supabase as any).from("ec_access_grants").insert({
+      granted_to: grantUserId,
+      granted_by: user.id,
+    } as any);
+    if (error) toast.error(error.message);
+    else { toast.success("Access granted!"); fetchGrants(); setGrantUserId(""); }
+  };
+
+  const revokeAccess = async (id: string) => {
+    await (supabase as any).from("ec_access_grants").delete().eq("id", id);
+    toast.success("Access revoked");
+    fetchGrants();
   };
 
   const generateBallotPDF = () => {
-    const qualifiedApplicants = applicants.filter((a) => a.status === "qualified");
-    if (qualifiedApplicants.length === 0) {
-      toast.error("No qualified applicants. Run auto-screen first.");
-      return;
-    }
+    const qual = applicants.filter((a) => a.status === "qualified");
+    if (!qual.length) { toast.error("No qualified applicants"); return; }
+    const males = qual.filter((a) => a.gender === "male");
+    const females = qual.filter((a) => a.gender === "female");
 
-    const males = qualifiedApplicants.filter((a) => a.gender === "male");
-    const females = qualifiedApplicants.filter((a) => a.gender === "female");
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const m = 15;
+    let y = 15;
 
-    try {
-      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageW = doc.internal.pageSize.getWidth();
-      const margin = 15;
-      let y = 15;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(20);
+    doc.text("MENGO SENIOR SCHOOL", pageW / 2, y, { align: "center" });
+    y += 7; doc.setFontSize(10); doc.setFont("helvetica", "normal");
+    doc.text("Kampala, Uganda", pageW / 2, y, { align: "center" });
+    y += 4; doc.setFontSize(9);
+    doc.text('"Akwana Akira Ayomba"', pageW / 2, y, { align: "center" });
+    y += 6;
+    doc.setDrawColor(128, 0, 32); doc.setLineWidth(1);
+    doc.line(m, y, pageW - m, y); y += 8;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(16);
+    doc.text("OFFICIAL BALLOT PAPER", pageW / 2, y, { align: "center" });
+    y += 7; doc.setFontSize(13);
+    doc.text(electionTitle.toUpperCase(), pageW / 2, y, { align: "center" });
+    y += 6; doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    doc.setTextColor(80);
+    doc.text("Instructions: Tick (\u2713) ONE candidate in each category.", pageW / 2, y, { align: "center" });
+    doc.setTextColor(0); y += 10;
 
-      // ── School heading ──
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(20);
-      doc.text("MENGO SENIOR SCHOOL", pageW / 2, y, { align: "center" });
-      y += 7;
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text("Kampala, Uganda", pageW / 2, y, { align: "center" });
-      y += 4;
-      doc.setFontSize(9);
-      doc.text('"Akwana Akira Ayomba"', pageW / 2, y, { align: "center" });
-      y += 6;
+    const drawCat = (title: string, cands: Applicant[], startY: number) => {
+      let cy = startY;
+      if (cy > 250) { doc.addPage(); cy = 20; }
+      doc.setFillColor(128, 0, 32);
+      doc.rect(m, cy, pageW - m * 2, 9, "F");
+      doc.setFont("helvetica", "bold"); doc.setFontSize(12);
+      doc.setTextColor(255); doc.text(title, pageW / 2, cy + 6.5, { align: "center" });
+      doc.setTextColor(0); cy += 11;
+      doc.setFillColor(240, 240, 240);
+      doc.rect(m, cy, pageW - m * 2, 7, "F");
+      doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+      doc.text("No.", m + 4, cy + 5); doc.text("Candidate Name", m + 18, cy + 5);
+      doc.text("Class", m + 90, cy + 5); doc.text("Stream", m + 120, cy + 5);
+      doc.text("Tick", pageW - m - 12, cy + 5); cy += 8;
+      doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+      cands.forEach((c, idx) => {
+        if (cy > 270) { doc.addPage(); cy = 20; }
+        if (idx % 2 === 0) { doc.setFillColor(250, 250, 250); doc.rect(m, cy, pageW - m * 2, 10, "F"); }
+        doc.setDrawColor(200); doc.setLineWidth(0.3); doc.line(m, cy + 10, pageW - m, cy + 10);
+        doc.setTextColor(0); doc.text(`${idx + 1}.`, m + 4, cy + 7);
+        doc.setFont("helvetica", "bold"); doc.text(c.applicant_name.toUpperCase(), m + 18, cy + 7);
+        doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(100);
+        doc.text(c.class, m + 90, cy + 7);
+        doc.text((c as any).stream || "", m + 120, cy + 7);
+        doc.setTextColor(0); doc.setFontSize(10);
+        doc.setDrawColor(128, 0, 32); doc.setLineWidth(0.5);
+        doc.rect(pageW - m - 14, cy + 2, 7, 7); cy += 10;
+      });
+      return cy + 6;
+    };
 
-      // Divider line
-      doc.setDrawColor(128, 0, 32);
-      doc.setLineWidth(1);
-      doc.line(margin, y, pageW - margin, y);
-      y += 8;
+    if (females.length) y = drawCat("FEMALE COUNCILLOR", females, y);
+    if (males.length) y = drawCat("MALE COUNCILLOR", males, y);
 
-      // ── Ballot title ──
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
-      doc.text("OFFICIAL BALLOT PAPER", pageW / 2, y, { align: "center" });
-      y += 7;
-      doc.setFontSize(13);
-      doc.text(electionTitle.toUpperCase(), pageW / 2, y, { align: "center" });
-      y += 6;
-
-      // Instruction
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      doc.setTextColor(80);
-      doc.text("Instructions: Tick (\u2713) ONE candidate in each category.", pageW / 2, y, { align: "center" });
-      doc.setTextColor(0);
-      y += 10;
-
-      // ── Draw category ──
-      const drawCategory = (title: string, candidates: Applicant[], startY: number): number => {
-        let cy = startY;
-
-        // Check for page overflow
-        if (cy > 250) {
-          doc.addPage();
-          cy = 20;
-        }
-
-        // Category header bar
-        doc.setFillColor(128, 0, 32);
-        doc.rect(margin, cy, pageW - margin * 2, 9, "F");
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.setTextColor(255, 255, 255);
-        doc.text(title, pageW / 2, cy + 6.5, { align: "center" });
-        doc.setTextColor(0);
-        cy += 11;
-
-        // Table column headers
-        doc.setFillColor(240, 240, 240);
-        doc.rect(margin, cy, pageW - margin * 2, 7, "F");
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        doc.text("No.", margin + 4, cy + 5);
-        doc.text("Candidate Name", margin + 18, cy + 5);
-        doc.text("Class", margin + 100, cy + 5);
-        doc.text("Tick", pageW - margin - 12, cy + 5);
-        cy += 8;
-
-        // Candidate rows
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        candidates.forEach((c, idx) => {
-          if (cy > 270) { doc.addPage(); cy = 20; }
-
-          // Alternating background
-          if (idx % 2 === 0) {
-            doc.setFillColor(250, 250, 250);
-            doc.rect(margin, cy, pageW - margin * 2, 10, "F");
-          }
-
-          // Row bottom border
-          doc.setDrawColor(200, 200, 200);
-          doc.setLineWidth(0.3);
-          doc.line(margin, cy + 10, pageW - margin, cy + 10);
-
-          doc.setTextColor(0);
-          doc.text(`${idx + 1}.`, margin + 4, cy + 7);
-          doc.setFont("helvetica", "bold");
-          doc.text(c.name.toUpperCase(), margin + 18, cy + 7);
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(9);
-          doc.setTextColor(100);
-          doc.text(c.class, margin + 100, cy + 7);
-          doc.setTextColor(0);
-          doc.setFontSize(10);
-
-          // Tick box
-          const boxX = pageW - margin - 14;
-          doc.setDrawColor(128, 0, 32);
-          doc.setLineWidth(0.5);
-          doc.rect(boxX, cy + 2, 7, 7);
-
-          cy += 10;
-        });
-
-        return cy + 6;
-      };
-
-      // Draw both categories
-      if (females.length > 0) {
-        y = drawCategory("FEMALE COUNCILLOR", females, y);
-      }
-      if (males.length > 0) {
-        y = drawCategory("MALE COUNCILLOR", males, y);
-      }
-
-      // ── Footer ──
-      y += 4;
-      doc.setDrawColor(128, 0, 32);
-      doc.setLineWidth(0.5);
-      doc.line(margin, y, pageW - margin, y);
-      y += 6;
-      doc.setFontSize(8);
-      doc.setTextColor(100);
-      doc.text("Electoral Commission \u2014 Mengo Senior School Student Council", pageW / 2, y, { align: "center" });
-      y += 4;
-      const dateStr = new Date().toLocaleDateString("en-UG", { day: "numeric", month: "long", year: "numeric" });
-      doc.text(`Generated on ${dateStr}`, pageW / 2, y, { align: "center" });
-
-      // Save PDF
-      const filename = `Ballot_${electionTitle.replace(/\s+/g, "_")}.pdf`;
-      doc.save(filename);
-      toast.success("Ballot paper PDF downloaded!");
-    } catch (err: any) {
-      console.error("PDF generation error:", err);
-      toast.error("Failed to generate PDF: " + (err.message || "Unknown error"));
-    }
+    y += 4; doc.setDrawColor(128, 0, 32); doc.setLineWidth(0.5);
+    doc.line(m, y, pageW - m, y); y += 6;
+    doc.setFontSize(8); doc.setTextColor(100);
+    doc.text("Electoral Commission — Mengo Senior School Student Council", pageW / 2, y, { align: "center" });
+    y += 4;
+    doc.text(`Generated on ${new Date().toLocaleDateString("en-UG", { day: "numeric", month: "long", year: "numeric" })}`, pageW / 2, y, { align: "center" });
+    doc.save(`Ballot_${electionTitle.replace(/\s+/g, "_")}.pdf`);
+    toast.success("Ballot PDF downloaded!");
   };
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="font-serif text-2xl font-bold text-foreground">Electoral Commission</h1>
-          <p className="mt-1 text-muted-foreground">Manage applications, screening & ballot generation.</p>
+          <h1 className="font-serif text-xl font-bold text-foreground sm:text-2xl">Electoral Commission</h1>
+          <p className="text-sm text-muted-foreground">Manage candidates, screening & ballots.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowSettings(!showSettings)}>
-            <Settings2 className="mr-2 h-4 w-4" /> Settings
-          </Button>
-          <Button onClick={generateBallotPDF}>
-            <Download className="mr-2 h-4 w-4" /> Generate Ballot
+        <div className="flex flex-wrap gap-2">
+          {isTopHead && (
+            <Button variant="outline" size="sm" onClick={() => setShowSettings(!showSettings)}>
+              <Settings2 className="mr-1 h-4 w-4" /> Settings
+            </Button>
+          )}
+          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Add Candidate</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-sm">
+              <DialogHeader><DialogTitle>Add Candidate</DialogTitle></DialogHeader>
+              <div className="space-y-3 pt-2">
+                <div><Label>Full Name *</Label><Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Nakamya Faith" /></div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div><Label>Class *</Label><Input value={newClass} onChange={e => setNewClass(e.target.value)} placeholder="S.2" /></div>
+                  <div><Label>Stream</Label><Input value={newStream} onChange={e => setNewStream(e.target.value)} placeholder="North" /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div><Label>Gender *</Label>
+                    <Select value={newGender} onValueChange={setNewGender}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Average (%) *</Label><Input type="number" min={0} max={100} value={newAverage} onChange={e => setNewAverage(e.target.value)} /></div>
+                </div>
+                <Button onClick={handleAddCandidate} className="w-full">Add Candidate</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Button size="sm" variant="outline" onClick={generateBallotPDF}>
+            <Download className="mr-1 h-4 w-4" /> Ballot PDF
           </Button>
         </div>
       </div>
 
-      {/* Settings panel */}
-      {showSettings && (
-        <Card className="mt-4 border-primary/30 bg-primary/5">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Settings2 className="h-4 w-4 text-primary" /> Screening & Ballot Settings
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="minAvg">Minimum Screening Average (%)</Label>
-              <Input id="minAvg" type="number" min={0} max={100}
-                value={minAverage} onChange={(e) => setMinAverage(Number(e.target.value))} />
-              <p className="text-xs text-muted-foreground">
-                Applicants below this average will be disqualified during auto-screen.
-              </p>
+      {/* Settings */}
+      {showSettings && isTopHead && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-4 space-y-4">
+            <h3 className="font-semibold text-sm flex items-center gap-2"><Settings2 className="h-4 w-4 text-primary" /> Screening & Access Settings</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Min Screening Average (%)</Label>
+                <Input type="number" min={0} max={100} value={minAverage} onChange={e => setMinAverage(Number(e.target.value))} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Election Title</Label>
+                <Input value={electionTitle} onChange={e => setElectionTitle(e.target.value)} />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="electionTitle">Election / Voting Title</Label>
-              <Input id="electionTitle" value={electionTitle}
-                onChange={(e) => setElectionTitle(e.target.value)}
-                placeholder="e.g. S.2 Councillors 2026" />
-              <p className="text-xs text-muted-foreground">
-                This title appears on the generated ballot paper heading.
-              </p>
+            <Button size="sm" onClick={handleAutoScreen}><UserCheck className="mr-1 h-4 w-4" /> Auto-Screen All</Button>
+
+            {/* EC Access Delegation */}
+            <div className="border-t pt-3 mt-3">
+              <h4 className="text-sm font-semibold flex items-center gap-2 mb-2"><ShieldCheck className="h-4 w-4 text-primary" /> EC Access Delegation</h4>
+              <p className="text-xs text-muted-foreground mb-2">Grant other councillors access to the Elections module.</p>
+              <div className="flex gap-2 flex-wrap">
+                <Select value={grantUserId} onValueChange={setGrantUserId}>
+                  <SelectTrigger className="w-48"><SelectValue placeholder="Select councillor" /></SelectTrigger>
+                  <SelectContent>
+                    {allProfiles.filter(p => !grants.some(g => g.granted_to === p.user_id)).map(p => (
+                      <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" onClick={grantAccess} disabled={!grantUserId}>Grant Access</Button>
+              </div>
+              {grants.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {grants.map(g => {
+                    const p = allProfiles.find(pr => pr.user_id === g.granted_to);
+                    return (
+                      <div key={g.id} className="flex items-center justify-between rounded bg-background px-3 py-1.5 text-sm">
+                        <span>{p?.full_name || "Unknown"}</span>
+                        <Button size="sm" variant="ghost" className="text-destructive h-7 text-xs" onClick={() => revokeAccess(g.id)}>Revoke</Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
       )}
 
       {/* Stats */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
-        <Card><CardContent className="p-4 text-center">
-          <p className="text-3xl font-bold text-card-foreground">{applicants.length}</p>
-          <p className="text-xs text-muted-foreground">Total Applicants</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <Card><CardContent className="p-3 text-center">
+          <p className="text-2xl font-bold sm:text-3xl">{applicants.length}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Applicants</p>
         </CardContent></Card>
-        <Card><CardContent className="p-4 text-center">
-          <p className="text-3xl font-bold text-primary">{qualified}</p>
-          <p className="text-xs text-muted-foreground">Qualified</p>
+        <Card><CardContent className="p-3 text-center">
+          <p className="text-2xl font-bold text-primary sm:text-3xl">{qualified}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Qualified</p>
         </CardContent></Card>
-        <Card><CardContent className="p-4 text-center">
-          <p className="text-3xl font-bold text-destructive">{disqualified}</p>
-          <p className="text-xs text-muted-foreground">Disqualified</p>
+        <Card><CardContent className="p-3 text-center">
+          <p className="text-2xl font-bold text-destructive sm:text-3xl">{disqualified}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Disqualified</p>
         </CardContent></Card>
       </div>
 
-      {/* Applicants table */}
-      <Card className="mt-6">
-        <CardHeader>
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Vote className="h-5 w-5 text-primary" />
-              Applicants (Min: {minAverage}%)
-            </CardTitle>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleAutoScreen}>
-                Auto-Screen
-              </Button>
-              <Button size="sm" onClick={generateBallotPDF}>
-                <Download className="mr-1 h-3 w-3" /> Ballot PDF
-              </Button>
-            </div>
-          </div>
+      {/* Applicants */}
+      <Card>
+        <CardHeader className="pb-2 px-3 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <Vote className="h-4 w-4 text-primary" />
+            Candidates (Min: {minAverage}%)
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0 sm:px-6">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs sm:text-sm min-w-[480px]">
               <thead>
                 <tr className="border-b">
-                  <th className="py-2 text-left font-medium text-muted-foreground">Name</th>
-                  <th className="py-2 text-left font-medium text-muted-foreground">Class</th>
-                  <th className="py-2 text-left font-medium text-muted-foreground">Gender</th>
-                  <th className="py-2 text-left font-medium text-muted-foreground">Average</th>
-                  <th className="py-2 text-left font-medium text-muted-foreground">Status</th>
-                  <th className="py-2 text-left font-medium text-muted-foreground">Action</th>
+                  <th className="py-2 px-2 text-left font-medium text-muted-foreground">Name</th>
+                  <th className="py-2 px-2 text-left font-medium text-muted-foreground">Class</th>
+                  <th className="py-2 px-2 text-left font-medium text-muted-foreground hidden sm:table-cell">Stream</th>
+                  <th className="py-2 px-2 text-left font-medium text-muted-foreground">Gender</th>
+                  <th className="py-2 px-2 text-left font-medium text-muted-foreground">Avg</th>
+                  <th className="py-2 px-2 text-left font-medium text-muted-foreground">Status</th>
+                  <th className="py-2 px-2 text-left font-medium text-muted-foreground">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {applicants.map((a) => (
+                {loading ? (
+                  <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">Loading…</td></tr>
+                ) : applicants.length === 0 ? (
+                  <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">No candidates yet. Add one above.</td></tr>
+                ) : applicants.map((a) => (
                   <tr key={a.id} className="border-b last:border-0">
-                    <td className="py-2.5 font-medium text-card-foreground">{a.name}</td>
-                    <td className="py-2.5 text-muted-foreground">{a.class}</td>
-                    <td className="py-2.5 capitalize text-muted-foreground">{a.gender}</td>
-                    <td className="py-2.5">
-                      <span className={`font-bold ${a.average >= minAverage ? "text-primary" : "text-destructive"}`}>
-                        {a.average}%
+                    <td className="py-2 px-2 font-medium">{a.applicant_name}</td>
+                    <td className="py-2 px-2 text-muted-foreground">{a.class}</td>
+                    <td className="py-2 px-2 text-muted-foreground hidden sm:table-cell">{(a as any).stream || "—"}</td>
+                    <td className="py-2 px-2 capitalize text-muted-foreground">{a.gender}</td>
+                    <td className="py-2 px-2">
+                      <span className={`font-bold ${a.average_score >= minAverage ? "text-primary" : "text-destructive"}`}>
+                        {a.average_score}%
                       </span>
                     </td>
-                    <td className="py-2.5">
-                      {a.status === "pending" ? (
-                        <Badge variant="secondary">pending</Badge>
-                      ) : (
-                        <Badge variant={a.status === "qualified" ? "default" : "destructive"} className="gap-1">
-                          {a.status === "qualified" ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}
-                          {a.status}
-                        </Badge>
-                      )}
+                    <td className="py-2 px-2">
+                      <Badge variant={a.status === "qualified" ? "default" : a.status === "disqualified" ? "destructive" : "secondary"} className="text-[10px] sm:text-xs">
+                        {a.status}
+                      </Badge>
                     </td>
-                    <td className="py-2.5">
+                    <td className="py-2 px-2">
                       {a.status !== "pending" && (
-                        <Button variant="ghost" size="sm" onClick={() => toggleStatus(a.id)}>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => toggleStatus(a.id, a.status)}>
                           {a.status === "qualified" ? "Disqualify" : "Qualify"}
                         </Button>
                       )}

@@ -118,9 +118,9 @@ export default function StudentVoicePage() {
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Projects">Projects</SelectItem>
-                <SelectItem value="Ideas">Ideas</SelectItem>
-                <SelectItem value="Complaints">Complaints</SelectItem>
+                <SelectItem value="projects">Projects</SelectItem>
+                <SelectItem value="ideas">Ideas</SelectItem>
+                <SelectItem value="complaints">Complaints</SelectItem>
               </SelectContent>
             </Select>
           </div>

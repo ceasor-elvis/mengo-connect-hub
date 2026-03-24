@@ -4,44 +4,44 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, Plus } from "lucide-react";
 
 const DUMMY_ISSUES = [
-  { id: 1, title: "Dormitory maintenance schedule overdue", description: "The dormitory block B has not been cleaned in 2 weeks. Students are complaining about hygiene.", status: "open", raised_by: "Nakato Grace", date: "Mar 20, 2026" },
-  { id: 2, title: "Inter-house sports budget allocation", description: "We need to allocate funds for the upcoming inter-house sports competition next term.", status: "in_progress", raised_by: "Mugisha Ronald", date: "Mar 19, 2026" },
-  { id: 3, title: "Assembly sound system needs repair", description: "The microphone and speakers in the main hall have been faulty for the past month.", status: "resolved", raised_by: "Ssenoga Peter", date: "Mar 15, 2026" },
-  { id: 4, title: "Library books shortage in Sciences", description: "S.4 and S.6 students report insufficient Physics and Chemistry textbooks.", status: "open", raised_by: "Kato Emmanuel", date: "Mar 14, 2026" },
-  { id: 5, title: "Lunch queue management", description: "The dining hall queue system is inefficient, causing students to miss afternoon classes.", status: "in_progress", raised_by: "Nambi Irene", date: "Mar 12, 2026" },
-  { id: 6, title: "Broken windows in S.2 classroom", description: "Three windows in the S.2 East classroom were broken during the storm last week.", status: "open", raised_by: "Lwanga David", date: "Mar 10, 2026" },
+  { id: 1, title: "Dormitory maintenance overdue", description: "Block B not cleaned in 2 weeks.", status: "open", raised_by: "Nakato Grace", date: "Mar 20" },
+  { id: 2, title: "Inter-house sports budget", description: "Need funds for next term competition.", status: "in_progress", raised_by: "Mugisha Ronald", date: "Mar 19" },
+  { id: 3, title: "Assembly sound system repair", description: "Microphone and speakers faulty.", status: "resolved", raised_by: "Ssenoga Peter", date: "Mar 15" },
+  { id: 4, title: "Library books shortage", description: "S.4/S.6 lack Physics and Chemistry texts.", status: "open", raised_by: "Kato Emmanuel", date: "Mar 14" },
+  { id: 5, title: "Lunch queue management", description: "Inefficient queue causing late classes.", status: "in_progress", raised_by: "Nambi Irene", date: "Mar 12" },
+  { id: 6, title: "Broken windows S.2 East", description: "3 windows broken during storm.", status: "open", raised_by: "Lwanga David", date: "Mar 10" },
 ];
 
 const statusColor = (s: string) => s === "resolved" ? "default" : s === "in_progress" ? "secondary" : "outline";
 
 export default function IssuesPage() {
   return (
-    <div>
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="font-serif text-2xl font-bold text-foreground">Issues at Hand</h1>
-          <p className="mt-1 text-muted-foreground">Track and manage issues raised by councillors.</p>
+          <h1 className="font-serif text-xl font-bold text-foreground sm:text-2xl">Issues at Hand</h1>
+          <p className="text-sm text-muted-foreground">Track issues raised by councillors.</p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Raise Issue
-        </Button>
+        <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Raise Issue</Button>
       </div>
 
-      <div className="mt-6 space-y-4">
+      <div className="space-y-2">
         {DUMMY_ISSUES.map((issue) => (
           <Card key={issue.id}>
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <AlertTriangle className={`h-4 w-4 ${issue.status === "resolved" ? "text-primary" : "text-gold"}`} />
-                  {issue.title}
-                </CardTitle>
-                <Badge variant={statusColor(issue.status)}>{issue.status.replace("_", " ")}</Badge>
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2 min-w-0 flex-1">
+                  <AlertTriangle className={`h-4 w-4 mt-0.5 shrink-0 ${issue.status === "resolved" ? "text-primary" : "text-gold"}`} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{issue.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{issue.description}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      By <span className="font-medium">{issue.raised_by}</span> • {issue.date}
+                    </p>
+                  </div>
+                </div>
+                <Badge variant={statusColor(issue.status)} className="text-[10px] shrink-0">{issue.status.replace("_", " ")}</Badge>
               </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{issue.description}</p>
-              <p className="mt-2 text-xs text-muted-foreground">Raised by <span className="font-medium text-card-foreground">{issue.raised_by}</span> • {issue.date}</p>
             </CardContent>
           </Card>
         ))}

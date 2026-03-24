@@ -10,236 +10,76 @@ import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
-/* ── Role-specific sections metadata ── */
-interface RoleInfo {
-  title: string;
-  icon: any;
-  color: string;
-  responsibilities: string[];
-}
+interface RoleInfo { title: string; icon: any; color: string; responsibilities: string[]; }
 
 const ROLE_INFO: Record<AppRole, RoleInfo> = {
-  patron: {
-    title: "Patron",
-    icon: Shield,
-    color: "text-gold",
-    responsibilities: [
-      "Overall oversight and guidance of the Student Council",
-      "Approve requisitions and financial expenditures",
-      "Mentor and advise council leadership",
-      "Liaise between school administration and council",
-      "Authorize major council decisions and events",
-    ],
-  },
-  chairperson: {
-    title: "Chairperson",
-    icon: UserCheck,
-    color: "text-primary",
-    responsibilities: [
-      "Lead the Student Council and chair cabinet meetings",
-      "Oversee all offices and monitor progress",
-      "Represent students before school administration",
-      "Coordinate with Patron on major decisions",
-      "Ensure all secretaries fulfil their mandates",
-    ],
-  },
-  vice_chairperson: {
-    title: "Vice Chairperson",
-    icon: UserCheck,
-    color: "text-primary",
-    responsibilities: [
-      "Act as Chairperson in their absence",
-      "Assist in coordinating council activities",
-      "Supervise specific projects delegated by the Chair",
-      "Monitor welfare of council members",
-    ],
-  },
-  speaker: {
-    title: "Speaker",
-    icon: Gavel,
-    color: "text-gold",
-    responsibilities: [
-      "Preside over council parliamentary sessions",
-      "Maintain order and enforce standing orders",
-      "Ensure every councillor's voice is heard",
-      "Rule on motions and points of order",
-      "Oversee Electoral Commission processes",
-    ],
-  },
-  deputy_speaker: {
-    title: "Deputy Speaker",
-    icon: Gavel,
-    color: "text-gold",
-    responsibilities: [
-      "Assist the Speaker in parliamentary duties",
-      "Preside over sessions in Speaker's absence",
-      "Help maintain decorum during debates",
-    ],
-  },
-  general_secretary: {
-    title: "General Secretary",
-    icon: FileText,
-    color: "text-primary",
-    responsibilities: [
-      "Record and distribute minutes of all council meetings",
-      "Manage council correspondence and communication",
-      "Evaluate Student Voice submissions",
-      "Coordinate programmes and events calendar",
-      "Maintain the council documents archive",
-    ],
-  },
-  assistant_general_secretary: {
-    title: "Assistant General Secretary",
-    icon: FileText,
-    color: "text-primary",
-    responsibilities: [
-      "Assist the General Secretary in secretarial duties",
-      "Manage and update the Working Rota",
-      "Help evaluate Student Voice submissions",
-      "Compile attendance records for meetings",
-    ],
-  },
-  secretary_finance: {
-    title: "Secretary Finance",
-    icon: DollarSign,
-    color: "text-gold",
-    responsibilities: [
-      "Manage the council budget and financial records",
-      "Process and track requisitions",
-      "Prepare termly financial reports",
-      "Ensure transparent use of council funds",
-      "Co-approve expenditures with the Patron",
-    ],
-  },
-  secretary_welfare: {
-    title: "Secretary Welfare",
-    icon: Heart,
-    color: "text-destructive",
-    responsibilities: [
-      "Address students' welfare concerns (food, accommodation, safety)",
-      "Conduct welfare surveys and report findings",
-      "Coordinate with school matron/warden on dormitory issues",
-      "Advocate for improved student living conditions",
-      "Organize welfare-related awareness campaigns",
-    ],
-  },
-  secretary_health: {
-    title: "Secretary Health",
-    icon: Stethoscope,
-    color: "text-primary",
-    responsibilities: [
-      "Promote health and hygiene across the school",
-      "Liaise with the school nurse and sick bay",
-      "Organize health awareness days and first aid training",
-      "Monitor sanitation in classrooms, dormitories, and latrines",
-      "Report and follow up on health hazards",
-    ],
-  },
-  secretary_women_affairs: {
-    title: "Secretary Women Affairs",
-    icon: Users,
-    color: "text-primary",
-    responsibilities: [
-      "Advocate for gender equality and girls' welfare",
-      "Address issues specific to female students",
-      "Organize women empowerment programmes",
-      "Ensure sanitary facilities are well-stocked",
-      "Mentor and support young female students",
-    ],
-  },
-  secretary_publicity: {
-    title: "Secretary Publicity",
-    icon: Megaphone,
-    color: "text-gold",
-    responsibilities: [
-      "Manage council communications and notice boards",
-      "Publicize events, programmes, and council decisions",
-      "Update cabinet photos on the public website",
-      "Coordinate with media during school events",
-      "Create awareness campaigns for council initiatives",
-    ],
-  },
-  secretary_pwd: {
-    title: "Secretary Persons with Disabilities",
-    icon: Accessibility,
-    color: "text-primary",
-    responsibilities: [
-      "Advocate for students with disabilities",
-      "Ensure school facilities are accessible",
-      "Report accessibility barriers to administration",
-      "Organize inclusive events and awareness programmes",
-      "Liaise with special needs education coordinators",
-    ],
-  },
-  electoral_commission: {
-    title: "Electoral Commission",
-    icon: Vote,
-    color: "text-gold",
-    responsibilities: [
-      "Organize and oversee all council elections",
-      "Screen candidates' academic qualifications",
-      "Generate and manage ballot papers",
-      "Ensure free, fair, and transparent elections",
-      "Announce and gazette election results",
-    ],
-  },
+  patron: { title: "Patron", icon: Shield, color: "text-gold", responsibilities: ["Overall oversight and guidance", "Approve requisitions", "Mentor council leadership", "Liaise with administration"] },
+  chairperson: { title: "Chairperson", icon: UserCheck, color: "text-primary", responsibilities: ["Lead the Student Council", "Oversee all offices", "Represent students", "Coordinate with Patron"] },
+  vice_chairperson: { title: "Vice Chairperson", icon: UserCheck, color: "text-primary", responsibilities: ["Act as Chairperson when absent", "Assist in coordination", "Supervise delegated projects"] },
+  speaker: { title: "Speaker", icon: Gavel, color: "text-gold", responsibilities: ["Preside over parliamentary sessions", "Maintain order", "Rule on motions", "Oversee EC processes"] },
+  deputy_speaker: { title: "Deputy Speaker", icon: Gavel, color: "text-gold", responsibilities: ["Assist Speaker", "Preside when Speaker absent", "Maintain decorum"] },
+  general_secretary: { title: "General Secretary", icon: FileText, color: "text-primary", responsibilities: ["Record minutes", "Manage communications", "Evaluate Student Voices", "Coordinate programmes"] },
+  assistant_general_secretary: { title: "Asst. Gen. Secretary", icon: FileText, color: "text-primary", responsibilities: ["Assist Gen. Secretary", "Manage Working Rota", "Compile attendance"] },
+  secretary_finance: { title: "Secretary Finance", icon: DollarSign, color: "text-gold", responsibilities: ["Manage council budget", "Track requisitions", "Prepare financial reports"] },
+  secretary_welfare: { title: "Secretary Welfare", icon: Heart, color: "text-destructive", responsibilities: ["Address welfare concerns", "Conduct surveys", "Coordinate with matron"] },
+  secretary_health: { title: "Secretary Health", icon: Stethoscope, color: "text-primary", responsibilities: ["Promote hygiene", "Liaise with sick bay", "Monitor sanitation"] },
+  secretary_women_affairs: { title: "Secretary Women Affairs", icon: Users, color: "text-primary", responsibilities: ["Advocate gender equality", "Address girls' welfare", "Ensure sanitary facilities"] },
+  secretary_publicity: { title: "Secretary Publicity", icon: Megaphone, color: "text-gold", responsibilities: ["Manage communications", "Publicize events", "Create awareness campaigns"] },
+  secretary_pwd: { title: "Secretary PWD", icon: Accessibility, color: "text-primary", responsibilities: ["Advocate for students with disabilities", "Ensure accessibility", "Organize inclusive events"] },
+  electoral_commission: { title: "Electoral Commission", icon: Vote, color: "text-gold", responsibilities: ["Organize elections", "Screen candidates", "Generate ballots", "Announce results"] },
 };
 
-/* ── Stats (common) ── */
 const stats = [
-  { label: "Student Voices", value: "23", icon: MessageSquare, color: "text-primary", change: "+5 this week" },
-  { label: "Open Issues", value: "7", icon: AlertTriangle, color: "text-gold", change: "3 resolved" },
-  { label: "Programmes", value: "12", icon: Calendar, color: "text-primary", change: "2 upcoming" },
-  { label: "Documents", value: "45", icon: FileText, color: "text-gold", change: "8 new" },
+  { label: "Voices", value: "23", icon: MessageSquare, color: "text-primary", change: "+5" },
+  { label: "Issues", value: "7", icon: AlertTriangle, color: "text-gold", change: "3 done" },
+  { label: "Events", value: "12", icon: Calendar, color: "text-primary", change: "2 next" },
+  { label: "Docs", value: "45", icon: FileText, color: "text-gold", change: "8 new" },
 ];
 
 const recentVoices = [
-  { title: "Library Opening Hours", category: "Ideas", status: "pending", date: "Mar 20, 2026" },
-  { title: "Broken Desks in S.3 East", category: "Complaints", status: "approved", date: "Mar 19, 2026" },
-  { title: "Science Fair Proposal", category: "Projects", status: "pending", date: "Mar 18, 2026" },
+  { title: "Library Opening Hours", category: "Ideas", status: "pending", date: "Mar 20" },
+  { title: "Broken Desks in S.3 East", category: "Complaints", status: "approved", date: "Mar 19" },
+  { title: "Science Fair Proposal", category: "Projects", status: "pending", date: "Mar 18" },
 ];
 
 const recentIssues = [
-  { title: "Dormitory maintenance schedule", status: "open", raised: "Nakato Grace" },
-  { title: "Inter-house sports budget", status: "in_progress", raised: "Mugisha Ronald" },
-  { title: "Assembly sound system repair", status: "resolved", raised: "Ssenoga Peter" },
+  { title: "Dormitory maintenance", status: "open", raised: "Nakato Grace" },
+  { title: "Sports budget", status: "in_progress", raised: "Mugisha Ronald" },
+  { title: "Sound system repair", status: "resolved", raised: "Ssenoga Peter" },
 ];
 
 export default function DashboardPage() {
-  const { profile, roles, hasRole, hasAnyRole } = useAuth();
+  const { profile, roles, hasAnyRole } = useAuth();
   const primaryRole = roles[0];
   const info = primaryRole ? ROLE_INFO[primaryRole] : null;
-
   const showFinance = hasAnyRole(["patron", "chairperson", "secretary_finance"]);
   const showVoices = hasAnyRole(["patron", "chairperson", "general_secretary", "assistant_general_secretary"]) || roles.length === 0;
   const showAllProgress = hasAnyRole(["patron", "chairperson"]) || roles.length === 0;
 
   return (
-    <div>
+    <div className="space-y-4">
       {/* Greeting */}
-      <h1 className="font-serif text-2xl font-bold text-foreground">
-        Welcome{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}!
-      </h1>
-      <p className="mt-1 text-muted-foreground">
-        {info ? `${info.title} — ${ROLE_INFO[primaryRole!].responsibilities[0]}` : "Your council dashboard overview."}
-      </p>
+      <div>
+        <h1 className="font-serif text-xl font-bold text-foreground sm:text-2xl">
+          Welcome{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}!
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {info ? `${info.title} — ${info.responsibilities[0]}` : "Your council dashboard."}
+        </p>
+      </div>
 
-      {/* Role Card */}
+      {/* Role Card — compact */}
       {info && (
-        <Card className="mt-6 border-primary/20 bg-primary/5">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 mb-2">
               <info.icon className={`h-5 w-5 ${info.color}`} />
-              Your Office: {info.title}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-3 text-sm font-medium text-foreground">Key Responsibilities:</p>
-            <ul className="space-y-1.5">
+              <span className="font-semibold text-sm">{info.title}</span>
+            </div>
+            <ul className="grid gap-1 sm:grid-cols-2">
               {info.responsibilities.map((r, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <CheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                  {r}
+                <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                  <CheckCircle className="mt-0.5 h-3 w-3 shrink-0 text-primary" /> {r}
                 </li>
               ))}
             </ul>
@@ -247,43 +87,41 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Quick Stats */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {stats.map((s) => (
           <Card key={s.label}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{s.label}</CardTitle>
-              <s.icon className={`h-5 w-5 ${s.color}`} />
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-card-foreground">{s.value}</p>
-              <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
-                <TrendingUp className="h-3 w-3" /> {s.change}
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">{s.label}</span>
+                <s.icon className={`h-4 w-4 ${s.color}`} />
+              </div>
+              <p className="text-2xl font-bold mt-1">{s.value}</p>
+              <p className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                <TrendingUp className="h-2.5 w-2.5" /> {s.change}
               </p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        {/* Recent Student Voices — visible to evaluators / all if no role */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Recent Student Voices */}
         {showVoices && (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <MessageSquare className="h-5 w-5 text-primary" />
-                Recent Student Voices
+            <CardHeader className="pb-2 px-3 sm:px-6">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <MessageSquare className="h-4 w-4 text-primary" /> Recent Voices
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="px-3 sm:px-6 space-y-2">
               {recentVoices.map((v) => (
-                <div key={v.title} className="flex items-center justify-between rounded-lg border p-3">
-                  <div>
-                    <p className="text-sm font-medium text-card-foreground">{v.title}</p>
-                    <p className="text-xs text-muted-foreground">{v.category} • {v.date}</p>
+                <div key={v.title} className="flex items-center justify-between rounded-lg border p-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium truncate">{v.title}</p>
+                    <p className="text-[10px] text-muted-foreground">{v.category} • {v.date}</p>
                   </div>
-                  <Badge variant={v.status === "approved" ? "default" : "secondary"}>
-                    {v.status === "approved" ? <CheckCircle className="mr-1 h-3 w-3" /> : <Clock className="mr-1 h-3 w-3" />}
+                  <Badge variant={v.status === "approved" ? "default" : "secondary"} className="text-[10px] ml-2 shrink-0">
                     {v.status}
                   </Badge>
                 </div>
@@ -292,22 +130,21 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {/* Recent Issues — all councillors */}
+        {/* Recent Issues */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <AlertTriangle className="h-5 w-5 text-gold" />
-              Recent Issues
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <AlertTriangle className="h-4 w-4 text-gold" /> Recent Issues
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="px-3 sm:px-6 space-y-2">
             {recentIssues.map((i) => (
-              <div key={i.title} className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium text-card-foreground">{i.title}</p>
-                  <p className="text-xs text-muted-foreground">Raised by {i.raised}</p>
+              <div key={i.title} className="flex items-center justify-between rounded-lg border p-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium truncate">{i.title}</p>
+                  <p className="text-[10px] text-muted-foreground">{i.raised}</p>
                 </div>
-                <Badge variant={i.status === "resolved" ? "default" : i.status === "in_progress" ? "secondary" : "outline"}>
+                <Badge variant={i.status === "resolved" ? "default" : "secondary"} className="text-[10px] ml-2 shrink-0">
                   {i.status.replace("_", " ")}
                 </Badge>
               </div>
@@ -316,51 +153,46 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Finance Summary — Patron, Chair, Finance only */}
+      {/* Finance Summary */}
       {showFinance && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <DollarSign className="h-5 w-5 text-gold" />
-              Finance Summary
+        <Card>
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <DollarSign className="h-4 w-4 text-gold" /> Finance
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-lg bg-muted p-4 text-center">
-                <p className="text-2xl font-bold text-card-foreground">UGX 2.4M</p>
-                <p className="text-xs text-muted-foreground">Total Budget</p>
-              </div>
-              <div className="rounded-lg bg-muted p-4 text-center">
-                <p className="text-2xl font-bold text-primary">UGX 1.8M</p>
-                <p className="text-xs text-muted-foreground">Spent</p>
-              </div>
-              <div className="rounded-lg bg-muted p-4 text-center">
-                <p className="text-2xl font-bold text-gold">UGX 600K</p>
-                <p className="text-xs text-muted-foreground">Remaining</p>
-              </div>
+          <CardContent className="px-3 sm:px-6">
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { v: "UGX 2.4M", l: "Budget" },
+                { v: "UGX 1.8M", l: "Spent" },
+                { v: "UGX 600K", l: "Left" },
+              ].map((f) => (
+                <div key={f.l} className="rounded-lg bg-muted p-2 sm:p-3 text-center">
+                  <p className="text-sm font-bold sm:text-lg">{f.v}</p>
+                  <p className="text-[10px] text-muted-foreground">{f.l}</p>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* All Offices Progress — Chair & Patron */}
+      {/* All Offices — compact grid */}
       {showAllProgress && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Shield className="h-5 w-5 text-primary" />
-              All Offices Overview
+        <Card>
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Shield className="h-4 w-4 text-primary" /> All Offices
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <CardContent className="px-3 sm:px-6">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               {(Object.entries(ROLE_INFO) as [AppRole, RoleInfo][]).map(([key, ri]) => (
-                <div key={key} className="flex items-center gap-3 rounded-lg border p-3">
-                  <ri.icon className={`h-5 w-5 shrink-0 ${ri.color}`} />
-                  <div>
-                    <p className="text-sm font-medium text-card-foreground">{ri.title}</p>
-                    <p className="text-xs text-muted-foreground line-clamp-1">{ri.responsibilities[0]}</p>
+                <div key={key} className="flex items-center gap-2 rounded-lg border p-2">
+                  <ri.icon className={`h-4 w-4 shrink-0 ${ri.color}`} />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium truncate">{ri.title}</p>
                   </div>
                 </div>
               ))}

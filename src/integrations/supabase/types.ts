@@ -25,6 +25,7 @@ export type Database = {
           id: string
           profile_pic: string | null
           status: string
+          stream: string | null
         }
         Insert: {
           applicant_name: string
@@ -36,6 +37,7 @@ export type Database = {
           id?: string
           profile_pic?: string | null
           status?: string
+          stream?: string | null
         }
         Update: {
           applicant_name?: string
@@ -47,6 +49,7 @@ export type Database = {
           id?: string
           profile_pic?: string | null
           status?: string
+          stream?: string | null
         }
         Relationships: []
       }
@@ -107,6 +110,27 @@ export type Database = {
           id?: string
           title?: string
           uploaded_by?: string
+        }
+        Relationships: []
+      }
+      ec_access_grants: {
+        Row: {
+          created_at: string
+          granted_by: string
+          granted_to: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by: string
+          granted_to: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string
+          granted_to?: string
+          id?: string
         }
         Relationships: []
       }
