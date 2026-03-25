@@ -17,6 +17,8 @@ import DocumentsPage from "@/pages/portal/DocumentsPage";
 import RequisitionsPage from "@/pages/portal/RequisitionsPage";
 import ElectionsPage from "@/pages/portal/ElectionsPage";
 import StudentVoicesPage from "@/pages/portal/StudentVoicesPage";
+import HierarchyPage from "@/pages/portal/HierarchyPage";
+import ActivityLogsPage from "@/pages/portal/ActivityLogsPage";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -46,6 +48,8 @@ const App = () => (
               <Route path="documents" element={<DocumentsPage />} />
               <Route path="requisitions" element={<RequisitionsPage />} />
               <Route path="elections" element={<ElectionsPage />} />
+              <Route path="hierarchy" element={<HierarchyPage />} />
+              <Route path="logs" element={<ActivityLogsPage />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

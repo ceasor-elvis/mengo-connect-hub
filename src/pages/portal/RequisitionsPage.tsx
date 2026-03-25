@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useActivityLog } from "@/hooks/useActivityLog";
+import { notifyAllCouncillors } from "@/hooks/useNotify";
 
 interface Requisition {
   id: string; item: string; amount: number; requested_by: string;
@@ -24,6 +26,7 @@ const statusVariant = (s: string) => s === "approved" ? "default" : s === "rejec
 
 export default function RequisitionsPage() {
   const { user, hasAnyRole } = useAuth();
+  const { log } = useActivityLog();
   const [reqs, setReqs] = useState<Requisition[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -55,14 +58,14 @@ export default function RequisitionsPage() {
     });
     setSubmitting(false);
     if (error) toast.error(error.message);
-    else { toast.success("Request submitted"); setItem(""); setAmount(""); setOpen(false); }
+    else { toast.success("Request submitted"); log("submitted a requisition", "requisitions", item); notifyAllCouncillors("New Requisition", `Requisition for "${item}" submitted`, "info"); setItem(""); setAmount(""); setOpen(false); }
   };
 
   const handleApprove = async (id: string, status: "approved" | "rejected") => {
     if (!user) return;
     const { error } = await supabase.from("requisitions").update({ status, approved_by: user.id }).eq("id", id);
     if (error) toast.error(error.message);
-    else toast.success(`Request ${status}`);
+    else { toast.success(`Request ${status}`); log(`${status} a requisition`, "requisitions"); }
   };
 
   return (

@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useActivityLog } from "@/hooks/useActivityLog";
+import { notifyAllCouncillors } from "@/hooks/useNotify";
 
 interface Issue {
   id: string; title: string; description: string; status: string;
@@ -20,6 +22,7 @@ const statusColor = (s: string) => s === "resolved" ? "default" : s === "in_prog
 
 export default function IssuesPage() {
   const { user } = useAuth();
+  const { log } = useActivityLog();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -49,7 +52,7 @@ export default function IssuesPage() {
     });
     setSubmitting(false);
     if (error) toast.error(error.message);
-    else { toast.success("Issue raised"); setTitle(""); setDescription(""); setOpen(false); }
+    else { toast.success("Issue raised"); log("raised an issue", "issues", title); notifyAllCouncillors("New Issue", `"${title}" was raised`, "warning"); setTitle(""); setDescription(""); setOpen(false); }
   };
 
   return (

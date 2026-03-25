@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Calendar, FileText, AlertTriangle, Users,
-  MessageSquare, DollarSign, Vote, LogOut, Menu, X,
+  MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import mengoBadge from "@/assets/mengo-badge.jpg";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import NotificationsBell from "@/components/portal/NotificationsBell";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -31,6 +32,9 @@ const sidebarLinks: NavItem[] = [
   { label: "Requisitions", path: "/portal/requisitions", icon: DollarSign,
     roles: ["patron", "chairperson", "secretary_finance"] },
   { label: "Elections", path: "/portal/elections", icon: Vote,
+    roles: ["patron", "chairperson", "speaker", "electoral_commission"] },
+  { label: "Hierarchy", path: "/portal/hierarchy", icon: Network },
+  { label: "Logs", path: "/portal/logs", icon: Activity,
     roles: ["patron", "chairperson", "speaker", "electoral_commission"] },
 ];
 
@@ -165,6 +169,7 @@ export default function PortalLayout() {
             <h2 className="font-serif text-sm font-semibold text-foreground sm:text-base">Portal</h2>
           </div>
           <div className="flex items-center gap-1">
+            <NotificationsBell />
             <Button variant="ghost" size="sm" className="text-xs h-8" asChild>
               <Link to="/">← Home</Link>
             </Button>

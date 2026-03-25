@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useActivityLog } from "@/hooks/useActivityLog";
+import { notifyAllCouncillors } from "@/hooks/useNotify";
 
 interface Programme {
   id: string;
@@ -21,6 +23,7 @@ interface Programme {
 
 export default function ProgrammesPage() {
   const { user, hasAnyRole } = useAuth();
+  const { log } = useActivityLog();
   const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -57,7 +60,7 @@ export default function ProgrammesPage() {
     setSubmitting(false);
     if (error) toast.error(error.message);
     else {
-      toast.success("Programme added");
+      toast.success("Programme added"); log("added a programme", "programmes", title); notifyAllCouncillors("New Programme", `"${title}" was added`, "info");
       setTitle(""); setDescription(""); setEventDate("");
       setOpen(false);
     }
