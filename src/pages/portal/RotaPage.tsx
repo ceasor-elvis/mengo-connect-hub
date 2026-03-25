@@ -59,7 +59,7 @@ export default function RotaPage() {
         (data || []).map((r) => ({
           id: r.id,
           week: r.week,
-          duties: (Array.isArray(r.duties) ? r.duties : []) as Duty[],
+          duties: (Array.isArray(r.duties) ? r.duties : []) as unknown as Duty[],
           created_by: r.created_by,
         }))
       );
