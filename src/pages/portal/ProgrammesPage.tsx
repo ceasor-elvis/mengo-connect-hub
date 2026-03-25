@@ -23,6 +23,7 @@ interface Programme {
 
 export default function ProgrammesPage() {
   const { user, hasAnyRole } = useAuth();
+  const { log } = useActivityLog();
   const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);

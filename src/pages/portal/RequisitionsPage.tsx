@@ -26,6 +26,7 @@ const statusVariant = (s: string) => s === "approved" ? "default" : s === "rejec
 
 export default function RequisitionsPage() {
   const { user, hasAnyRole } = useAuth();
+  const { log } = useActivityLog();
   const [reqs, setReqs] = useState<Requisition[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);

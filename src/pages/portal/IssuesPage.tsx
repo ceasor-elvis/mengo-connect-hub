@@ -22,6 +22,7 @@ const statusColor = (s: string) => s === "resolved" ? "default" : s === "in_prog
 
 export default function IssuesPage() {
   const { user } = useAuth();
+  const { log } = useActivityLog();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
