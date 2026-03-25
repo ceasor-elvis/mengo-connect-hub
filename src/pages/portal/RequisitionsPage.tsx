@@ -57,7 +57,7 @@ export default function RequisitionsPage() {
     });
     setSubmitting(false);
     if (error) toast.error(error.message);
-    else { toast.success("Request submitted"); setItem(""); setAmount(""); setOpen(false); }
+    else { toast.success("Request submitted"); log("submitted a requisition", "requisitions", item); notifyAllCouncillors("New Requisition", `Requisition for "${item}" submitted`, "info"); setItem(""); setAmount(""); setOpen(false); }
   };
 
   const handleApprove = async (id: string, status: "approved" | "rejected") => {
