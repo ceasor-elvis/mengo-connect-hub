@@ -1,20 +1,57 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
-const DUMMY_ISSUES = [
-  { id: 1, title: "Dormitory maintenance overdue", description: "Block B not cleaned in 2 weeks.", status: "open", raised_by: "Nakato Grace", date: "Mar 20" },
-  { id: 2, title: "Inter-house sports budget", description: "Need funds for next term competition.", status: "in_progress", raised_by: "Mugisha Ronald", date: "Mar 19" },
-  { id: 3, title: "Assembly sound system repair", description: "Microphone and speakers faulty.", status: "resolved", raised_by: "Ssenoga Peter", date: "Mar 15" },
-  { id: 4, title: "Library books shortage", description: "S.4/S.6 lack Physics and Chemistry texts.", status: "open", raised_by: "Kato Emmanuel", date: "Mar 14" },
-  { id: 5, title: "Lunch queue management", description: "Inefficient queue causing late classes.", status: "in_progress", raised_by: "Nambi Irene", date: "Mar 12" },
-  { id: 6, title: "Broken windows S.2 East", description: "3 windows broken during storm.", status: "open", raised_by: "Lwanga David", date: "Mar 10" },
-];
+interface Issue {
+  id: string; title: string; description: string; status: string;
+  raised_by: string; created_at: string;
+}
 
 const statusColor = (s: string) => s === "resolved" ? "default" : s === "in_progress" ? "secondary" : "outline";
 
 export default function IssuesPage() {
+  const { user } = useAuth();
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchIssues = async () => {
+    const { data, error } = await supabase.from("issues").select("*").order("created_at", { ascending: false });
+    if (error) { toast.error("Failed to load issues"); console.error(error); }
+    else setIssues(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchIssues();
+    const ch = supabase.channel("issues-rt").on("postgres_changes", { event: "*", schema: "public", table: "issues" }, () => fetchIssues()).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
+  const handleAdd = async () => {
+    if (!title.trim() || !description.trim()) { toast.error("Title & description required"); return; }
+    if (!user) { toast.error("Login required"); return; }
+    setSubmitting(true);
+    const { error } = await supabase.from("issues").insert({
+      title: title.trim(), description: description.trim(), raised_by: user.id,
+    });
+    setSubmitting(false);
+    if (error) toast.error(error.message);
+    else { toast.success("Issue raised"); setTitle(""); setDescription(""); setOpen(false); }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -22,30 +59,48 @@ export default function IssuesPage() {
           <h1 className="font-serif text-xl font-bold text-foreground sm:text-2xl">Issues at Hand</h1>
           <p className="text-sm text-muted-foreground">Track issues raised by councillors.</p>
         </div>
-        <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Raise Issue</Button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Raise Issue</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle>Raise New Issue</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div><Label>Title *</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Broken lab equipment" /></div>
+              <div><Label>Description *</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Describe the issue..." /></div>
+              <Button onClick={handleAdd} disabled={submitting} className="w-full">{submitting ? "Saving..." : "Raise Issue"}</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="space-y-2">
-        {DUMMY_ISSUES.map((issue) => (
-          <Card key={issue.id}>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-2 min-w-0 flex-1">
-                  <AlertTriangle className={`h-4 w-4 mt-0.5 shrink-0 ${issue.status === "resolved" ? "text-primary" : "text-gold"}`} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{issue.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{issue.description}</p>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      By <span className="font-medium">{issue.raised_by}</span> • {issue.date}
-                    </p>
+      {loading ? (
+        <p className="text-center py-8 text-muted-foreground">Loading...</p>
+      ) : issues.length === 0 ? (
+        <p className="text-center py-8 text-muted-foreground">No issues raised yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {issues.map((issue) => (
+            <Card key={issue.id}>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2 min-w-0 flex-1">
+                    <AlertTriangle className={`h-4 w-4 mt-0.5 shrink-0 ${issue.status === "resolved" ? "text-primary" : "text-gold"}`} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{issue.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{issue.description}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {new Date(issue.created_at).toLocaleDateString("en-UG", { day: "numeric", month: "short" })}
+                      </p>
+                    </div>
                   </div>
+                  <Badge variant={statusColor(issue.status) as any} className="text-[10px] shrink-0">{issue.status.replace("_", " ")}</Badge>
                 </div>
-                <Badge variant={statusColor(issue.status)} className="text-[10px] shrink-0">{issue.status.replace("_", " ")}</Badge>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

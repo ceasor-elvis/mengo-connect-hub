@@ -1,26 +1,70 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DollarSign, Plus, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
-const DUMMY_REQUISITIONS = [
-  { id: 1, item: "PA System Repair", amount: 350000, requested_by: "Ssenoga Peter", status: "approved", date: "Mar 18" },
-  { id: 2, item: "Sports Equipment", amount: 480000, requested_by: "Lwanga David", status: "pending", date: "Mar 19" },
-  { id: 3, item: "First Aid Kit", amount: 120000, requested_by: "Okello Joseph", status: "approved", date: "Mar 15" },
-  { id: 4, item: "Newsletter Printing", amount: 95000, requested_by: "Ssenoga Peter", status: "rejected", date: "Mar 14" },
-  { id: 5, item: "Debate Transport", amount: 250000, requested_by: "Lwanga David", status: "pending", date: "Mar 20" },
-  { id: 6, item: "Women's Day Expenses", amount: 180000, requested_by: "Babirye Esther", status: "approved", date: "Mar 8" },
-];
+interface Requisition {
+  id: string; item: string; amount: number; requested_by: string;
+  status: string; approved_by: string | null; created_at: string;
+}
 
 const statusIcon = (s: string) => {
   if (s === "approved") return <CheckCircle className="mr-1 h-3 w-3" />;
   if (s === "rejected") return <XCircle className="mr-1 h-3 w-3" />;
   return <Clock className="mr-1 h-3 w-3" />;
 };
-
 const statusVariant = (s: string) => s === "approved" ? "default" : s === "rejected" ? "destructive" : "secondary";
 
 export default function RequisitionsPage() {
+  const { user, hasAnyRole } = useAuth();
+  const [reqs, setReqs] = useState<Requisition[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [item, setItem] = useState("");
+  const [amount, setAmount] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const canApprove = hasAnyRole(["secretary_finance", "patron"]);
+
+  const fetchReqs = async () => {
+    const { data, error } = await supabase.from("requisitions").select("*").order("created_at", { ascending: false });
+    if (error) { toast.error("Failed to load"); console.error(error); }
+    else setReqs(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchReqs();
+    const ch = supabase.channel("reqs-rt").on("postgres_changes", { event: "*", schema: "public", table: "requisitions" }, () => fetchReqs()).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
+  const handleAdd = async () => {
+    if (!item.trim() || !amount) { toast.error("Item & amount required"); return; }
+    if (!user) { toast.error("Login required"); return; }
+    setSubmitting(true);
+    const { error } = await supabase.from("requisitions").insert({
+      item: item.trim(), amount: Number(amount), requested_by: user.id,
+    });
+    setSubmitting(false);
+    if (error) toast.error(error.message);
+    else { toast.success("Request submitted"); setItem(""); setAmount(""); setOpen(false); }
+  };
+
+  const handleApprove = async (id: string, status: "approved" | "rejected") => {
+    if (!user) return;
+    const { error } = await supabase.from("requisitions").update({ status, approved_by: user.id }).eq("id", id);
+    if (error) toast.error(error.message);
+    else toast.success(`Request ${status}`);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -28,32 +72,58 @@ export default function RequisitionsPage() {
           <h1 className="font-serif text-xl font-bold text-foreground sm:text-2xl">Requisitions</h1>
           <p className="text-sm text-muted-foreground">Financial requests & approvals.</p>
         </div>
-        <Button size="sm"><Plus className="mr-1 h-4 w-4" /> New Request</Button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm"><Plus className="mr-1 h-4 w-4" /> New Request</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle>New Requisition</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div><Label>Item *</Label><Input value={item} onChange={e => setItem(e.target.value)} placeholder="e.g. Sports Equipment" /></div>
+              <div><Label>Amount (UGX) *</Label><Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="e.g. 250000" /></div>
+              <Button onClick={handleAdd} disabled={submitting} className="w-full">{submitting ? "Saving..." : "Submit Request"}</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="space-y-2">
-        {DUMMY_REQUISITIONS.map((req) => (
-          <Card key={req.id}>
-            <CardContent className="flex items-center justify-between p-3 gap-2">
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/10 shrink-0">
-                  <DollarSign className="h-4 w-4 text-gold" />
+      {loading ? (
+        <p className="text-center py-8 text-muted-foreground">Loading...</p>
+      ) : reqs.length === 0 ? (
+        <p className="text-center py-8 text-muted-foreground">No requisitions yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {reqs.map((req) => (
+            <Card key={req.id}>
+              <CardContent className="flex items-center justify-between p-3 gap-2">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/10 shrink-0">
+                    <DollarSign className="h-4 w-4 text-gold" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-medium truncate">{req.item}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      UGX {req.amount.toLocaleString()} • {new Date(req.created_at).toLocaleDateString("en-UG", { day: "numeric", month: "short" })}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm font-medium truncate">{req.item}</p>
-                  <p className="text-[10px] text-muted-foreground">{req.requested_by} • {req.date}</p>
+                <div className="flex items-center gap-2 shrink-0">
+                  {canApprove && req.status === "pending" ? (
+                    <div className="flex gap-1">
+                      <Button size="sm" className="h-6 text-[10px] px-2" onClick={() => handleApprove(req.id, "approved")}>Approve</Button>
+                      <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => handleApprove(req.id, "rejected")}>Reject</Button>
+                    </div>
+                  ) : (
+                    <Badge variant={statusVariant(req.status) as any} className="text-[10px]">
+                      {statusIcon(req.status)} {req.status}
+                    </Badge>
+                  )}
                 </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <p className="text-xs font-bold hidden sm:block">UGX {req.amount.toLocaleString()}</p>
-                <Badge variant={statusVariant(req.status) as any} className="text-[10px]">
-                  {statusIcon(req.status)} {req.status}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
