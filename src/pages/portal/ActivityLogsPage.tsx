@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Activity, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { formatDistanceToNow } from "date-fns";
 
 interface LogEntry {
@@ -36,28 +36,23 @@ export default function ActivityLogsPage() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("activity_logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(200);
-      
-      if (data && data.length > 0) {
-        const userIds = [...new Set((data as any[]).map((l) => l.user_id))];
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, full_name")
-          .in("user_id", userIds);
+      try {
+        const { data } = await api.get("/activity-logs/", { params: { limit: 200 } });
         
-        const profileMap: Record<string, string> = {};
-        profiles?.forEach((p) => { profileMap[p.user_id] = p.full_name; });
+        // Assuming Django API returns an array, or an object with 'results' array (pagination)
+        const entries = Array.isArray(data) ? data : data.results || [];
         
-        setLogs((data as any[]).map((l) => ({
+        // Normally Django serializers can directly embed profile info (e.g., `user__full_name`)
+        // If not, we map it, but we assume the API provides `profile.full_name` or `full_name` directly
+        setLogs(entries.map((l: any) => ({
           ...l,
-          profile: { full_name: profileMap[l.user_id] || "Unknown" },
+          profile: l.profile || { full_name: l.user_full_name || l.user_id || "Unknown" },
         })));
+      } catch (error) {
+        console.error("Failed to fetch activity logs", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     })();
   }, []);
 

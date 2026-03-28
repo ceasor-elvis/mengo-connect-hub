@@ -7,12 +7,11 @@ import { Lock, LogIn, UserPlus } from "lucide-react";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
-import { Constants } from "@/integrations/supabase/types";
+import { api } from "@/lib/api";
 
-const COUNCILLOR_PREFIX = "MSC"; // Mengo Student Council - common identifier
+const COUNCILLOR_PREFIX = "MSC";
 
 const ROLE_LABELS: Record<string, string> = {
   patron: "Patron",
@@ -31,13 +30,15 @@ const ROLE_LABELS: Record<string, string> = {
   electoral_commission: "Electoral Commission",
 };
 
+const APP_ROLES = Object.keys(ROLE_LABELS);
+
 function makeEmail(studentId: string) {
   return `${COUNCILLOR_PREFIX.toLowerCase()}.${studentId.toLowerCase()}@mengo.council`;
 }
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, setAuthData } = useAuth();
   const [loading, setLoading] = useState(false);
   const [isSignup, setIsSignup] = useState(false);
   const [studentId, setStudentId] = useState("");
@@ -57,14 +58,25 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
-    const email = makeEmail(studentId);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) {
-      toast.error("Invalid Student ID or password");
-    } else {
+    
+    try {
+      const email = makeEmail(studentId);
+      const res = await api.post("/users/login/", { email, password });
+      
+      const { access, refresh, user: userData } = res.data;
+      
+      setAuthData(
+        access, 
+        refresh, 
+        userData || { id: "temp", email }
+      );
+      
       toast.success("Welcome back!");
       navigate("/portal");
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || "Invalid Student ID or password");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -81,52 +93,24 @@ export default function LoginPage() {
 
     setLoading(true);
 
-    // Check if position is already taken
-    const { data: existingRoles } = await supabase
-      .from("user_roles")
-      .select("id")
-      .eq("role", selectedRole as any);
-
-    if (existingRoles && existingRoles.length > 0) {
-      setLoading(false);
-      toast.error(`The position "${ROLE_LABELS[selectedRole]}" is already taken by another councillor.`);
-      return;
-    }
-
-    const email = makeEmail(studentId);
-
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName, student_id: studentId },
-        emailRedirectTo: window.location.origin,
-      },
-    });
-
-    if (error) {
-      setLoading(false);
-      toast.error(error.message);
-      return;
-    }
-
-    // Update profile with student_id and class
-    if (data.user) {
-      await supabase
-        .from("profiles")
-        .update({ student_id: studentId, class: studentClass || null })
-        .eq("user_id", data.user.id);
-
-      // Assign role
-      await supabase.from("user_roles").insert({
-        user_id: data.user.id,
-        role: selectedRole as any,
+    try {
+      const email = makeEmail(studentId);
+      await api.post("/users/register/", {
+        email,
+        password,
+        student_id: studentId,
+        full_name: fullName,
+        student_class: studentClass,
+        role: selectedRole
       });
-    }
 
-    setLoading(false);
-    toast.success("Account created! You can now sign in.");
-    setIsSignup(false);
+      toast.success("Account created! You can now sign in.");
+      setIsSignup(false);
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || "Registration failed. Position might be taken.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -161,7 +145,7 @@ export default function LoginPage() {
                     <SelectValue placeholder="Select your position" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Constants.public.Enums.app_role.map((role) => (
+                    {APP_ROLES.map((role) => (
                       <SelectItem key={role} value={role}>
                         {ROLE_LABELS[role] || role}
                       </SelectItem>

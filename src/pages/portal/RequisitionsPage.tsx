@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useActivityLog } from "@/hooks/useActivityLog";
 import { notifyAllCouncillors } from "@/hooks/useNotify";
@@ -37,35 +37,53 @@ export default function RequisitionsPage() {
   const canApprove = hasAnyRole(["secretary_finance", "patron"]);
 
   const fetchReqs = async () => {
-    const { data, error } = await supabase.from("requisitions").select("*").order("created_at", { ascending: false });
-    if (error) { toast.error("Failed to load"); console.error(error); }
-    else setReqs(data || []);
-    setLoading(false);
+    try {
+      const { data } = await api.get("/requisitions/");
+      setReqs(Array.isArray(data) ? data : data.results || []);
+    } catch (error) {
+      toast.error("Failed to load");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchReqs();
-    const ch = supabase.channel("reqs-rt").on("postgres_changes", { event: "*", schema: "public", table: "requisitions" }, () => fetchReqs()).subscribe();
-    return () => { supabase.removeChannel(ch); };
   }, []);
 
   const handleAdd = async () => {
     if (!item.trim() || !amount) { toast.error("Item & amount required"); return; }
     if (!user) { toast.error("Login required"); return; }
     setSubmitting(true);
-    const { error } = await supabase.from("requisitions").insert({
-      item: item.trim(), amount: Number(amount), requested_by: user.id,
-    });
-    setSubmitting(false);
-    if (error) toast.error(error.message);
-    else { toast.success("Request submitted"); log("submitted a requisition", "requisitions", item); notifyAllCouncillors("New Requisition", `Requisition for "${item}" submitted`, "info"); setItem(""); setAmount(""); setOpen(false); }
+    try {
+      await api.post("/requisitions/", {
+        item: item.trim(),
+        amount: Number(amount),
+        requested_by: user.id
+      });
+      toast.success("Request submitted");
+      log("submitted a requisition", "requisitions", item);
+      notifyAllCouncillors("New Requisition", `Requisition for "${item}" submitted`, "info");
+      setItem(""); setAmount(""); setOpen(false);
+      fetchReqs();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Error submitting request");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleApprove = async (id: string, status: "approved" | "rejected") => {
     if (!user) return;
-    const { error } = await supabase.from("requisitions").update({ status, approved_by: user.id }).eq("id", id);
-    if (error) toast.error(error.message);
-    else { toast.success(`Request ${status}`); log(`${status} a requisition`, "requisitions"); }
+    try {
+      await api.patch(`/requisitions/${id}/`, { status, approved_by: user.id });
+      toast.success(`Request ${status}`);
+      log(`${status} a requisition`, "requisitions");
+      fetchReqs();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Error updating status");
+    }
   };
 
   return (
@@ -112,10 +130,10 @@ export default function RequisitionsPage() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {canApprove && req.status === "pending" ? (
-                    <div className="flex gap-1">
-                      <Button size="sm" className="h-6 text-[10px] px-2" onClick={() => handleApprove(req.id, "approved")}>Approve</Button>
-                      <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => handleApprove(req.id, "rejected")}>Reject</Button>
-                    </div>
+                     <div className="flex gap-1">
+                       <Button size="sm" className="h-6 text-[10px] px-2" onClick={() => handleApprove(req.id, "approved")}>Approve</Button>
+                       <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => handleApprove(req.id, "rejected")}>Reject</Button>
+                     </div>
                   ) : (
                     <Badge variant={statusVariant(req.status) as any} className="text-[10px]">
                       {statusIcon(req.status)} {req.status}

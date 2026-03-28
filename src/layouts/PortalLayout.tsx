@@ -8,11 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import { api } from "@/lib/api";
 import NotificationsBell from "@/components/portal/NotificationsBell";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+type AppRole = string;
 
 interface NavItem {
   label: string;
@@ -38,7 +37,7 @@ const sidebarLinks: NavItem[] = [
     roles: ["patron", "chairperson", "speaker", "electoral_commission"] },
 ];
 
-const ROLE_LABELS: Record<AppRole, string> = {
+const ROLE_LABELS: Record<string, string> = {
   patron: "Patron", chairperson: "Chairperson", vice_chairperson: "Vice Chairperson",
   speaker: "Speaker", deputy_speaker: "Deputy Speaker", general_secretary: "General Secretary",
   assistant_general_secretary: "Asst. Gen. Secretary", secretary_finance: "Secretary Finance",
@@ -61,9 +60,11 @@ export default function PortalLayout() {
   // Check if user has EC access grant
   useEffect(() => {
     if (!user) return;
-    (supabase as any).from("ec_access_grants").select("id").eq("granted_to", user.id).then(({ data }: any) => {
-      if (data && data.length > 0) setEcGranted(true);
-    });
+    api.get("/ec-access-grants/", { params: { granted_to: user.id } }).then(({ data }) => {
+      const grants = Array.isArray(data) ? data : data.results || [];
+      // either the API filters by `granted_to` or we verify locally just in case
+      if (grants.some((g: any) => g.granted_to === user.id)) setEcGranted(true);
+    }).catch(console.error);
   }, [user]);
 
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);

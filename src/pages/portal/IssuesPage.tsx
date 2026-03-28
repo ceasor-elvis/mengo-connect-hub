@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useActivityLog } from "@/hooks/useActivityLog";
 import { notifyAllCouncillors } from "@/hooks/useNotify";
@@ -31,28 +31,44 @@ export default function IssuesPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const fetchIssues = async () => {
-    const { data, error } = await supabase.from("issues").select("*").order("created_at", { ascending: false });
-    if (error) { toast.error("Failed to load issues"); console.error(error); }
-    else setIssues(data || []);
-    setLoading(false);
+    try {
+      const { data } = await api.get("/issues/");
+      setIssues(Array.isArray(data) ? data : data.results || []);
+    } catch (error) {
+      toast.error("Failed to load issues");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchIssues();
-    const ch = supabase.channel("issues-rt").on("postgres_changes", { event: "*", schema: "public", table: "issues" }, () => fetchIssues()).subscribe();
-    return () => { supabase.removeChannel(ch); };
+    // In absence of websockets, we could poll, but let's just fetch once on mount for now
   }, []);
 
   const handleAdd = async () => {
     if (!title.trim() || !description.trim()) { toast.error("Title & description required"); return; }
     if (!user) { toast.error("Login required"); return; }
     setSubmitting(true);
-    const { error } = await supabase.from("issues").insert({
-      title: title.trim(), description: description.trim(), raised_by: user.id,
-    });
-    setSubmitting(false);
-    if (error) toast.error(error.message);
-    else { toast.success("Issue raised"); log("raised an issue", "issues", title); notifyAllCouncillors("New Issue", `"${title}" was raised`, "warning"); setTitle(""); setDescription(""); setOpen(false); }
+    try {
+      await api.post("/issues/", {
+        title: title.trim(),
+        description: description.trim(),
+        raised_by: user.id,
+      });
+      toast.success("Issue raised"); 
+      log("raised an issue", "issues", title); 
+      notifyAllCouncillors("New Issue", `"${title}" was raised`, "warning"); 
+      setTitle(""); 
+      setDescription(""); 
+      setOpen(false);
+      fetchIssues();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Error raising issue");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

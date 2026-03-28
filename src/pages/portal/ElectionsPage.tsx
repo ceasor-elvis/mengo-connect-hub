@@ -6,11 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
-import { Vote, UserCheck, UserX, Settings2, Download, Plus, Users, ShieldCheck } from "lucide-react";
+import { Vote, UserCheck, Settings2, Download, Plus, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import jsPDF from "jspdf";
 
 interface Applicant {
@@ -23,17 +22,8 @@ interface Applicant {
   status: string;
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  patron: "Patron", chairperson: "Chairperson", vice_chairperson: "Vice Chairperson",
-  speaker: "Speaker", deputy_speaker: "Deputy Speaker", general_secretary: "General Secretary",
-  assistant_general_secretary: "Asst. Gen. Secretary", secretary_finance: "Secretary Finance",
-  secretary_welfare: "Secretary Welfare", secretary_health: "Secretary Health",
-  secretary_women_affairs: "Secretary Women Affairs", secretary_publicity: "Secretary Publicity",
-  secretary_pwd: "Secretary PWD", electoral_commission: "Electoral Commission",
-};
-
 export default function ElectionsPage() {
-  const { user, roles, hasAnyRole } = useAuth();
+  const { user, hasAnyRole } = useAuth();
   const isTopHead = hasAnyRole(["patron", "chairperson", "speaker", "electoral_commission"]);
 
   const [minAverage, setMinAverage] = useState(70);
@@ -56,19 +46,26 @@ export default function ElectionsPage() {
   const [grantUserId, setGrantUserId] = useState("");
 
   const fetchApplicants = async () => {
-    const { data } = await supabase.from("applications").select("*").order("created_at", { ascending: false });
-    setApplicants(data || []);
-    setLoading(false);
+    try {
+      const { data } = await api.get("/applications/");
+      const entries = Array.isArray(data) ? data : data.results || [];
+      setApplicants(entries);
+    } catch(e) { console.error("Failed to load applicants", e); }
+    finally { setLoading(false); }
   };
 
   const fetchGrants = async () => {
-    const { data } = await (supabase as any).from("ec_access_grants").select("*");
-    setGrants(data || []);
+    try {
+      const { data } = await api.get("/ec-access-grants/");
+      setGrants(Array.isArray(data) ? data : data.results || []);
+    } catch(e) { console.error(e); }
   };
 
   const fetchProfiles = async () => {
-    const { data } = await supabase.from("profiles").select("id, user_id, full_name");
-    setAllProfiles(data || []);
+    try {
+      const { data } = await api.get("/users/all-profiles/");
+      setAllProfiles(Array.isArray(data) ? data : data.results || []);
+    } catch(e) { console.error(e); }
   };
 
   useEffect(() => {
@@ -83,53 +80,66 @@ export default function ElectionsPage() {
     if (!newName || !newClass || !newGender || !newAverage) {
       toast.error("Fill all required fields"); return;
     }
-    const { error } = await supabase.from("applications").insert({
-      applicant_name: newName,
-      class: newClass,
-      stream: newStream || null,
-      gender: newGender,
-      average_score: Number(newAverage),
-      status: "pending",
-    } as any);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Candidate added!");
-    setAddOpen(false);
-    setNewName(""); setNewClass(""); setNewStream(""); setNewGender("male"); setNewAverage("");
-    fetchApplicants();
+    try {
+      await api.post("/applications/", {
+        applicant_name: newName,
+        applicant_class: newClass, // Using _class keyword workaround
+        stream: newStream || null,
+        gender: newGender,
+        average_score: Number(newAverage),
+        status: "pending",
+      });
+      toast.success("Candidate added!");
+      setAddOpen(false);
+      setNewName(""); setNewClass(""); setNewStream(""); setNewGender("male"); setNewAverage("");
+      fetchApplicants();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Failed to add candidate");
+    }
   };
 
   const handleAutoScreen = async () => {
-    const updates = applicants.map(a => ({
-      ...a,
-      status: a.average_score >= minAverage ? "qualified" : "disqualified",
-    }));
-    for (const a of updates) {
-      await supabase.from("applications").update({ status: a.status }).eq("id", a.id);
+    try {
+      await api.post("/applications/auto-screen/", { min_average: minAverage });
+      toast.success(`Screened at ${minAverage}% minimum`);
+      fetchApplicants();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Failed to autoscreen");
     }
-    toast.success(`Screened at ${minAverage}% minimum`);
-    fetchApplicants();
   };
 
   const toggleStatus = async (id: string, current: string) => {
     const next = current === "qualified" ? "disqualified" : "qualified";
-    await supabase.from("applications").update({ status: next }).eq("id", id);
-    fetchApplicants();
+    try {
+      await api.patch(`/applications/${id}/`, { status: next });
+      fetchApplicants();
+    } catch (e) {
+      toast.error("Failed to update status");
+    }
   };
 
   const grantAccess = async () => {
     if (!grantUserId || !user) return;
-    const { error } = await (supabase as any).from("ec_access_grants").insert({
-      granted_to: grantUserId,
-      granted_by: user.id,
-    } as any);
-    if (error) toast.error(error.message);
-    else { toast.success("Access granted!"); fetchGrants(); setGrantUserId(""); }
+    try {
+      await api.post("/ec-access-grants/", {
+        granted_to: grantUserId,
+      });
+      toast.success("Access granted!"); 
+      fetchGrants(); 
+      setGrantUserId("");
+    } catch(e: any) {
+      toast.error(e.response?.data?.detail || "Error granting access");
+    }
   };
 
   const revokeAccess = async (id: string) => {
-    await (supabase as any).from("ec_access_grants").delete().eq("id", id);
-    toast.success("Access revoked");
-    fetchGrants();
+    try {
+      await api.delete(`/ec-access-grants/${id}/`);
+      toast.success("Access revoked");
+      fetchGrants();
+    } catch (e) {
+      toast.error("Error revoking access");
+    }
   };
 
   const generateBallotPDF = () => {
@@ -183,8 +193,8 @@ export default function ElectionsPage() {
         doc.setTextColor(0); doc.text(`${idx + 1}.`, m + 4, cy + 7);
         doc.setFont("helvetica", "bold"); doc.text(c.applicant_name.toUpperCase(), m + 18, cy + 7);
         doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(100);
-        doc.text(c.class, m + 90, cy + 7);
-        doc.text((c as any).stream || "", m + 120, cy + 7);
+        doc.text(c.class || '', m + 90, cy + 7);
+        doc.text(c.stream || "", m + 120, cy + 7);
         doc.setTextColor(0); doc.setFontSize(10);
         doc.setDrawColor(128, 0, 32); doc.setLineWidth(0.5);
         doc.rect(pageW - m - 14, cy + 2, 7, 7); cy += 10;

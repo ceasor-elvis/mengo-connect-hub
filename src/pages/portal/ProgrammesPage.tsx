@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useActivityLog } from "@/hooks/useActivityLog";
 import { notifyAllCouncillors } from "@/hooks/useNotify";
@@ -35,34 +35,43 @@ export default function ProgrammesPage() {
   const canAdd = hasAnyRole(["general_secretary", "secretary_publicity"]);
 
   const fetchProgrammes = async () => {
-    const { data, error } = await supabase.from("programmes").select("*").order("event_date", { ascending: true });
-    if (error) { toast.error("Failed to load programmes"); console.error(error); }
-    else setProgrammes(data || []);
-    setLoading(false);
+    try {
+      const { data } = await api.get("/programmes/");
+      setProgrammes(Array.isArray(data) ? data : data.results || []);
+    } catch (error) {
+      toast.error("Failed to load programmes");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchProgrammes();
-    const ch = supabase.channel("prog-rt").on("postgres_changes", { event: "*", schema: "public", table: "programmes" }, () => fetchProgrammes()).subscribe();
-    return () => { supabase.removeChannel(ch); };
   }, []);
 
   const handleAdd = async () => {
     if (!title.trim()) { toast.error("Title is required"); return; }
     if (!user) { toast.error("Login required"); return; }
     setSubmitting(true);
-    const { error } = await supabase.from("programmes").insert({
-      title: title.trim(),
-      description: description.trim() || null,
-      event_date: eventDate || null,
-      created_by: user.id,
-    });
-    setSubmitting(false);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Programme added"); log("added a programme", "programmes", title); notifyAllCouncillors("New Programme", `"${title}" was added`, "info");
+    
+    try {
+      await api.post("/programmes/", {
+        title: title.trim(),
+        description: description.trim() || null,
+        event_date: eventDate || null,
+        created_by: user.id,
+      });
+      toast.success("Programme added"); 
+      log("added a programme", "programmes", title); 
+      notifyAllCouncillors("New Programme", `"${title}" was added`, "info");
       setTitle(""); setDescription(""); setEventDate("");
       setOpen(false);
+      fetchProgrammes();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Failed to add programme");
+    } finally {
+      setSubmitting(false);
     }
   };
 

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Users, Plus, Pencil, Trash2, Save } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -48,23 +48,22 @@ export default function RotaPage() {
   const [editDuties, setEditDuties] = useState<Duty[]>([]);
 
   const fetchRotas = async () => {
-    const { data, error } = await supabase
-      .from("rotas")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) {
-      console.error(error);
-    } else {
+    try {
+      const { data } = await api.get("/rotas/");
+      const entries = Array.isArray(data) ? data : data.results || [];
       setRotas(
-        (data || []).map((r) => ({
+        entries.map((r: any) => ({
           id: r.id,
           week: r.week,
           duties: (Array.isArray(r.duties) ? r.duties : []) as unknown as Duty[],
           created_by: r.created_by,
         }))
       );
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -90,17 +89,20 @@ export default function RotaPage() {
     const validDuties = newDuties.filter((d) => d.task.trim() && d.assigned.trim());
     if (!validDuties.length) return toast.error("Add at least one duty");
 
-    const { error } = await supabase.from("rotas").insert({
-      week: newWeek.trim(),
-      duties: validDuties as any,
-      created_by: user!.id,
-    });
-    if (error) return toast.error(error.message);
-    toast.success("Rota created");
-    setShowAdd(false);
-    setNewWeek("");
-    setNewDuties([{ day: "Mon", task: "", assigned: "" }]);
-    fetchRotas();
+    try {
+      await api.post("/rotas/", {
+        week: newWeek.trim(),
+        duties: validDuties,
+        created_by: user!.id,
+      });
+      toast.success("Rota created");
+      setShowAdd(false);
+      setNewWeek("");
+      setNewDuties([{ day: "Mon", task: "", assigned: "" }]);
+      fetchRotas();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Error creating rota");
+    }
   };
 
   const startEdit = (rota: RotaRow) => {
@@ -112,22 +114,28 @@ export default function RotaPage() {
   const handleSaveEdit = async () => {
     if (!editingId) return;
     const validDuties = editDuties.filter((d) => d.task.trim() && d.assigned.trim());
-    const { error } = await supabase
-      .from("rotas")
-      .update({ week: editWeek.trim(), duties: validDuties as any })
-      .eq("id", editingId);
-    if (error) return toast.error(error.message);
-    toast.success("Rota updated");
-    setEditingId(null);
-    fetchRotas();
+    try {
+      await api.patch(`/rotas/${editingId}/`, {
+        week: editWeek.trim(), 
+        duties: validDuties 
+      });
+      toast.success("Rota updated");
+      setEditingId(null);
+      fetchRotas();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Error updating rota");
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this rota?")) return;
-    const { error } = await supabase.from("rotas").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Rota deleted");
-    fetchRotas();
+    try {
+      await api.delete(`/rotas/${id}/`);
+      toast.success("Rota deleted");
+      fetchRotas();
+    } catch (e) {
+      toast.error("Error deleting rota");
+    }
   };
 
   const DutyEditor = ({ duties, setDuties }: { duties: Duty[]; setDuties: (d: Duty[]) => void }) => (

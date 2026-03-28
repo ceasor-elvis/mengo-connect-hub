@@ -6,9 +6,8 @@ import {
   Megaphone, Accessibility, Users, Vote, Gavel, UserCheck,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+type AppRole = string;
 
 interface RoleInfo { title: string; icon: any; color: string; responsibilities: string[]; }
 

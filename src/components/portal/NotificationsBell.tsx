@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 
@@ -26,29 +26,29 @@ export default function NotificationsBell() {
 
   const fetchNotifications = async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(20);
-    if (data) setNotifications(data as Notification[]);
+    try {
+      const { data } = await api.get("/notifications/", { params: { limit: 20 } });
+      if (data) setNotifications(data);
+    } catch (e) {
+      console.error("Failed to load notifications", e);
+    }
   };
 
   useEffect(() => {
     fetchNotifications();
-    if (!user) return;
-    const channel = supabase
-      .channel("notifications-" + user.id)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => fetchNotifications())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    // Using polling as a fallback for real-time until websockets are configured in Django
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
   }, [user]);
 
   const markAllRead = async () => {
     if (!user) return;
-    await supabase.from("notifications").update({ read: true } as any).eq("user_id", user.id).eq("read", false);
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    try {
+      await api.post("/notifications/mark-all-read/");
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch (e) {
+      console.error("Failed to mark notifications as read", e);
+    }
   };
 
   const typeColors: Record<string, string> = {

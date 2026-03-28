@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -110,7 +110,12 @@
     font-family: 'Inter', system-ui, sans-serif;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Playfair Display', serif;
   }
 }
@@ -119,15 +124,19 @@
   .bg-hero-gradient {
     background: var(--hero-gradient);
   }
+
   .bg-gold-gradient {
     background: var(--gold-gradient);
   }
+
   .text-gold {
     color: hsl(var(--gold));
   }
+
   .bg-gold {
     background-color: hsl(var(--gold));
   }
+
   .border-gold {
     border-color: hsl(var(--gold));
   }

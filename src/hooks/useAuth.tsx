@@ -1,16 +1,26 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { User, Session } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import { api } from "@/lib/api";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+type AppRole = string;
 
-interface Profile {
+export interface User {
+  id: string;
+  email?: string;
+}
+
+export interface Session {
+  access_token: string;
+  refresh_token: string;
+  user: User;
+}
+
+export interface Profile {
   id: string;
   user_id: string;
   full_name: string;
   profile_pic_url: string | null;
   class: string | null;
+  student_id?: string | null;
 }
 
 interface AuthContextType {
@@ -22,6 +32,7 @@ interface AuthContextType {
   hasRole: (role: AppRole) => boolean;
   hasAnyRole: (roles: AppRole[]) => boolean;
   signOut: () => Promise<void>;
+  setAuthData: (access: string, refresh: string, user: User, profileData?: Profile, rolesData?: string[]) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -33,6 +44,7 @@ const AuthContext = createContext<AuthContextType>({
   hasRole: () => false,
   hasAnyRole: () => false,
   signOut: async () => {},
+  setAuthData: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -42,46 +54,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserData = async (userId: string) => {
-    const [profileRes, rolesRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
-      supabase.from("user_roles").select("role").eq("user_id", userId),
-    ]);
-    if (profileRes.data) setProfile(profileRes.data);
-    if (rolesRes.data) setRoles(rolesRes.data.map((r) => r.role));
+  const fetchUserData = async () => {
+    try {
+      // Fallback format for Django
+      const [profileRes, rolesRes] = await Promise.all([
+        api.get("/users/me/profile/").catch(() => ({ data: null })),
+        api.get("/users/me/roles/").catch(() => ({ data: [] }))
+      ]);
+      
+      if (profileRes.data) setProfile(profileRes.data);
+      if (rolesRes.data) {
+        const r = Array.isArray(rolesRes.data) ? rolesRes.data : rolesRes.data.roles || [];
+        setRoles(r.map((roleObj: any) => roleObj.role || roleObj));
+      }
+    } catch (e) {
+      console.error("Failed to fetch user data:", e);
+    }
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          // Defer data fetch to avoid Supabase deadlock
-          setTimeout(() => fetchUserData(session.user.id), 0);
-        } else {
-          setProfile(null);
-          setRoles([]);
+    const initAuth = async () => {
+      const accessToken = localStorage.getItem("access_token");
+      const refreshToken = localStorage.getItem("refresh_token");
+      const storedUser = localStorage.getItem("user");
+
+      if (accessToken && refreshToken && storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setSession({ access_token: accessToken, refresh_token: refreshToken, user: parsedUser });
+          setUser(parsedUser);
+          await fetchUserData();
+        } catch (e) {
+          // Parse fail
         }
-        setLoading(false);
       }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) fetchUserData(session.user.id);
       setLoading(false);
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    initAuth();
   }, []);
 
   const hasRole = (role: AppRole) => roles.includes(role);
   const hasAnyRole = (r: AppRole[]) => r.some((role) => roles.includes(role));
 
+  const setAuthData = (access: string, refresh: string, u: User, p?: Profile, r?: string[]) => {
+    localStorage.setItem("access_token", access);
+    localStorage.setItem("refresh_token", refresh);
+    localStorage.setItem("user", JSON.stringify(u));
+    setSession({ access_token: access, refresh_token: refresh, user: u });
+    setUser(u);
+    if (p) setProfile(p);
+    if (r) setRoles(r);
+    else fetchUserData();
+  };
+
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+       const refresh = localStorage.getItem("refresh_token");
+       if (refresh) await api.post("/users/logout/", { refresh });
+    } catch (e) {}
+
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user");
     setUser(null);
     setSession(null);
     setProfile(null);
@@ -89,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, roles, loading, hasRole, hasAnyRole, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, roles, loading, hasRole, hasAnyRole, signOut, setAuthData }}>
       {children}
     </AuthContext.Provider>
   );

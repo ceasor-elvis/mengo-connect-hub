@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageSquare, CheckCircle, Clock, Search, XCircle, ExternalLink } from "lucide-react";
+import { CheckCircle, Search, XCircle, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Voice {
   id: string; title: string; category: string; description: string; status: string;
@@ -17,30 +18,42 @@ interface Voice {
 const statusVariant = (s: string) => s === "approved" ? "default" : s === "rejected" ? "destructive" : "secondary";
 
 export default function StudentVoicesPage() {
+  const { user } = useAuth();
   const [voices, setVoices] = useState<Voice[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [commentMap, setCommentMap] = useState<Record<string, string>>({});
 
   const fetchVoices = async () => {
-    const { data, error } = await supabase.from("student_voices").select("*").order("created_at", { ascending: false });
-    if (error) { toast.error("Failed to load"); console.error(error); }
-    else setVoices(data || []);
-    setLoading(false);
+    try {
+      const { data } = await api.get("/student-voices/");
+      setVoices(Array.isArray(data) ? data : data.results || []);
+    } catch (error) {
+      toast.error("Failed to load");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchVoices();
-    const channel = supabase.channel("sv-rt").on("postgres_changes", { event: "*", schema: "public", table: "student_voices" }, () => fetchVoices()).subscribe();
-    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const handleEvaluate = async (id: string, status: "approved" | "rejected") => {
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Login required"); return; }
-    const { error } = await supabase.from("student_voices").update({ status, evaluated_by: user.id, comments: commentMap[id] || null }).eq("id", id);
-    if (error) toast.error(error.message);
-    else { toast.success(`Submission ${status}`); setCommentMap(p => { const n = { ...p }; delete n[id]; return n; }); }
+    try {
+      await api.patch(`/student-voices/${id}/`, {
+        status, 
+        evaluated_by: user.id, 
+        comments: commentMap[id] || null 
+      });
+      toast.success(`Submission ${status}`); 
+      setCommentMap(p => { const n = { ...p }; delete n[id]; return n; });
+      fetchVoices();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Error evaluating submission");
+    }
   };
 
   const filtered = voices.filter(v =>

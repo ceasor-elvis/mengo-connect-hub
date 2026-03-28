@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageSquare, Send, CheckCircle, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 export default function StudentVoicePage() {
   const [submitted, setSubmitted] = useState(false);
@@ -29,38 +29,27 @@ export default function StudentVoicePage() {
     setLoading(true);
 
     try {
-      let file_url: string | null = null;
-
-      // Upload file if provided
+      const formData = new FormData();
+      formData.append("title", form.title);
+      formData.append("description", form.description);
+      formData.append("category", form.category);
+      if (form.studentName) formData.append("submitted_by", form.studentName);
+      if (form.studentClass) formData.append("submitted_class", form.studentClass);
+      
       if (file) {
-        const ext = file.name.split(".").pop();
-        const filePath = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: uploadErr } = await supabase.storage
-          .from("student-voice-files")
-          .upload(filePath, file);
-        if (uploadErr) throw uploadErr;
-
-        const { data: urlData } = supabase.storage
-          .from("student-voice-files")
-          .getPublicUrl(filePath);
-        file_url = urlData.publicUrl;
+        formData.append("file", file);
       }
 
-      const { error } = await supabase.from("student_voices").insert({
-        title: form.title,
-        description: form.description,
-        category: form.category,
-        submitted_by: form.studentName || null,
-        submitted_class: form.studentClass || null,
-        file_url,
+      await api.post("/student-voices/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
-
-      if (error) throw error;
 
       setSubmitted(true);
       toast.success("Your submission has been received!");
     } catch (err: any) {
-      toast.error(err.message || "Failed to submit. Please try again.");
+      toast.error(err.response?.data?.detail || "Failed to submit. Please try again.");
     } finally {
       setLoading(false);
     }

@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { Shield, UserCheck, Gavel, FileText, DollarSign, Heart, Stethoscope, Users, Megaphone, Accessibility, Vote } from "lucide-react";
-import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+type AppRole = string;
 
 interface RoleNode {
   role: AppRole;
@@ -59,11 +58,12 @@ function NodeCard({ node, roleMap, profileMap }: { node: RoleNode; roleMap: Role
 
 function TreeBranch({ role, roleMap, profileMap }: { role: AppRole; roleMap: RoleMap; profileMap: ProfileMap }) {
   const node = findNode(role);
-  const children = node.children;
+  // Default to empty array if node isn't found just in case.
+  const children = node?.children || [];
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <NodeCard node={node} roleMap={roleMap} profileMap={profileMap} />
+      {node && <NodeCard node={node} roleMap={roleMap} profileMap={profileMap} />}
       {children.length > 0 && (
         <>
           <div className="w-px h-3 bg-border" />
@@ -93,19 +93,24 @@ export default function HierarchyTree() {
 
   useEffect(() => {
     (async () => {
-      const [rolesRes, profilesRes] = await Promise.all([
-        supabase.from("user_roles").select("user_id, role"),
-        supabase.from("profiles").select("user_id, full_name, profile_pic_url"),
-      ]);
-      if (rolesRes.data) {
-        const rm: RoleMap = {};
-        rolesRes.data.forEach((r) => { rm[r.role] = r.user_id; });
-        setRoleMap(rm);
-      }
-      if (profilesRes.data) {
-        const pm: ProfileMap = {};
-        profilesRes.data.forEach((p) => { pm[p.user_id] = { full_name: p.full_name, profile_pic_url: p.profile_pic_url }; });
-        setProfileMap(pm);
+      try {
+        const [rolesRes, profilesRes] = await Promise.all([
+          api.get("/users/all-roles/"),
+          api.get("/users/all-profiles/"),
+        ]);
+        
+        if (rolesRes.data) {
+          const rm: RoleMap = {};
+          rolesRes.data.forEach((r: any) => { rm[r.role] = r.user_id; });
+          setRoleMap(rm);
+        }
+        if (profilesRes.data) {
+          const pm: ProfileMap = {};
+          profilesRes.data.forEach((p: any) => { pm[p.user_id] = { full_name: p.full_name, profile_pic_url: p.profile_pic_url }; });
+          setProfileMap(pm);
+        }
+      } catch (e) {
+        console.error("Failed to fetch hierarchy data", e);
       }
     })();
   }, []);
