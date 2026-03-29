@@ -21,6 +21,7 @@ interface Voice {
   submitted_by: string | null; submitted_class: string | null;
   file: string | null; file_url: string | null;
   comments: string | null; created_at: string; rejected_at: string | null;
+  evaluated_by_name: string | null; evaluated_by_office: string | null;
 }
 
 type StatusFilter = "All" | "Pending" | "Approved" | "Rejected";
@@ -302,7 +303,20 @@ export default function StudentVoicesPage() {
 
                   {selected.comments && (
                     <div className="rounded-md bg-muted px-3 py-2.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Council Comment</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                        Council Comment
+                        {selected.evaluated_by_office && (
+                          <span className="ml-1 normal-case font-normal">
+                            — from{" "}
+                            <span className="font-semibold text-foreground">
+                              {selected.evaluated_by_office
+                                .split("_")
+                                .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                                .join(" ")}
+                            </span>
+                          </span>
+                        )}
+                      </p>
                       <p className="text-xs italic">{selected.comments}</p>
                     </div>
                   )}

@@ -1,15 +1,43 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertTriangle, Calendar, FileText, MessageSquare, DollarSign,
   TrendingUp, CheckCircle, Clock, Shield, Heart, Stethoscope,
-  Megaphone, Accessibility, Users, Vote, Gavel, UserCheck,
+  Megaphone, Accessibility, Users, Vote, Gavel, UserCheck, type LucideIcon
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/lib/api";
 
 type AppRole = string;
 
-interface RoleInfo { title: string; icon: any; color: string; responsibilities: string[]; }
+interface RoleInfo { title: string; icon: LucideIcon; color: string; responsibilities: string[]; }
+
+interface DashboardStats {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  color: string;
+  change: string;
+}
+
+interface RecentVoice {
+  title: string;
+  category: string;
+  status: string;
+  date: string;
+}
+
+interface RecentIssue {
+  title: string;
+  status: string;
+  raised: string;
+}
+
+interface FinanceItem {
+  v: string;
+  l: string;
+}
 
 const ROLE_INFO: Record<AppRole, RoleInfo> = {
   patron: { title: "Patron", icon: Shield, color: "text-gold", responsibilities: ["Overall oversight and guidance", "Approve requisitions", "Mentor council leadership", "Liaise with administration"] },
@@ -28,25 +56,6 @@ const ROLE_INFO: Record<AppRole, RoleInfo> = {
   electoral_commission: { title: "Electoral Commission", icon: Vote, color: "text-gold", responsibilities: ["Organize elections", "Screen candidates", "Generate ballots", "Announce results"] },
 };
 
-const stats = [
-  { label: "Voices", value: "23", icon: MessageSquare, color: "text-primary", change: "+5" },
-  { label: "Issues", value: "7", icon: AlertTriangle, color: "text-gold", change: "3 done" },
-  { label: "Events", value: "12", icon: Calendar, color: "text-primary", change: "2 next" },
-  { label: "Docs", value: "45", icon: FileText, color: "text-gold", change: "8 new" },
-];
-
-const recentVoices = [
-  { title: "Library Opening Hours", category: "Ideas", status: "pending", date: "Mar 20" },
-  { title: "Broken Desks in S.3 East", category: "Complaints", status: "approved", date: "Mar 19" },
-  { title: "Science Fair Proposal", category: "Projects", status: "pending", date: "Mar 18" },
-];
-
-const recentIssues = [
-  { title: "Dormitory maintenance", status: "open", raised: "Nakato Grace" },
-  { title: "Sports budget", status: "in_progress", raised: "Mugisha Ronald" },
-  { title: "Sound system repair", status: "resolved", raised: "Ssenoga Peter" },
-];
-
 export default function DashboardPage() {
   const { profile, roles, hasAnyRole } = useAuth();
   const primaryRole = roles[0];
@@ -54,6 +63,55 @@ export default function DashboardPage() {
   const showFinance = hasAnyRole(["patron", "chairperson", "secretary_finance"]);
   const showVoices = hasAnyRole(["patron", "chairperson", "general_secretary", "assistant_general_secretary"]) || roles.length === 0;
   const showAllProgress = hasAnyRole(["patron", "chairperson"]) || roles.length === 0;
+
+  const [dashboardData, setDashboardData] = useState<{
+    stats: DashboardStats[];
+    recentVoices: RecentVoice[];
+    recentIssues: RecentIssue[];
+    finance: FinanceItem[];
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const response = await api.get('/dashboard/stats/');
+        const data = response.data;
+        
+        const mappedStats = [
+          { label: "Voices", value: data.stats.voices.toString(), icon: MessageSquare, color: "text-primary", change: "Total" },
+          { label: "Issues", value: data.stats.issues.toString(), icon: AlertTriangle, color: "text-gold", change: "Recorded" },
+          { label: "Events", value: data.stats.events.toString(), icon: Calendar, color: "text-primary", change: "Scheduled" },
+          { label: "Docs", value: data.stats.docs.toString(), icon: FileText, color: "text-gold", change: "Uploaded" },
+        ];
+        
+        setDashboardData({
+          stats: mappedStats,
+          recentVoices: data.recentVoices,
+          recentIssues: data.recentIssues,
+          finance: data.finance
+        });
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      }
+    };
+    
+    fetchDashboardData();
+  }, []);
+
+  const stats = dashboardData?.stats || [
+    { label: "Voices", value: "...", icon: MessageSquare, color: "text-primary", change: "..." },
+    { label: "Issues", value: "...", icon: AlertTriangle, color: "text-gold", change: "..." },
+    { label: "Events", value: "...", icon: Calendar, color: "text-primary", change: "..." },
+    { label: "Docs", value: "...", icon: FileText, color: "text-gold", change: "..." },
+  ];
+  
+  const recentVoices = dashboardData?.recentVoices || [];
+  const recentIssues = dashboardData?.recentIssues || [];
+  const financeData = dashboardData?.finance || [
+    { v: "...", l: "Budget" },
+    { v: "...", l: "Spent" },
+    { v: "...", l: "Left" },
+  ];
 
   return (
     <div className="space-y-4">
@@ -162,11 +220,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="px-3 sm:px-6">
             <div className="grid grid-cols-3 gap-2">
-              {[
-                { v: "UGX 2.4M", l: "Budget" },
-                { v: "UGX 1.8M", l: "Spent" },
-                { v: "UGX 600K", l: "Left" },
-              ].map((f) => (
+              {financeData.map((f: FinanceItem) => (
                 <div key={f.l} className="rounded-lg bg-muted p-2 sm:p-3 text-center">
                   <p className="text-sm font-bold sm:text-lg">{f.v}</p>
                   <p className="text-[10px] text-muted-foreground">{f.l}</p>
