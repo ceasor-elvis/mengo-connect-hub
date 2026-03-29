@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Calendar, FileText, AlertTriangle, Users,
-  MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network,
+  MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network, UserPlus,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,8 @@ const sidebarLinks: NavItem[] = [
   { label: "Hierarchy", path: "/portal/hierarchy", icon: Network },
   { label: "Logs", path: "/portal/logs", icon: Activity,
     roles: ["patron", "chairperson", "speaker", "electoral_commission"] },
+  { label: "Register Member", path: "/portal/register-member", icon: UserPlus,
+    roles: ["patron", "chairperson"] },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -79,7 +81,6 @@ export default function PortalLayout() {
   const visibleLinks = sidebarLinks.filter((l) => {
     if (!l.roles) return true;
     if (hasAnyRole(l.roles)) return true;
-    if (roles.length === 0) return true;
     // EC access delegation
     if (l.path === "/portal/elections" && ecGranted) return true;
     return false;
@@ -93,7 +94,7 @@ export default function PortalLayout() {
       <div className="border-b border-sidebar-border p-3">
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={profile?.profile_pic_url || ""} />
+            <AvatarImage src={profile?.profile_pic || ""} />
             <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
               {(profile?.full_name || "U").slice(0, 2).toUpperCase()}
             </AvatarFallback>

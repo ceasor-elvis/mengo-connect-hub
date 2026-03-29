@@ -5,6 +5,7 @@ type AppRole = string;
 
 export interface User {
   id: string;
+  username?: string;
   email?: string;
 }
 
@@ -18,9 +19,8 @@ export interface Profile {
   id: string;
   user_id: string;
   full_name: string;
-  profile_pic_url: string | null;
-  class: string | null;
-  student_id?: string | null;
+  profile_pic: string | null;   // from backend
+  student_class: string | null; // from backend
 }
 
 interface AuthContextType {
