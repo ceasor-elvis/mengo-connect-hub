@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Plus } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertTriangle, Plus, MoreHorizontal } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,20 +17,37 @@ import { notifyAllCouncillors } from "@/hooks/useNotify";
 
 interface Issue {
   id: string; title: string; description: string; status: string;
-  raised_by: string; created_at: string;
+  raised_by: string; reporter_name?: string; created_at: string;
+  category: string; priority: string;
 }
 
 const statusColor = (s: string) => s === "resolved" ? "default" : s === "in_progress" ? "secondary" : "outline";
 
 export default function IssuesPage() {
-  const { user } = useAuth();
+  const { user, hasAnyRole } = useAuth();
+  const canManage = hasAnyRole(["chairperson", "patron", "general_secretary"]);
   const { log } = useActivityLog();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Infrastructure");
+  const [priority, setPriority] = useState("Medium");
   const [submitting, setSubmitting] = useState(false);
+
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [priorityFilter, setPriorityFilter] = useState("All");
+
+  const filteredIssues = issues.filter(issue => {
+    const s = issue.status.toLowerCase();
+    const st = statusFilter.toLowerCase();
+    const matchesStatus = statusFilter === "All" || s === st || (st === "open" && s !== "in_progress" && s !== "resolved");
+    const matchesCategory = categoryFilter === "All" || issue.category === categoryFilter;
+    const matchesPriority = priorityFilter === "All" || issue.priority === priorityFilter;
+    return matchesStatus && matchesCategory && matchesPriority;
+  });
 
   const fetchIssues = async () => {
     try {
@@ -56,18 +75,33 @@ export default function IssuesPage() {
         title: title.trim(),
         description: description.trim(),
         raised_by: user.id,
+        category,
+        priority
       });
       toast.success("Issue raised"); 
       log("raised an issue", "issues", title); 
       notifyAllCouncillors("New Issue", `"${title}" was raised`, "warning"); 
       setTitle(""); 
       setDescription(""); 
+      setCategory("Infrastructure");
+      setPriority("Medium");
       setOpen(false);
       fetchIssues();
-    } catch (e: any) {
-      toast.error(e.response?.data?.detail || "Error raising issue");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } } };
+      toast.error(err.response?.data?.detail || "Error raising issue");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleStatusUpdate = async (id: string, newStatus: string) => {
+    try {
+      await api.patch(`/issues/${id}/`, { status: newStatus });
+      toast.success("Status updated");
+      fetchIssues();
+    } catch (e: unknown) {
+      toast.error("Failed to update status");
     }
   };
 
@@ -87,19 +121,81 @@ export default function IssuesPage() {
             <div className="space-y-3">
               <div><Label>Title *</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Broken lab equipment" /></div>
               <div><Label>Description *</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Describe the issue..." /></div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>Category *</Label>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Infrastructure">Infrastructure</SelectItem>
+                      <SelectItem value="Academic">Academic</SelectItem>
+                      <SelectItem value="Welfare">Welfare</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Priority *</Label>
+                  <Select value={priority} onValueChange={setPriority}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Low">Low</SelectItem>
+                      <SelectItem value="Medium">Medium</SelectItem>
+                      <SelectItem value="High">High</SelectItem>
+                      <SelectItem value="Critical">Critical</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <Button onClick={handleAdd} disabled={submitting} className="w-full">{submitting ? "Saving..." : "Raise Issue"}</Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All Statuses</SelectItem>
+            <SelectItem value="Open">Open</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="resolved">Resolved</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All Categories</SelectItem>
+            <SelectItem value="Infrastructure">Infrastructure</SelectItem>
+            <SelectItem value="Academic">Academic</SelectItem>
+            <SelectItem value="Welfare">Welfare</SelectItem>
+            <SelectItem value="Other">Other</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <SelectTrigger><SelectValue placeholder="Priority" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All Priorities</SelectItem>
+            <SelectItem value="Low">Low</SelectItem>
+            <SelectItem value="Medium">Medium</SelectItem>
+            <SelectItem value="High">High</SelectItem>
+            <SelectItem value="Critical">Critical</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {loading ? (
         <p className="text-center py-8 text-muted-foreground">Loading...</p>
       ) : issues.length === 0 ? (
         <p className="text-center py-8 text-muted-foreground">No issues raised yet.</p>
+      ) : filteredIssues.length === 0 ? (
+        <p className="text-center py-8 text-muted-foreground">No issues found matching your filters.</p>
       ) : (
         <div className="space-y-2">
-          {issues.map((issue) => (
+          {filteredIssues.map((issue) => (
             <Card key={issue.id}>
               <CardContent className="p-3 sm:p-4">
                 <div className="flex items-start justify-between gap-2">
@@ -107,13 +203,31 @@ export default function IssuesPage() {
                     <AlertTriangle className={`h-4 w-4 mt-0.5 shrink-0 ${issue.status === "resolved" ? "text-primary" : "text-gold"}`} />
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{issue.title}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-1 mb-1">
+                        <Badge variant="outline" className="text-[10px]">{issue.category}</Badge>
+                        <Badge variant="secondary" className="text-[10px]">{issue.priority}</Badge>
+                      </div>
                       <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{issue.description}</p>
                       <p className="text-[10px] text-muted-foreground mt-1">
-                        {new Date(issue.created_at).toLocaleDateString("en-UG", { day: "numeric", month: "short" })}
+                        Raised by <span className="font-semibold text-foreground">{issue.reporter_name || "Unknown"}</span> • {new Date(issue.created_at).toLocaleDateString("en-UG", { day: "numeric", month: "short" })}
                       </p>
                     </div>
                   </div>
-                  <Badge variant={statusColor(issue.status) as any} className="text-[10px] shrink-0">{issue.status.replace("_", " ")}</Badge>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant={statusColor(issue.status) as "default" | "secondary" | "outline"} className="text-[10px]">{issue.status.replace("_", " ")}</Badge>
+                    {canManage && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-6 w-6"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleStatusUpdate(issue.id, "Open")}>Open</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleStatusUpdate(issue.id, "in_progress")}>In Progress</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleStatusUpdate(issue.id, "resolved")}>Resolved</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
