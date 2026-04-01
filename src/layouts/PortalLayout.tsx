@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Calendar, FileText, AlertTriangle, Users,
-  MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network, UserPlus, Lock
+  MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network, UserPlus, Lock, Settings
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -150,8 +150,13 @@ export default function PortalLayout() {
         ))}
       </nav>
 
-      <div className="border-t border-sidebar-border p-2">
-        <Button variant="ghost" size="sm" className="w-full justify-start text-sidebar-foreground" onClick={async () => { await signOut(); navigate("/"); }}>
+      <div className="border-t border-sidebar-border p-2 space-y-1">
+        <Button variant="ghost" size="sm" className="w-full justify-start text-sidebar-foreground relative hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" asChild>
+          <Link to="/portal?tab=profile">
+            <Settings className="mr-2 h-4 w-4" /> Profile Settings
+          </Link>
+        </Button>
+        <Button variant="ghost" size="sm" className="w-full justify-start text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive" onClick={async () => { await signOut(); navigate("/"); }}>
           <LogOut className="mr-2 h-4 w-4" /> Sign Out
         </Button>
       </div>

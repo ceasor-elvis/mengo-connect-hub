@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { useLocation } from "react-router-dom";
 
 type AppRole = string;
 
@@ -65,8 +66,18 @@ const ROLE_INFO: Record<string, RoleInfo> = {
 
 export default function DashboardPage() {
   const { profile, roles, hasAnyRole } = useAuth();
+  const location = useLocation();
   const primaryRole = roles[0];
   const info = primaryRole ? ROLE_INFO[primaryRole] : null;
+
+  const [activeTab, setActiveTab] = useState(() => {
+    return new URLSearchParams(location.search).get("tab") === "profile" ? "profile" : "overview";
+  });
+
+  useEffect(() => {
+    const tab = new URLSearchParams(location.search).get("tab");
+    if (tab === "profile" || tab === "overview") setActiveTab(tab);
+  }, [location.search]);
 
   const [profileName, setProfileName] = useState(profile?.full_name || "");
   const [profileDesc, setProfileDesc] = useState((profile as any)?.description || "");
@@ -172,7 +183,7 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      <Tabs defaultValue="overview" className="mt-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
         <TabsList className="mb-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="profile">Profile Settings</TabsTrigger>
