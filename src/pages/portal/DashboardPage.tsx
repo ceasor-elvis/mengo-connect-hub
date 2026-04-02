@@ -1,20 +1,13 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
 import {
   AlertTriangle, Calendar, FileText, MessageSquare, DollarSign,
-  TrendingUp, CheckCircle, Clock, Shield, Heart, Stethoscope,
-  Megaphone, Accessibility, Users, Vote, Gavel, UserCheck, Loader2, type LucideIcon
+  TrendingUp, CheckCircle, Shield, Heart, Stethoscope,
+  Megaphone, Accessibility, Users, Vote, Gavel, UserCheck, type LucideIcon
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
-import { useLocation } from "react-router-dom";
 
 type AppRole = string;
 
@@ -66,24 +59,8 @@ const ROLE_INFO: Record<string, RoleInfo> = {
 
 export default function DashboardPage() {
   const { profile, roles, hasAnyRole } = useAuth();
-  const location = useLocation();
   const primaryRole = roles[0];
   const info = primaryRole ? ROLE_INFO[primaryRole] : null;
-
-  const [activeTab, setActiveTab] = useState(() => {
-    return new URLSearchParams(location.search).get("tab") === "profile" ? "profile" : "overview";
-  });
-
-  useEffect(() => {
-    const tab = new URLSearchParams(location.search).get("tab");
-    if (tab === "profile" || tab === "overview") setActiveTab(tab);
-  }, [location.search]);
-
-  const [profileName, setProfileName] = useState(profile?.full_name || "");
-  const [profileDesc, setProfileDesc] = useState((profile as any)?.description || "");
-  const [profilePic, setProfilePic] = useState((profile as any)?.profile_pic || "");
-  const [savingProfile, setSavingProfile] = useState(false);
-  const canEditName = hasAnyRole(["chairperson", "patron", "adminabsolute"]);
 
   const showFinance = hasAnyRole(["patron", "chairperson", "secretary_finance"]);
   const showVoices = hasAnyRole(["patron", "chairperson", "general_secretary", "assistant_general_secretary"]) || roles.length === 0;
@@ -123,20 +100,6 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, [profile]);
 
-  const handleSaveProfile = async () => {
-    setSavingProfile(true);
-    try {
-      const payload: any = { description: profileDesc, profile_pic: profilePic };
-      if (canEditName) payload.full_name = profileName;
-      await api.patch('/users/me/profile/', payload);
-      toast.success("Profile updated globally! (Refresh to see header update)");
-    } catch(e) {
-      toast.error("Failed to update profile");
-    } finally {
-      setSavingProfile(false);
-    }
-  };
-
   const stats = dashboardData?.stats || [
     { label: "Voices", value: "...", icon: MessageSquare, color: "text-primary", change: "..." },
     { label: "Issues", value: "...", icon: AlertTriangle, color: "text-gold", change: "..." },
@@ -144,7 +107,11 @@ export default function DashboardPage() {
     { label: "Docs", value: "...", icon: FileText, color: "text-gold", change: "..." },
   ];
   
-  const recentVoices = dashboardData?.recentVoices || [];
+  const isPatronStrict = roles.includes("patron") && !roles.includes("adminabsolute");
+  const recentVoices = (dashboardData?.recentVoices || []).filter(v => {
+    if (isPatronStrict) return v.status === "Approved"; // Simple filter for safety, or we assume backend handles it.
+    return true;
+  });
   const recentIssues = dashboardData?.recentIssues || [];
   const financeData = dashboardData?.finance || [
     { v: "...", l: "Budget" },
@@ -182,14 +149,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-        <TabsList className="mb-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="profile">Profile Settings</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="overview" className="space-y-4">
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -300,48 +259,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
-          </TabsContent>
-          <TabsContent value="profile">
-            <Card className="max-w-xl">
-              <CardHeader>
-                <CardTitle>Edit Your Profile</CardTitle>
-                <CardDescription>Update your public information.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Full Name</Label>
-                  <Input 
-                    value={profileName} 
-                    onChange={e => setProfileName(e.target.value)} 
-                    disabled={!canEditName} 
-                  />
-                  {!canEditName && <p className="text-xs text-muted-foreground">Only Admins can change official names.</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label>Profile Picture URL</Label>
-                  <Input 
-                    value={profilePic} 
-                    onChange={e => setProfilePic(e.target.value)} 
-                    placeholder="https://example.com/photo.jpg" 
-                  />
-                  {profilePic && <img src={profilePic} alt="Preview" className="h-16 w-16 rounded-full border object-cover mt-2" />}
-                </div>
-                <div className="space-y-2">
-                  <Label>Introduction / Bio</Label>
-                  <Textarea 
-                    value={profileDesc} 
-                    onChange={e => setProfileDesc(e.target.value)} 
-                    rows={4} 
-                    placeholder="Tell the school about yourself..." 
-                  />
-                </div>
-                <Button onClick={handleSaveProfile} disabled={savingProfile}>
-                  {savingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Profile
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
     </div>
   );
 }

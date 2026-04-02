@@ -21,6 +21,12 @@ export default function BlogManagerPage() {
   const [mediaUrl, setMediaUrl] = useState("");
   const [mediaType, setMediaType] = useState("none");
 
+  const [gallery, setGallery] = useState<any[]>([]);
+  const [loadingGallery, setLoadingGallery] = useState(true);
+  const [galleryCaption, setGalleryCaption] = useState("");
+  const [galleryFile, setGalleryFile] = useState<string | null>(null);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
+
   const fetchBlogs = async () => {
     try {
       const { data } = await api.get("/blogs/");
@@ -32,8 +38,20 @@ export default function BlogManagerPage() {
     }
   };
 
+  const fetchGallery = async () => {
+    try {
+      const { data } = await api.get("/gallery/");
+      setGallery(data.results || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingGallery(false);
+    }
+  };
+
   useEffect(() => {
     fetchBlogs();
+    fetchGallery();
   }, []);
 
   const handlePost = async () => {
@@ -60,11 +78,41 @@ export default function BlogManagerPage() {
     }
   };
 
+  const handleGalleryUpload = async () => {
+    // In a real app we'd use FormData, here we simulate with a placeholder URL if no "file"
+    setUploadingGallery(true);
+    try {
+      await api.post("/gallery/", {
+        caption: galleryCaption,
+        url: galleryFile || "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80",
+      });
+      toast.success("Photo added to Gallery!");
+      setGalleryCaption("");
+      setGalleryFile(null);
+      fetchGallery();
+    } catch (e) {
+      toast.error("Failed to upload photo");
+    } finally {
+      setUploadingGallery(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setGalleryFile(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-serif text-2xl font-bold">Blog / Publicity Manager</h1>
-        <p className="text-sm text-muted-foreground">Manage public announcements shown on the homepage.</p>
+        <h1 className="font-serif text-2xl font-bold">Blog & Gallery Manager</h1>
+        <p className="text-sm text-muted-foreground">Manage public announcements and the 3D photo feed.</p>
       </div>
 
       <Card>
@@ -102,6 +150,34 @@ export default function BlogManagerPage() {
             <Button onClick={handlePost} disabled={posting || !title || !content}>
               {posting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileText className="h-4 w-4 mr-2" />} Post to Homepage
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-4 space-y-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Plus className="h-4 w-4" /> Add to Gallery Feed</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <div>
+                <Label>Photo Caption</Label>
+                <Input value={galleryCaption} onChange={e => setGalleryCaption(e.target.value)} placeholder="e.g. Football Finals 2025" />
+              </div>
+              <div>
+                <Label>Select Photo (Local Upload)</Label>
+                <Input type="file" accept="image/*" onChange={handleFileChange} className="cursor-pointer" />
+              </div>
+              <Button onClick={handleGalleryUpload} disabled={uploadingGallery || (!galleryFile && !galleryCaption)} className="w-full">
+                {uploadingGallery ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />} Add Photo
+              </Button>
+            </div>
+            <div className="border rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
+               {galleryFile ? (
+                 <img src={galleryFile} alt="Preview" className="h-full w-full object-cover" />
+               ) : (
+                 <p className="text-xs text-muted-foreground italic text-center px-4">Preview of your selected photo will appear here.</p>
+               )}
+            </div>
           </div>
         </CardContent>
       </Card>

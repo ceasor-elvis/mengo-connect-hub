@@ -6,6 +6,7 @@ import mengoBadge from "@/assets/mengo-badge.jpg";
 
 const navLinks = [
   { label: "Home", path: "/" },
+  { label: "Blog", path: "/blog" },
   { label: "Student Voice", path: "/student-voice" },
 ];
 

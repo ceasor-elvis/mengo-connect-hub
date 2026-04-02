@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Download, ShieldCheck, Settings2, UserCheck, Vote, Trash2, Pencil, Lock, Upload } from "lucide-react";
+import { Plus, Download, ShieldCheck, Settings2, UserCheck, Vote, Trash2, Pencil, Lock, Upload, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
@@ -41,7 +41,9 @@ interface Applicant {
 
 export default function ElectionsPage() {
   const { user, hasAnyRole } = useAuth();
-  const isTopHead = hasAnyRole(["patron", "chairperson", "speaker", "electoral_commission"]);
+  const [autoProgress, setAutoProgress] = useState(false);
+  const [orgName, setOrgName] = useState("VINE STUDENTS' COUNCIL");
+  const isTopHead = hasAnyRole(["patron", "chairperson", "speaker", "electoral_commission", "general_secretary"]);
 
   const [minAverage, setMinAverage] = useState(15);
   const [electionTitle, setElectionTitle] = useState("S.2 Councillors 2026");
@@ -90,6 +92,16 @@ export default function ElectionsPage() {
   const [grantUserId, setGrantUserId] = useState("");
   const [activeLocks, setActiveLocks] = useState<any[]>([]);
 
+  // Predefined streams
+  const canManageStreams = hasAnyRole(["chairperson", "adminabsolute", "general_secretary"]);
+  const [streams, setStreams] = useState<any[]>([]);
+  const [addStreamOpen, setAddStreamOpen] = useState(false);
+  const [newStreamName, setNewStreamName] = useState("");
+  const [addingStream, setAddingStream] = useState(false);
+
+  const filterId = `${filterClass}-${filterStream}`.toLowerCase();
+  const isLocked = activeLocks.some(l => l.filter_id === filterId);
+
   const fetchApplicants = async () => {
     try {
       const { data } = await api.get("/applications/");
@@ -120,11 +132,25 @@ export default function ElectionsPage() {
     } catch(e) { console.error(e); }
   };
 
+  const fetchStreams = async () => {
+    try {
+      const { data } = await api.get("/streams/");
+      setStreams(data.results || []);
+    } catch(e) { console.error(e); }
+  };
+
   useEffect(() => {
     fetchApplicants();
     fetchLocks();
+    fetchStreams();
     if (isTopHead) { fetchGrants(); fetchProfiles(); }
   }, []);
+
+  useEffect(() => {
+    const cls = filterClass !== "all" ? filterClass : "General";
+    const strm = filterStream !== "all" ? filterStream : "";
+    setElectionTitle(`${cls} ${strm} Councillors ${new Date().getFullYear()}`.replace(/\s+/g, " ").trim());
+  }, [filterClass, filterStream]);
 
   const filteredApplicants = applicants.filter((a) => {
     let match = true;
@@ -141,16 +167,45 @@ export default function ElectionsPage() {
   const qualified = filteredApplicants.filter((a) => a.status === "qualified").length;
   const disqualified = filteredApplicants.filter((a) => a.status === "disqualified").length;
 
-  const handleComputeAverage = () => {
+  // New Dashboard Stats
+  const hasFiltered = filteredApplicants.length > 0;
+  const avgTotal = hasFiltered ? filteredApplicants.reduce((sum, a) => sum + a.average_score, 0) / filteredApplicants.length : 0;
+  const avgPerc = (avgTotal / 30) * 100;
+  const highest = hasFiltered ? Math.max(...filteredApplicants.map(a => a.average_score)) : 0;
+  const lowest = hasFiltered ? Math.min(...filteredApplicants.map(a => a.average_score)) : 0;
+
+  const handleAddStream = async () => {
+    if (!newStreamName) return;
+    setAddingStream(true);
+    try {
+      await api.post("/streams/", { name: newStreamName });
+      toast.success("Stream added!");
+      setNewStreamName("");
+      setAddStreamOpen(false);
+      fetchStreams();
+    } catch (e) {
+      toast.error("Failed to add stream");
+    } finally {
+      setAddingStream(false);
+    }
+  };
+
+  const handleStreamSelect = (val: string, setter: (val: string) => void) => {
+    if (val === "add_new") {
+      if (canManageStreams) setAddStreamOpen(true);
+      else toast.error("Unauthorized to add streams.");
+      return;
+    }
+    setter(val);
+  };
+
+  const handleSetThresholdFromAvg = () => {
     if (filteredApplicants.length === 0) {
       toast.error("No candidates in current filter");
       return;
     }
-    const total = filteredApplicants.reduce((sum, a) => sum + a.average_score, 0);
-    const avg = Math.round(total / filteredApplicants.length);
-    setComputedAverage(avg);
-    setMinAverage(avg);
-    toast.success(`Computed Avg Total: ${avg}/30. Set as new screening minimum!`);
+    setMinAverage(Math.round(avgTotal));
+    toast.success(`Threshold updated to Average: ${avgTotal.toFixed(1)}/30`);
   };
 
   const handleAddCandidate = async () => {
@@ -162,7 +217,7 @@ export default function ElectionsPage() {
       await api.post("/applications/", {
         applicant_name: newName,
         applicant_class: newClass,
-        stream: newStream || null,
+        stream: newStream === "none" ? null : newStream,
         gender: newGender,
         smart_score: Number(newSmart),
         conf_score: Number(newConf),
@@ -228,7 +283,7 @@ export default function ElectionsPage() {
             await api.post("/applications/", {
               applicant_name: name,
               applicant_class: uploadClass,
-              stream: uploadStream || null,
+              stream: uploadStream === "none" ? null : uploadStream,
               gender,
               smart_score: smart,
               conf_score: conf,
@@ -280,7 +335,7 @@ export default function ElectionsPage() {
       await api.patch(`/applications/${editingId}/`, {
         applicant_name: editName,
         class: editClass,
-        stream: editStream,
+        stream: editStream === "none" ? null : editStream,
         gender: editGender,
         smart_score: smart,
         conf_score: conf,
@@ -365,23 +420,68 @@ export default function ElectionsPage() {
 
   const lockFilter = async () => {
     try {
-      await api.post("/election-locks/", {
-        filter_class: filterClass,
-        filter_stream: filterStream,
-        threshold: minAverage
-      });
-      toast.success("Screening configuration locked globally!");
+      await api.post("/election-locks/", { filter_id: filterId, locked_by: user?.id });
+      toast.success("Screening criteria locked for all officials.");
       fetchLocks();
-    } catch (e) {
-      toast.error("Failed to lock filter");
-    }
+    } catch (e) { toast.error("Failed to lock filter"); }
+  };
+
+  const unlockFilter = async () => {
+    const lock = activeLocks.find(l => l.filter_id === filterId);
+    if (!lock) return;
+    try {
+      await api.delete(`/election-locks/${lock.id}/`);
+      toast.success("Screening configuration unlocked.");
+      fetchLocks();
+    } catch (e) { toast.error("Failed to unlock filter"); }
+  };
+
+  const addImageToDoc = (doc: jsPDF, src: string, x: number, y: number, w: number, h: number, format: string) => {
+    return new Promise<void>((resolve) => {
+      const img = new Image();
+      img.src = src;
+      img.crossOrigin = "Anonymous";
+      img.onload = () => { doc.addImage(img, format, x, y, w, h); resolve(); };
+      img.onerror = () => resolve();
+    });
+  };
+
+  const generateCriteriaPDF = async () => {
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    let y = 20;
+
+    await Promise.all([
+      addImageToDoc(doc, mengoBadge, 15, 10, 20, 20, "JPEG"),
+      addImageToDoc(doc, unsaLogoB64, pageW - 35, 10, 20, 20, "PNG")
+    ]);
+
+    doc.setFont("helvetica", "bold"); doc.setFontSize(14);
+    doc.text("MENGO SENIOR SCHOOL", pageW / 2, y, { align: "center" });
+    y += 6; doc.setFontSize(12);
+    doc.text(orgName.toUpperCase(), pageW / 2, y, { align: "center" });
+    y += 10; doc.setFontSize(11);
+    doc.text("OFFICIAL SCREENING CRITERIA RECORD", pageW / 2, y, { align: "center" });
+    y += 15;
+
+    doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+    doc.text(`Election: ${getDynamicTitle()}`, 20, y); y += 8;
+    doc.text(`Filter Applied: ${filterId}`, 20, y); y += 8;
+    doc.text(`Threshold Set: ${minAverage}/30`, 20, y); y += 8;
+    doc.text(`Date Logged: ${new Date().toLocaleString()}`, 20, y); y += 20;
+
+    doc.text("Approved By: __________________________", 20, y);
+    y += 10;
+    doc.text("EC Chairperson Signature: __________________", 20, y);
+
+    doc.save(`Screening_Criteria_${filterId}.pdf`);
+    toast.success("Criteria log generated!");
   };
 
   const generateQualifiedPDF = async () => {
     const qual = filteredApplicants.filter((a) => a.status === "qualified");
     if (!qual.length) { toast.error("No qualified applicants in current filter"); return; }
     
-    // Sort by class, stream, then alphabetically
     const sorted = [...qual].sort((a, b) => {
       if (a.class !== b.class) return (a.class || "").localeCompare(b.class || "");
       if (a.stream !== b.stream) return ((a as any).stream || "").localeCompare((b as any).stream || "");
@@ -392,27 +492,15 @@ export default function ElectionsPage() {
     const pageW = doc.internal.pageSize.getWidth();
     let y = 15;
 
-    const addImageToDoc = (src: string, x: number, y: number, w: number, h: number, format: string) => {
-      return new Promise<void>((resolve) => {
-        const img = new Image();
-        img.src = src;
-        img.crossOrigin = "Anonymous";
-        img.onload = () => { doc.addImage(img, format, x, y, w, h); resolve(); };
-        img.onerror = () => resolve();
-      });
-    };
-
-    try {
-      await Promise.all([
-        addImageToDoc(mengoBadge, 15, 10, 20, 20, "JPEG"),
-        addImageToDoc(unsaLogoB64, pageW - 35, 10, 20, 20, "PNG")
-      ]);
-    } catch(e) { console.error("Failed to load PDF images:", e); }
+    await Promise.all([
+      addImageToDoc(doc, mengoBadge, 15, 10, 20, 20, "JPEG"),
+      addImageToDoc(doc, unsaLogoB64, pageW - 35, 10, 20, 20, "PNG")
+    ]);
 
     doc.setFont("helvetica", "bold"); doc.setFontSize(14);
     doc.text("MENGO SENIOR SCHOOL", pageW / 2, y, { align: "center" });
     y += 6; doc.setFontSize(12);
-    doc.text("VINE STUDENTS' COUNCIL", pageW / 2, y, { align: "center" });
+    doc.text(orgName.toUpperCase(), pageW / 2, y, { align: "center" });
     y += 6; doc.setFontSize(11);
     doc.text("QUALIFIED CANDIDATES LIST", pageW / 2, y, { align: "center" });
     y += 6; doc.setFont("helvetica", "normal"); doc.setFontSize(9);
@@ -447,7 +535,9 @@ export default function ElectionsPage() {
       y += 8;
     });
 
-    doc.save(`Qualified_List_${getDynamicTitle().replace(/\s+/g, "_")}.pdf`);
+    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
+
+    doc.save(`${getDynamicTitle().replace(/\s+/g, '_')}_Qualified_List.pdf`);
     toast.success("Qualified List PDF downloaded!");
   };
 
@@ -465,29 +555,13 @@ export default function ElectionsPage() {
     const ballotsPerPage = 3;
     const ballotHeight = (pageH - 20) / ballotsPerPage;
 
-    const addImageToDoc = (src: string, x: number, y: number, w: number, h: number, format: string) => {
-      return new Promise<void>((resolve) => {
-        const img = new Image();
-        img.src = src;
-        img.crossOrigin = "Anonymous";
-        img.onload = () => { doc.addImage(img, format, x, y, w, h); resolve(); };
-        img.onerror = () => resolve();
-      });
-    };
-
-    // Calculate maximum rows needed
     const maxRows = Math.max(males.length, females.length);
-    // Determine how many pages total
-    const totalPages = 1; // Note: if the list is long, we'd need multiple pages, but typically a ballot generation for a class fits. Let's assume standard usage.
-    
-    let currentBallot = 0;
     
     for (let currentBallot = 0; currentBallot < ballotsPerPage; currentBallot++) {
       const topY = 10 + (currentBallot * ballotHeight);
       let y = topY;
       
       if (currentBallot > 0) {
-        // Draw dashed line
         doc.setLineDashPattern([3, 3], 0);
         doc.setDrawColor(150);
         doc.line(10, topY - 3, pageW - 10, topY - 3);
@@ -495,15 +569,15 @@ export default function ElectionsPage() {
       }
 
       await Promise.all([
-        addImageToDoc(mengoBadge, 15, y, 16, 16, "JPEG"),
-        addImageToDoc(unsaLogoB64, pageW - 28, y, 16, 16, "PNG")
+        addImageToDoc(doc, mengoBadge, 15, y, 16, 16, "JPEG"),
+        addImageToDoc(doc, unsaLogoB64, pageW - 28, y, 16, 16, "PNG")
       ]);
 
       y += 4;
       doc.setFont("helvetica", "bold"); doc.setFontSize(14);
       doc.text("MENGO SENIOR SCHOOL", pageW / 2, y, { align: "center" });
       y += 5; doc.setFontSize(11);
-      doc.text("THE VINE STUDENTS' COUNCIL", pageW / 2, y, { align: "center" });
+      doc.text(orgName.toUpperCase(), pageW / 2, y, { align: "center" });
       y += 5; doc.setFontSize(11);
       doc.text("VINE STUDENTS' COUNCIL ELECTIONS", pageW / 2, y, { align: "center" });
       y += 5;
@@ -513,16 +587,12 @@ export default function ElectionsPage() {
       }
       y += 5;
       
-      // Dual column table
       const midX = pageW / 2;
       doc.setFontSize(10);
       doc.text("MALES", m + (midX - m) / 2, y, { align: "center" });
       doc.text("FEMALES", midX + (pageW - m - midX) / 2, y, { align: "center" });
       y += 2;
       
-      const startTableY = y;
-      
-      // Headers
       doc.setFillColor(230, 230, 230);
       doc.rect(m, y, midX - m, 6, "F");
       doc.rect(midX, y, pageW - m - midX, 6, "F");
@@ -539,24 +609,21 @@ export default function ElectionsPage() {
       const tickBoxW = 10;
       
       for (let i = 0; i < maxRows; i++) {
-        // Row height 6
         const rowH = 6;
         const male = males[i];
         const female = females[i];
         
-        // Male box
         doc.setLineWidth(0.3);
-        doc.rect(m, y, midX - m - tickBoxW, rowH); // text box
-        doc.rect(midX - tickBoxW, y, tickBoxW, rowH); // tick box
+        doc.rect(m, y, midX - m - tickBoxW, rowH);
+        doc.rect(midX - tickBoxW, y, tickBoxW, rowH);
         if (male) {
            doc.setFont("helvetica", "bold"); doc.setFontSize(8);
            doc.text(`${i + 1}.`, m + 2, y + 4);
            doc.text(male.applicant_name.toUpperCase(), m + 8, y + 4);
         }
         
-        // Female box
-        doc.rect(midX, y, pageW - m - midX - tickBoxW, rowH); // text box
-        doc.rect(pageW - m - tickBoxW, y, tickBoxW, rowH); // tick box
+        doc.rect(midX, y, pageW - m - midX - tickBoxW, rowH);
+        doc.rect(pageW - m - tickBoxW, y, tickBoxW, rowH);
         if (female) {
            doc.setFont("helvetica", "bold"); doc.setFontSize(8);
            doc.text(`${i + 1}.`, midX + 2, y + 4);
@@ -564,13 +631,14 @@ export default function ElectionsPage() {
         }
         y += rowH;
       }
-      
-      // Space for extra candidate row or write in
       doc.rect(m, y, pageW - m * 2, 12);
-      
     }
 
-    doc.save(`Ballot_${getDynamicTitle().replace(/\s+/g, "_")}.pdf`);
+    doc.setPage(doc.getNumberOfPages());
+    doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
+
+    doc.save(`${getDynamicTitle().replace(/\s+/g, "_")}.pdf`);
     toast.success("Ballot PDF downloaded!");
   };
 
@@ -582,32 +650,15 @@ export default function ElectionsPage() {
     const pageW = doc.internal.pageSize.getWidth();
     let y = 15;
 
-    const addImageToDoc = (src: string, x: number, y: number, w: number, h: number, format: string) => {
-      return new Promise<void>((resolve) => {
-        const img = new Image();
-        img.src = src;
-        img.crossOrigin = "Anonymous";
-        img.onload = () => {
-          doc.addImage(img, format, x, y, w, h);
-          resolve();
-        };
-        img.onerror = () => resolve();
-      });
-    };
+    await Promise.all([
+      addImageToDoc(doc, mengoBadge, 15, 10, 25, 25, "JPEG"),
+      addImageToDoc(doc, unsaLogoB64, pageW - 40, 10, 25, 25, "PNG")
+    ]);
 
-    try {
-      await Promise.all([
-        addImageToDoc(mengoBadge, 15, 10, 25, 25, "JPEG"),
-        addImageToDoc(unsaLogoB64, pageW - 40, 10, 25, 25, "PNG")
-      ]);
-    } catch(e) {
-      console.error("Failed to load PDF images:", e);
-    }
-
-    doc.setFont("helvetica", "bold"); doc.setFontSize(14);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     doc.text("MENGO SENIOR SCHOOL", pageW / 2, y, { align: "center" });
-    y += 6; doc.setFontSize(12);
-    doc.text("VINE STUDENTS' COUNCIL", pageW / 2, y, { align: "center" });
+    y += 5;
+    doc.text(orgName.toUpperCase(), pageW / 2, y, { align: "center" });
     y += 6; doc.setFontSize(11);
     doc.text("SCREENING EVALUATION TOOL", pageW / 2, y, { align: "center" });
     y += 6; doc.setFont("helvetica", "normal"); doc.setFontSize(9);
@@ -655,6 +706,9 @@ export default function ElectionsPage() {
       y += 8;
     });
 
+    doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 200, { align: "center" });
+
     doc.save(`Screening_Report_${getDynamicTitle().replace(/\s+/g, "_")}.pdf`);
     toast.success("Screening Report PDF downloaded!");
   };
@@ -669,14 +723,50 @@ export default function ElectionsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {isTopHead && (
-            <>
-              <Button variant="outline" size="sm" onClick={lockFilter} disabled={activeLocks.length > 0} className={activeLocks.length > 0 ? "opacity-50" : ""}>
-                <Lock className="mr-1 h-4 w-4" /> {activeLocks.length > 0 ? "Locked" : "Lock Filter"}
+            <div className="flex flex-wrap gap-2">
+              {canManageStreams && (
+                <Dialog open={addStreamOpen} onOpenChange={setAddStreamOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Plus className="mr-1 h-4 w-4" /> Add Stream
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-sm">
+                    <DialogHeader><DialogTitle>Add New Stream</DialogTitle></DialogHeader>
+                    <div className="space-y-3 pt-2">
+                      <div>
+                        <Label>Stream Name</Label>
+                        <Input value={newStreamName} onChange={e => setNewStreamName(e.target.value)} placeholder="e.g. NORTH" />
+                      </div>
+                      <Button onClick={handleAddStream} className="w-full" disabled={addingStream}>
+                        {addingStream ? "Saving..." : "Save Stream"}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+              {isLocked ? (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20 select-none">
+                  <Lock className="h-4 w-4 animate-pulse" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Locked</span>
+                  {isTopHead && (
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] hover:bg-destructive/10" onClick={unlockFilter}>
+                      Unlock
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <Button variant="outline" size="sm" className="border-primary/20" onClick={lockFilter} disabled={!isTopHead}>
+                  <Lock className="mr-1 h-4 w-4" /> Lock Filter
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={generateCriteriaPDF}>
+                <FileText className="mr-1 h-4 w-4" /> Log Criteria
               </Button>
               <Button variant="outline" size="sm" onClick={() => setShowSettings(!showSettings)}>
                 <Settings2 className="mr-1 h-4 w-4" /> Settings
               </Button>
-            </>
+            </div>
           )}
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
@@ -687,8 +777,30 @@ export default function ElectionsPage() {
               <div className="space-y-3 pt-2">
                 <div><Label>Full Name *</Label><Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Nakamya Faith" /></div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div><Label>Class *</Label><Input value={newClass} onChange={e => setNewClass(e.target.value)} placeholder="S.2" /></div>
-                  <div><Label>Stream</Label><Input value={newStream} onChange={e => setNewStream(e.target.value)} placeholder="North" /></div>
+                  <div>
+                    <Label>Class *</Label>
+                    <Select value={newClass} onValueChange={setNewClass}>
+                      <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+                      <SelectContent>
+                        {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Stream</Label>
+                    <Select value={newStream} onValueChange={(val) => handleStreamSelect(val, setNewStream)}>
+                      <SelectTrigger><SelectValue placeholder="Select Stream" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {streams.map((s) => (
+                          <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                        ))}
+                        {canManageStreams && <SelectItem value="add_new" className="text-primary font-medium">+ Add New Stream</SelectItem>}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div><Label>Gender *</Label>
@@ -723,8 +835,30 @@ export default function ElectionsPage() {
                   Select the Class and Stream first, then choose an Excel file (.xlsx). Extract uses columns: "Name", "Gender", "Smart", "Conf", "Q.App".
                 </p>
                 <div className="grid grid-cols-2 gap-2">
-                  <div><Label>Class *</Label><Input value={uploadClass} onChange={e => setUploadClass(e.target.value)} placeholder="e.g. S.2" /></div>
-                  <div><Label>Stream</Label><Input value={uploadStream} onChange={e => setUploadStream(e.target.value)} placeholder="e.g. North" /></div>
+                  <div>
+                    <Label>Class *</Label>
+                    <Select value={uploadClass} onValueChange={setUploadClass}>
+                      <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+                      <SelectContent>
+                        {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Stream</Label>
+                    <Select value={uploadStream} onValueChange={(val) => handleStreamSelect(val, setUploadStream)}>
+                      <SelectTrigger><SelectValue placeholder="Select Stream" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {streams.map((s) => (
+                          <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                        ))}
+                        {canManageStreams && <SelectItem value="add_new" className="text-primary font-medium">+ Add New Stream</SelectItem>}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
                   <Label>Excel File</Label>
@@ -760,8 +894,30 @@ export default function ElectionsPage() {
           <div className="space-y-3 pt-2">
             <div><Label>Full Name *</Label><Input value={editName} onChange={e => setEditName(e.target.value)} /></div>
             <div className="grid grid-cols-2 gap-2">
-              <div><Label>Class *</Label><Input value={editClass} onChange={e => setEditClass(e.target.value)} /></div>
-              <div><Label>Stream</Label><Input value={editStream} onChange={e => setEditStream(e.target.value)} /></div>
+              <div>
+                <Label>Class *</Label>
+                <Select value={editClass} onValueChange={setEditClass}>
+                  <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+                  <SelectContent>
+                    {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Stream</Label>
+                <Select value={editStream} onValueChange={(val) => handleStreamSelect(val, setEditStream)}>
+                  <SelectTrigger><SelectValue placeholder="Select Stream" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {streams.map((s) => (
+                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                    ))}
+                    {canManageStreams && <SelectItem value="add_new" className="text-primary font-medium">+ Add New Stream</SelectItem>}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div><Label>Gender *</Label>
@@ -800,7 +956,7 @@ export default function ElectionsPage() {
               <SelectTrigger><SelectValue placeholder="All Classes" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Classes</SelectItem>
-                {uniqueClasses.map(c => <SelectItem key={c as string} value={c as string}>{c as string}</SelectItem>)}
+                {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -810,7 +966,7 @@ export default function ElectionsPage() {
               <SelectTrigger><SelectValue placeholder="All Streams" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Streams</SelectItem>
-                {uniqueStreams.map(s => <SelectItem key={s as string} value={s as string}>{s as string}</SelectItem>)}
+                {streams.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -826,13 +982,103 @@ export default function ElectionsPage() {
             </Select>
           </div>
           <div className="sm:col-span-4 flex justify-between items-center border-t border-primary/10 pt-3 mt-1">
-             <div className="text-sm">
-               {computedAverage !== null && <span>Current Filter Avg: <strong className="text-primary">{computedAverage}/30</strong></span>}
+             <div className="text-sm font-medium text-muted-foreground italic">
+               Filtered for focus. Total candidates: {filteredApplicants.length}
              </div>
-             <Button size="sm" variant="secondary" onClick={handleComputeAverage}>Compute Filter Average</Button>
           </div>
+
+          {isTopHead && (
+            <div className="mt-4 pt-4 border-t border-stone-200">
+              <Label className="text-[10px] font-bold text-stone-500 uppercase">Document Branding</Label>
+              <div className="mt-1.5 flex gap-2">
+                <Input 
+                  value={orgName} 
+                  onChange={e => setOrgName(e.target.value)} 
+                  placeholder="e.g. VINE STUDENTS' COUNCIL"
+                  className="h-8 text-xs bg-stone-50 border-stone-300"
+                />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Filter Statistics Dashboard */}
+      <div className="bg-[#f2ebe9] dark:bg-stone-900 p-4 sm:p-6 rounded-2xl border border-stone-200 shadow-sm space-y-4">
+        <div className="flex items-center gap-2 text-stone-700 dark:text-stone-300">
+          <Settings2 className="h-5 w-5" />
+          <h3 className="font-bold text-sm uppercase tracking-wide">
+            Filter Statistics — Class: {filterClass.toUpperCase()} • Stream: {filterStream.toUpperCase()} • Gender: {filterGender.toUpperCase()}
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            { label: "Total Candidates", value: filteredApplicants.length },
+            { label: "Avg Total /30", value: avgTotal.toFixed(1) },
+            { label: "Avg Percentage", value: `${avgPerc.toFixed(1)}%` },
+            { label: "Highest", value: highest },
+            { label: "Lowest", value: lowest },
+            { label: "Qualified", value: `${qualified}/${filteredApplicants.length}` }
+          ].map((stat, i) => (
+            <div key={i} className="bg-white dark:bg-stone-800 p-3 flex flex-col items-center justify-center rounded-xl border border-stone-100 shadow-sm hover:shadow-md transition-shadow">
+              <p className="text-xl font-bold text-stone-900 dark:text-white">{stat.value}</p>
+              <p className="text-[10px] text-stone-500 uppercase font-medium mt-1">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-end justify-between gap-4 pt-2 border-t border-stone-200/50">
+          <div className="space-y-3">
+            <p className="text-xs text-stone-500 font-medium tracking-tight">Set threshold based on average</p>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                className="bg-[#d4a035] hover:bg-[#c08e2a] text-white border-none text-xs" 
+                onClick={handleSetThresholdFromAvg}
+              >
+                Use Average ({avgPerc.toFixed(0)}%)
+              </Button>
+              <div className="w-20">
+                <Input 
+                  type="number" 
+                  className="bg-white dark:bg-stone-800 border-stone-200 h-9 text-xs font-bold text-center" 
+                  value={minAverage} 
+                  onChange={e => setMinAverage(Number(e.target.value))} 
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {isLocked ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-1.5 text-destructive font-bold animate-pulse text-[10px] uppercase tracking-tighter">
+                  <Lock className="h-3 w-3" /> System Locked (Official Use Only)
+                </div>
+                {isTopHead && (
+                  <Button variant="outline" size="sm" className="h-7 text-[10px] border-destructive/30 text-destructive hover:bg-destructive/5" onClick={unlockFilter}>
+                    Unlock Configuration
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <Button size="sm" className="h-7 text-[10px]" onClick={lockFilter} disabled={!isTopHead}>
+                <Lock className="mr-1 h-3 w-3" /> Lock Criteria
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={generateCriteriaPDF}>
+              <FileText className="mr-1 h-3 w-3" /> Log Criteria
+            </Button>
+            <Button 
+              variant="outline" 
+              className="border-stone-300 text-xs px-6 font-bold hover:bg-white" 
+              onClick={handleAutoScreen}
+            >
+              Auto-Screen with {((minAverage / 30) * 100).toFixed(0)}%
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* Settings */}
       {showSettings && isTopHead && (
@@ -884,21 +1130,6 @@ export default function ElectionsPage() {
         </Card>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
-        <Card><CardContent className="p-3 text-center">
-          <p className="text-2xl font-bold sm:text-3xl">{filteredApplicants.length}</p>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">Applicants</p>
-        </CardContent></Card>
-        <Card><CardContent className="p-3 text-center">
-          <p className="text-2xl font-bold text-primary sm:text-3xl">{qualified}</p>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">Qualified</p>
-        </CardContent></Card>
-        <Card><CardContent className="p-3 text-center">
-          <p className="text-2xl font-bold text-destructive sm:text-3xl">{disqualified}</p>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">Disqualified</p>
-        </CardContent></Card>
-      </div>
 
       {/* Applicants */}
       <Card>

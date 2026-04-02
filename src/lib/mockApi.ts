@@ -32,12 +32,29 @@ const USERS: Record<string, any> = {
     user: { id: 'usr_pub', username: 'publicity', email: 'publicity@mengo.sc' },
     profile: { id: 'prof_pub', user_id: 'usr_pub', full_name: 'Secretary Publicity', profile_pic: null, student_class: 'S.4' },
     roles: ['secretary_publicity'],
+  },
+  'disciplinary': {
+    password: 'disciplinary123',
+    user: { id: 'usr_dc', username: 'disciplinary', email: 'dc@mengo.sc' },
+    profile: { id: 'prof_dc', user_id: 'usr_dc', full_name: 'Disciplinary Committee', profile_pic: null, student_class: 'S.5' },
+    roles: ['disciplinary_committee'],
+  },
+  'vicechair': {
+    password: 'vicechair123',
+    user: { id: 'usr_vc', username: 'vicechair', email: 'vc@mengo.sc' },
+    profile: { id: 'prof_vc', user_id: 'usr_vc', full_name: 'Vice Chairperson (DP)', profile_pic: null, student_class: 'S.6' },
+    roles: ['vice_chairperson'],
   }
 };
 
 let MOCK_APPLICANTS = [
   { id: '1', applicant_name: 'Jane Doe', class: 'S.2', stream: 'North', smart_score: 9, conf_score: 8, qapp_score: 8, average_score: 25, comment: 'Great prospect', gender: 'female', status: 'qualified' },
   { id: '2', applicant_name: 'John Smith', class: 'S.2', stream: 'South', smart_score: 4, conf_score: 5, qapp_score: 3, average_score: 12, comment: 'Needs confidence', gender: 'male', status: 'disqualified' },
+];
+
+let MOCK_STREAMS = [
+  { id: '1', name: 'EAST' },
+  { id: '2', name: 'WEST' },
 ];
 
 export function setupMockApi(api: AxiosInstance) {
@@ -139,6 +156,14 @@ export function setupMockApi(api: AxiosInstance) {
     return [200, { message: 'Screened' }];
   });
 
+  mock.onGet('/streams/').reply(200, { results: MOCK_STREAMS });
+  mock.onPost('/streams/').reply((config) => {
+    const data = JSON.parse(config.data);
+    const newStream = { id: Date.now().toString(), name: data.name };
+    MOCK_STREAMS.push(newStream);
+    return [201, newStream];
+  });
+
   let MOCK_DOCS: any[] = [
     { id: '100', title: 'Term 1 Report', category: 'Reports', uploaded_by: 'adminabsolute', uploader_role: 'adminabsolute', access_level: 'public', file_url: '#', created_at: new Date().toISOString(), target_office: null },
   ];
@@ -146,6 +171,59 @@ export function setupMockApi(api: AxiosInstance) {
   let MOCK_BLOGS: any[] = [
     { id: '1', title: 'Welcome to Mengo Student Hub', content: 'This is the first official blog post regarding our new portal. Watch this space for updates from the Publicity office.', author: 'Publicity Team', media_url: null, media_type: 'none', created_at: new Date().toISOString() }
   ];
+
+  let MOCK_PROGRAMMES: any[] = [
+    { id: '1', title: 'Opening Ceremony', description: 'Termly opening assembly for all students.', event_date: new Date().toISOString(), visibility: 'public', created_by: 'adminabsolute', created_at: new Date().toISOString() },
+    { id: '2', title: 'Council Strategy Meeting', description: 'Private meeting for incoming strategies.', event_date: new Date(Date.now() + 86400000 * 2).toISOString(), visibility: 'private', created_by: 'chairperson', created_at: new Date().toISOString() }
+  ];
+
+  let MOCK_DC_CASES: any[] = [
+    { id: '1', offender_name: 'Student A', category: 'Insubordination', description: 'Refusal to follow head prefect instructions during assembly.', status: 'Pending', reported_by: 'merecouncillor', created_at: new Date().toISOString() }
+  ];
+
+  let MOCK_GALLERY: any[] = [
+     { id: '8', url: 'https://images.unsplash.com/photo-1511629091441-ee46146481b6?auto=format&fit=crop&q=80', caption: 'Debate Club - Regional Finals', created_at: new Date().toISOString() }
+   ];
+ 
+   let MOCK_STUDENT_VOICES: any[] = [
+     { id: '1', title: 'Better Cafeteria Menu', category: 'ideas', description: 'The menu is currently repetitive. Requesting more variety in fruits and snacks for students.', status: 'Pending', submitted_by: 'Musa John', submitted_class: 'S.3', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: false },
+     { id: '2', title: 'Broken Lab Equipment', category: 'complaints', description: 'Form 4 lab is lacking working microscopes. This makes practical sessions difficult.', status: 'Pending', submitted_by: 'Sarah Faith', submitted_class: 'S.4', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: true },
+     { id: '3', title: 'aaaaaaaaaaaaaaa', category: 'ideas', description: 'sdsdsdsdsdsdsdsdsdsd sdsdsdsdsdsdsdsdsd', status: 'Pending', submitted_by: 'Anonymous', submitted_class: 'S.2', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: false },
+     { id: '4', title: 'URGENT: Stolen Phone', category: 'complaints', description: 'Someone stole my phone in the locker room. This is unfair and I want a strike if it is not found!', status: 'Pending', submitted_by: 'Kato Paul', submitted_class: 'S.5', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: false }
+   ];
+
+  const getFilteredVoices = (config: any) => {
+    const isPatronMock = config.headers?.["Authorization"]?.includes("patron_token") || false;
+    return isPatronMock ? MOCK_STUDENT_VOICES.filter(v => v.is_forwarded_to_patron) : MOCK_STUDENT_VOICES;
+  };
+
+  mock.onGet('/dashboard/stats/').reply((config) => {
+    const voices = getFilteredVoices(config);
+    return [200, {
+      stats: {
+        voices: voices.length,
+        issues: MOCK_DC_CASES.length,
+        events: 12,
+        docs: 45
+      },
+      recentVoices: voices.slice(0, 3).map(v => ({
+        title: v.title,
+        category: v.category,
+        status: v.status.toLowerCase(),
+        date: new Date(v.created_at).toLocaleDateString()
+      })),
+      recentIssues: MOCK_DC_CASES.slice(0, 3).map(c => ({
+        title: c.title,
+        status: c.status.toLowerCase(),
+        raised: new Date(c.created_at).toLocaleDateString()
+      })),
+      finance: [
+        { v: "15.4M", l: "Budget" },
+        { v: "8.2M", l: "Spent" },
+        { v: "7.2M", l: "Left" }
+      ]
+    }];
+  });
 
   mock.onGet('/blogs/').reply(200, { results: MOCK_BLOGS });
   mock.onPost('/blogs/').reply((config) => {
@@ -228,15 +306,141 @@ export function setupMockApi(api: AxiosInstance) {
 
   mock.onGet('/users/all-profiles/').reply(200, { results: Object.values(USERS).map(u => u.profile) });
 
+  mock.onGet('/users/all-roles/').reply((config) => {
+    const roles: any[] = [];
+    Object.values(USERS).forEach(u => {
+      u.roles.forEach((r: string) => {
+        roles.push({ role: r, user_id: u.profile.user_id });
+      });
+    });
+    return [200, roles]; // Return array as expected by component
+  });
+
   mock.onPost('/users/upgrade-role/').reply((config) => {
     const { user_id, new_role } = JSON.parse(config.data);
+    
+    // 1. Clear this role from anyone else who might have it (if it's a leadership role)
+    // We only enforce 1-to-1 for non-general roles like 'councillor'
+    if (new_role !== 'councillor' && new_role !== 'adminabsolute') {
+      Object.keys(USERS).forEach(username => {
+        if (USERS[username].roles.includes(new_role)) {
+          USERS[username].roles = USERS[username].roles.filter((r: string) => r !== new_role);
+          // If they end up with no roles, give them 'councillor'
+          if (USERS[username].roles.length === 0) USERS[username].roles = ['councillor'];
+        }
+      });
+    }
+
+    // 2. Assign the new role to the target user
     const userToUpdate = Object.values(USERS).find((u) => u.profile.user_id === user_id);
     if (userToUpdate) {
-      userToUpdate.roles = [new_role];
-      return [200, { message: "Role upgraded successfully" }];
+      if (new_role === 'councillor') {
+        userToUpdate.roles = ['councillor'];
+      } else {
+        // Replace existing roles or specific logic? Let's just set the primary role.
+        userToUpdate.roles = [new_role];
+      }
+      return [200, { message: "Cabinet position updated!" }];
     }
     return [404, { detail: "User not found" }];
   });
 
-  mock.onAny().passThrough();
+  mock.onGet('/users/councillors/').reply(200, { 
+    results: Object.values(USERS).map(u => u.profile) 
+  });
+
+
+  mock.onGet('/programmes/').reply((config) => {
+    const token = config.headers?.Authorization;
+    let userRole = null;
+    if (token) {
+      const username = token.split('-').pop();
+      if (username && USERS[username]) {
+        userRole = USERS[username].roles[0];
+      }
+    }
+    
+    // Default visibility allows all to council and public to guests
+    let visibleProgrammes = MOCK_PROGRAMMES;
+    if (!userRole) {
+       // Filter down to only public
+       visibleProgrammes = MOCK_PROGRAMMES.filter(p => p.visibility === 'public');
+    }
+    return [200, { results: visibleProgrammes }];
+  });
+
+  mock.onPost('/programmes/').reply((config) => {
+    const data = JSON.parse(config.data);
+    const newProg = { ...data, id: Date.now().toString(), created_at: new Date().toISOString() };
+    MOCK_PROGRAMMES.push(newProg);
+    return [201, newProg];
+  });
+
+  mock.onGet('/dc-cases/').reply((config) => {
+    return [200, { results: MOCK_DC_CASES }];
+  });
+
+  mock.onPost('/dc-cases/').reply((config) => {
+    const data = JSON.parse(config.data);
+    const newCase = { ...data, id: Date.now().toString(), status: 'Pending', created_at: new Date().toISOString() };
+    MOCK_DC_CASES.push(newCase);
+    return [201, newCase];
+  });
+
+  mock.onPatch(/\/dc-cases\/\d+\//).reply((config) => {
+    const id = config.url?.split('/')[2];
+    const data = JSON.parse(config.data);
+    const caseIndex = MOCK_DC_CASES.findIndex(c => c.id === id);
+    if (caseIndex !== -1) {
+      MOCK_DC_CASES[caseIndex] = { ...MOCK_DC_CASES[caseIndex], ...data };
+      return [200, MOCK_DC_CASES[caseIndex]];
+    }
+    return [404, { detail: 'Case not found' }];
+  });
+
+  mock.onGet('/gallery/').reply(200, { results: MOCK_GALLERY });
+  mock.onPost('/gallery/').reply((config) => {
+    const data = JSON.parse(config.data);
+    const newPhoto = { 
+      ...data, 
+      id: Date.now().toString(), 
+      url: data.url || 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80', // Fallback for simulation
+      created_at: new Date().toISOString() 
+    };
+    MOCK_GALLERY.unshift(newPhoto);
+    return [201, newPhoto];
+  });
+
+   mock.onGet('/student-voices/').reply(200, { results: MOCK_STUDENT_VOICES });
+   mock.onPost('/student-voices/').reply((config) => {
+     let title = "Voice Sub", description = "", category = "General";
+     if (config.data instanceof FormData) {
+        title = config.data.get('title') as string;
+        description = config.data.get('description') as string;
+        category = config.data.get('category') as string;
+     } else {
+        const body = JSON.parse(config.data);
+        title = body.title; description = body.description; category = body.category;
+     }
+     const newVoice = { id: Date.now().toString(), title, description, category, status: 'Pending', created_at: new Date().toISOString(), is_forwarded_to_patron: false };
+     MOCK_STUDENT_VOICES.unshift(newVoice);
+     return [201, newVoice];
+   });
+   mock.onPatch(/\/student-voices\/\d+\//).reply((config) => {
+     const id = config.url?.split('/')[2];
+     const data = JSON.parse(config.data);
+     const index = MOCK_STUDENT_VOICES.findIndex(v => v.id === id);
+     if (index !== -1) {
+       MOCK_STUDENT_VOICES[index] = { ...MOCK_STUDENT_VOICES[index], ...data };
+       return [200, MOCK_STUDENT_VOICES[index]];
+     }
+     return [404, {}];
+   });
+   mock.onDelete(/\/student-voices\/\d+\//).reply((config) => {
+     const id = config.url?.split('/')[2];
+     MOCK_STUDENT_VOICES = MOCK_STUDENT_VOICES.filter(v => v.id !== id);
+     return [204, {}];
+   });
+ 
+   mock.onAny().passThrough();
 }

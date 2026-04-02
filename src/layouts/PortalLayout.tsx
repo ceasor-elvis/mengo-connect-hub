@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Calendar, FileText, AlertTriangle, Users,
-  MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network, UserPlus, Lock, Settings
+  MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network, UserPlus, Lock, Settings, Scale, Shield, ShieldCheck
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -36,10 +36,14 @@ const sidebarLinks: NavItem[] = [
   { label: "Hierarchy", path: "/portal/hierarchy", icon: Network },
   { label: "Logs", path: "/portal/logs", icon: Activity,
     roles: ["patron", "chairperson", "speaker", "electoral_commission"] },
-  { label: "Register Member", path: "/portal/register-member", icon: UserPlus,
+  { label: "Add Member", path: "/portal/register-member", icon: UserPlus,
+    roles: ["chairperson"] },
+  { label: "Add Patron", path: "/portal/register-patron", icon: Shield,
     roles: ["chairperson"] },
   { label: "Blog Manager", path: "/portal/blog", icon: FileText,
     roles: ["chairperson", "secretary_publicity"] },
+  { label: "Disciplinary", path: "/portal/disciplinary", icon: Scale,
+    roles: ["disciplinary_committee", "chairperson", "vice_chairperson", "general_secretary"] },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -50,6 +54,7 @@ const ROLE_LABELS: Record<string, string> = {
   secretary_welfare: "Secretary Welfare", secretary_health: "Secretary Health",
   secretary_women_affairs: "Secretary Women Affairs", secretary_publicity: "Secretary Publicity",
   secretary_pwd: "Secretary PWD", electoral_commission: "Electoral Commission",
+  disciplinary_committee: "DP / Disciplinary Committee",
 };
 
 export default function PortalLayout() {
@@ -98,7 +103,7 @@ export default function PortalLayout() {
   if (!user) return null;
 
   const visibleLinks = sidebarLinks.filter((l) => {
-    if (roles.includes("patron") && !["Dashboard", "Student Voices", "Programmes", "Documents", "Requisitions"].includes(l.label)) {
+    if (roles.includes("patron") && !roles.includes("adminabsolute") && !["Dashboard", "Student Voices", "Programmes", "Documents", "Requisitions"].includes(l.label)) {
       return false;
     }
     if (!l.roles) return true;
@@ -124,35 +129,45 @@ export default function PortalLayout() {
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-sidebar-foreground">{profile?.full_name || user.email}</p>
             <p className="truncate text-[10px] text-muted-foreground">{roleLabel}</p>
+            {roles.includes("adminabsolute") && (
+              <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold uppercase tracking-widest shadow-sm">
+                <ShieldCheck className="h-2.5 w-2.5" />
+                Admin Absolute
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-0.5 p-2">
-        {visibleLinks.map((l) => (
-          <Button
-            key={l.path}
-            variant={location.pathname === l.path ? "default" : "ghost"}
-            size="sm"
-            className={`w-full justify-start text-sm relative ${location.pathname !== l.path ? "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" : ""}`}
-            asChild
-          >
-            <Link to={l.path}>
-              <l.icon className="mr-2 h-4 w-4" />
-              <span className="flex-1 text-left">{l.label}</span>
-              {l.label === "Elections" && activeLocks.length > 0 && (
-                <Badge variant="destructive" className="ml-auto rounded-full px-1.5 py-0 text-[10px]">
-                  <Lock className="h-3 w-3 mr-1" /> {activeLocks.length}
-                </Badge>
+      <nav className="flex-1 space-y-0.5 p-2 overflow-y-auto">
+        {visibleLinks.map((l, index) => {
+          const isCouncilBodyStart = l.label === "Add Member";
+          return (
+            <div key={l.path}>
+              {isCouncilBodyStart && (
+                <div className="px-3 py-2 mt-4 mb-1 border-t border-sidebar-border pt-4">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Council Body</p>
+                </div>
               )}
-            </Link>
-          </Button>
-        ))}
+              <Button
+                variant={location.pathname === l.path ? "default" : "ghost"}
+                size="sm"
+                className={`w-full justify-start text-sm relative ${location.pathname !== l.path ? "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" : ""}`}
+                asChild
+              >
+                <Link to={l.path}>
+                  <l.icon className="mr-2 h-4 w-4" />
+                  <span className="flex-1 text-left">{l.label}</span>
+                </Link>
+              </Button>
+            </div>
+          );
+        })}
       </nav>
 
       <div className="border-t border-sidebar-border p-2 space-y-1">
         <Button variant="ghost" size="sm" className="w-full justify-start text-sidebar-foreground relative hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" asChild>
-          <Link to="/portal?tab=profile">
+          <Link to="/portal/settings">
             <Settings className="mr-2 h-4 w-4" /> Profile Settings
           </Link>
         </Button>

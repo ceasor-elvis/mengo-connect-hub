@@ -1,5 +1,6 @@
 import { Users, Award, Shield } from "lucide-react";
 import mengoBadge from "@/assets/mengo-badge.jpg";
+import HierarchyTree from "@/components/portal/HierarchyTree";
 
 const CABINET_MEMBERS = [
   { name: "Ssekandi Brian", position: "Chairperson", initials: "SB" },
@@ -20,28 +21,20 @@ const CABINET_MEMBERS = [
 
 export function CabinetGrid() {
   return (
-    <section className="py-12 sm:py-20">
+    <section className="py-12 sm:py-20 bg-muted/30 border-t">
       <div className="container mx-auto px-4">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <Users className="h-6 w-6 text-primary" />
           </div>
-          <h2 className="font-serif text-2xl font-bold text-foreground sm:text-3xl md:text-4xl">The Cabinet</h2>
+          <h2 className="font-serif text-2xl font-bold text-foreground sm:text-3xl md:text-4xl">The Student Cabinet</h2>
           <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
-            Meet the leaders driving positive change at Mengo Senior School.
+            The formal organizational structure and leadership hierarchy of the Mengo Senior School Council.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {CABINET_MEMBERS.map((m) => (
-            <div key={m.position} className="group flex flex-col items-center rounded-xl border bg-card p-3 text-center shadow-sm transition-all hover:shadow-md">
-              <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground sm:h-18 sm:w-18 sm:text-xl">
-                {m.initials}
-              </div>
-              <p className="text-xs font-semibold text-card-foreground sm:text-sm">{m.name}</p>
-              <p className="mt-0.5 text-[10px] text-muted-foreground sm:text-xs">{m.position}</p>
-            </div>
-          ))}
+        <div className="rounded-2xl border bg-card p-4 sm:p-8 shadow-sm overflow-hidden">
+          <HierarchyTree />
         </div>
       </div>
     </section>

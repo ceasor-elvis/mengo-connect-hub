@@ -9,6 +9,9 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import MonthlyReportForm from "@/components/portal/MonthlyReportForm";
+import RequisitionFormTemplate from "@/components/portal/RequisitionFormTemplate";
+import MinutesFormTemplate from "@/components/portal/MinutesFormTemplate";
 
 const CATEGORIES = ["Constitution", "Minutes", "Finance", "Reports", "Plans", "Other"];
 const catColor = (c: string) => {
@@ -27,6 +30,8 @@ export default function DocumentsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [accessLevel, setAccessLevel] = useState("public");
   const [targetOffice, setTargetOffice] = useState("");
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
 
   const OFFICES = [
     "chairperson", "vice_chairperson", "speaker", "deputy_speaker", 
@@ -102,47 +107,146 @@ export default function DocumentsPage() {
           <h1 className="font-serif text-xl font-bold text-foreground sm:text-2xl">Documents Archive</h1>
           <p className="text-sm text-muted-foreground">Council documents & reports.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm"><Upload className="mr-1 h-4 w-4" /> Upload</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-sm">
-            <DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
-            <div className="space-y-3 pt-2">
-              <div><Label>Title</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Term 1 Minutes" /></div>
-              <div><Label>Category</Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div><Label>Access Level</Label>
-                <Select value={accessLevel} onValueChange={setAccessLevel}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="public">Public (All members)</SelectItem>
-                    <SelectItem value="private">Private (My Office Only)</SelectItem>
-                    <SelectItem value="shared">Share with Specific Office</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {accessLevel === "shared" && (
-                <div><Label>Target Office</Label>
-                  <Select value={targetOffice} onValueChange={setTargetOffice}>
-                    <SelectTrigger><SelectValue placeholder="Select Office" /></SelectTrigger>
+        
+        <div className="flex gap-2">
+          {/* Templates flow */}
+          <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="border-primary/20">
+                <FileText className="mr-1 h-4 w-4" /> Templates
+              </Button>
+            </DialogTrigger>
+            <DialogContent className={(activeTemplate === "monthly_report" || activeTemplate === "requisition" || activeTemplate === "minutes") ? "max-w-4xl" : "max-w-sm"}>
+              <DialogHeader>
+                <DialogTitle>
+                  {activeTemplate === "monthly_report" ? "Monthly Council Report" : 
+                   activeTemplate === "requisition" ? "Official Requisition Voucher" :
+                   activeTemplate === "minutes" ? "Meeting Minutes Recording" :
+                   "Council Document Templates"}
+                </DialogTitle>
+              </DialogHeader>
+              {!activeTemplate ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4">
+                  <div 
+                    className="flex items-center gap-4 p-4 rounded-xl border border-primary/10 hover:bg-primary/5 cursor-pointer transition-all hover:border-primary/30"
+                    onClick={() => setActiveTemplate("monthly_report")}
+                  >
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-xs">Monthly Council Report</p>
+                      <p className="text-[10px] text-muted-foreground">Standardized class/office reporting.</p>
+                    </div>
+                  </div>
+
+                  <div 
+                    className="flex items-center gap-4 p-4 rounded-xl border border-primary/10 hover:bg-primary/5 cursor-pointer transition-all hover:border-primary/30"
+                    onClick={() => setActiveTemplate("requisition")}
+                  >
+                    <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-600 shrink-0">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-xs">Financial Requisition</p>
+                      <p className="text-[10px] text-muted-foreground">Formal printable fund request voucher.</p>
+                    </div>
+                  </div>
+
+                  <div 
+                    className="flex items-center gap-4 p-4 rounded-xl border border-primary/10 hover:bg-primary/5 cursor-pointer transition-all hover:border-primary/30"
+                    onClick={() => setActiveTemplate("minutes")}
+                  >
+                    <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-xs">Meeting Minutes</p>
+                      <p className="text-[10px] text-muted-foreground">Structured meeting record & resolutions.</p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-dashed border-muted-foreground/20 text-center opacity-50 select-none flex items-center justify-center">
+                    <p className="text-[10px] font-medium italic">More templates coming soon...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="pt-2">
+                   {activeTemplate === "monthly_report" && (
+                     <MonthlyReportForm 
+                       onSuccess={() => {
+                         setActiveTemplate(null);
+                         setShowTemplates(false);
+                         fetchDocs();
+                       }} 
+                     />
+                   )}
+                   {activeTemplate === "requisition" && (
+                     <RequisitionFormTemplate 
+                       onSuccess={() => {
+                         setActiveTemplate(null);
+                         setShowTemplates(false);
+                         fetchDocs();
+                       }} 
+                     />
+                   )}
+                   {activeTemplate === "minutes" && (
+                     <MinutesFormTemplate 
+                       onSuccess={() => {
+                         setActiveTemplate(null);
+                         setShowTemplates(false);
+                         fetchDocs();
+                       }} 
+                     />
+                   )}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Simple Upload flow */}
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm"><Upload className="mr-1 h-4 w-4" /> Upload</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-sm">
+              <DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
+              <div className="space-y-3 pt-2">
+                <div><Label>Title</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Term 1 Minutes" /></div>
+                <div><Label>Category</Label>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div><Label>Access Level</Label>
+                  <Select value={accessLevel} onValueChange={setAccessLevel}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {OFFICES.map(o => <SelectItem key={o} value={o}>{ROLE_LABELS[o]}</SelectItem>)}
+                      <SelectItem value="public">Public (All members)</SelectItem>
+                      <SelectItem value="private">Private (My Office Only)</SelectItem>
+                      <SelectItem value="shared">Share with Specific Office</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-              )}
-              <div><Label>File</Label><Input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={e => setFile(e.target.files?.[0] || null)} /></div>
-              <Button onClick={handleUpload} disabled={uploading || !file || !title || (accessLevel === 'shared' && !targetOffice)} className="w-full">
-                {uploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> : "Upload"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+                {accessLevel === "shared" && (
+                  <div><Label>Target Office</Label>
+                    <Select value={targetOffice} onValueChange={setTargetOffice}>
+                      <SelectTrigger><SelectValue placeholder="Select Office" /></SelectTrigger>
+                      <SelectContent>
+                        {OFFICES.map(o => <SelectItem key={o} value={o}>{ROLE_LABELS[o]}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div><Label>File</Label><Input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={e => setFile(e.target.files?.[0] || null)} /></div>
+                <Button onClick={handleUpload} disabled={uploading || !file || !title || (accessLevel === 'shared' && !targetOffice)} className="w-full">
+                  {uploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> : "Upload"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="relative">

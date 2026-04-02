@@ -9,11 +9,12 @@ import {
 } from "@/components/ui/dialog";
 import {
   CheckCircle, Search, XCircle, ExternalLink, Clock,
-  User, Calendar, Pencil, Save, X, Trash2,
+  User, Calendar, Pencil, Save, X, Trash2, Send, ShieldCheck
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { analyzeVoice } from "@/lib/moderation";
 
 interface Voice {
   id: string; title: string; category: string; description: string;
@@ -22,10 +23,14 @@ interface Voice {
   file: string | null; file_url: string | null;
   comments: string | null; created_at: string; rejected_at: string | null;
   evaluated_by_name: string | null; evaluated_by_office: string | null;
+  is_forwarded_to_patron?: boolean;
 }
 
 type StatusFilter = "All" | "Pending" | "Approved" | "Rejected";
 const STATUS_FILTERS: StatusFilter[] = ["All", "Pending", "Approved", "Rejected"];
+
+type ToneFilter = "All" | "Safe" | "Flagged";
+const TONE_FILTERS: ToneFilter[] = ["All", "Safe", "Flagged"];
 
 const statusVariant = (s: string) =>
   s === "Approved" ? "default" : s === "Rejected" ? "destructive" : "secondary";
@@ -46,11 +51,12 @@ function daysUntilDeletion(rejectedAt: string | null): number | null {
 }
 
 export default function StudentVoicesPage() {
-  const { user } = useAuth();
+  const { user, roles, hasAnyRole } = useAuth();
   const [voices, setVoices] = useState<Voice[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
+  const [toneFilter, setToneFilter] = useState<ToneFilter>("All");
   const [selected, setSelected] = useState<Voice | null>(null);
   const [comment, setComment] = useState("");
   const [evaluating, setEvaluating] = useState(false);
@@ -153,6 +159,21 @@ export default function StudentVoicesPage() {
     }
   };
 
+  const handleToggleForward = async () => {
+    if (!selected) return;
+    const newState = !selected.is_forwarded_to_patron;
+    try {
+      await api.patch(`/student-voices/${selected.id}/`, {
+        is_forwarded_to_patron: newState
+      });
+      toast.success(newState ? "Forwarded to Patron" : "Forwarding revoked");
+      setSelected({ ...selected, is_forwarded_to_patron: newState });
+      fetchVoices();
+    } catch (e) {
+      toast.error("Action failed");
+    }
+  };
+
   const counts: Record<StatusFilter, number> = {
     All: voices.length,
     Pending: voices.filter(v => v.status === "Pending").length,
@@ -161,6 +182,16 @@ export default function StudentVoicesPage() {
   };
 
   const filtered = voices.filter(v => {
+    // Patron Access Restriction
+    const isPatron = roles.includes("patron") && !roles.includes("adminabsolute");
+    if (isPatron && !v.is_forwarded_to_patron) return false;
+
+    // Smart Tone Filter
+    if (toneFilter !== "All") {
+      const { status } = analyzeVoice(v.title, v.description);
+      if (status !== toneFilter) return false;
+    }
+
     const matchesStatus = statusFilter === "All" || v.status === statusFilter;
     const matchesSearch =
       v.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -197,6 +228,25 @@ export default function StudentVoicesPage() {
         ))}
       </div>
 
+      {/* Secondary Tone Filter row — Hidden from Patron */}
+      {!roles.includes("patron") || roles.includes("adminabsolute") ? (
+        <div className="flex items-center gap-4 py-1.5 px-3 border border-dashed rounded-lg bg-muted/20">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Smart Tone:</span>
+          <div className="flex gap-2">
+            {TONE_FILTERS.map(f => (
+              <button
+                key={f}
+                onClick={() => setToneFilter(f)}
+                className={`text-[10px] font-semibold transition-opacity px-2 py-0.5 rounded
+                  ${toneFilter === f ? "bg-primary/10 text-primary" : "opacity-50 hover:opacity-100"}`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -228,10 +278,26 @@ export default function StudentVoicesPage() {
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                       <Badge variant="outline" className="text-[10px] shrink-0">{v.category}</Badge>
                       <span className="text-sm font-medium truncate">{v.title}</span>
+                      {/* Tone Indicator */}
+                      {(() => {
+                        const { status, reason } = analyzeVoice(v.title, v.description);
+                        return (
+                          <Badge variant={status === "Safe" ? "secondary" : "destructive"} className="text-[9px] h-4 scale-90 px-1 border-none bg-stone-100 dark:bg-stone-800">
+                            {status === "Safe" ? <span className="text-green-600">● Safe</span> : <span title={reason || ""}>⚠ Flagged</span>}
+                          </Badge>
+                        );
+                      })()}
                     </div>
-                    <Badge variant={statusVariant(v.status)} className="text-[10px] flex items-center gap-1 shrink-0">
-                      {statusIcon(v.status)} {v.status}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge variant={statusVariant(v.status)} className="text-[10px] flex items-center gap-1 shrink-0">
+                        {statusIcon(v.status)} {v.status}
+                      </Badge>
+                      {v.is_forwarded_to_patron && (
+                        <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] flex items-center gap-1 shrink-0">
+                          <ShieldCheck className="h-3 w-3" /> Forwarded
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{v.description}</p>
                   <div className="flex items-center justify-between mt-1.5">
@@ -266,11 +332,26 @@ export default function StudentVoicesPage() {
                   <Badge variant={statusVariant(selected.status)} className="text-[10px] flex items-center gap-1">
                     {statusIcon(selected.status)} {selected.status}
                   </Badge>
+                  {selected.is_forwarded_to_patron && (
+                    <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] flex items-center gap-1">
+                      <ShieldCheck className="h-3 w-3" /> {roles.includes("patron") ? "Forwarded by Council" : "Forwarded to Patron"}
+                    </Badge>
+                  )}
                   {daysUntilDeletion(selected.rejected_at) !== null && (
                     <span className={`text-[10px] font-medium ${(daysUntilDeletion(selected.rejected_at) ?? 31) <= 7 ? "text-destructive" : "text-muted-foreground"}`}>
                       🗑 Auto-deletes in {daysUntilDeletion(selected.rejected_at)}d
                     </span>
                   )}
+                  {/* Modal Tone info */}
+                  {(() => {
+                    const { status, reason } = analyzeVoice(selected.title, selected.description);
+                    return status === "Flagged" && (
+                      <div className="w-full mt-1.5 p-2 bg-destructive/5 text-destructive border border-destructive/20 rounded-md flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase">FLAGGED ISSUE:</span>
+                        <span className="text-xs">{reason}</span>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <DialogTitle className="font-serif text-lg leading-snug">{selected.title}</DialogTitle>
                 <DialogDescription className="flex items-center gap-1 text-xs flex-wrap">
@@ -321,27 +402,41 @@ export default function StudentVoicesPage() {
                     </div>
                   )}
 
-                  {/* Actions row — Edit + Delete */}
-                  <div className="flex items-center justify-between gap-2 border-t pt-3">
-                    <Button variant="outline" size="sm" className="gap-1.5" onClick={startEdit}>
-                      <Pencil className="h-3.5 w-3.5" /> Edit
-                    </Button>
-                    <div className="flex items-center gap-2">
-                      {confirmDelete && (
-                        <span className="text-xs text-destructive font-medium">Confirm delete?</span>
-                      )}
-                      <Button
-                        variant={confirmDelete ? "destructive" : "outline"}
-                        size="sm"
-                        className="gap-1.5"
-                        disabled={deleting}
-                        onClick={handleDelete}
-                        onBlur={() => setConfirmDelete(false)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        {deleting ? "Deleting..." : confirmDelete ? "Yes, Delete" : "Delete"}
+                  {/* Actions row — Edit + Delete + Forward */}
+                  <div className="flex flex-col gap-3 border-t pt-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={startEdit}>
+                        <Pencil className="h-3.5 w-3.5" /> Edit
                       </Button>
+                      <div className="flex items-center gap-2">
+                        {confirmDelete && (
+                          <span className="text-xs text-destructive font-medium">Confirm delete?</span>
+                        )}
+                        <Button
+                          variant={confirmDelete ? "destructive" : "outline"}
+                          size="sm"
+                          className="gap-1.5"
+                          disabled={deleting}
+                          onClick={handleDelete}
+                          onBlur={() => setConfirmDelete(false)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          {deleting ? "Deleting..." : confirmDelete ? "Yes, Delete" : "Delete"}
+                        </Button>
+                      </div>
                     </div>
+
+                    {hasAnyRole(["chairperson", "general_secretary", "assistant_general_secretary"]) && (
+                      <Button 
+                        variant={selected.is_forwarded_to_patron ? "destructive" : "default"} 
+                        className="w-full gap-2 border-stone-200" 
+                        size="sm"
+                        onClick={handleToggleForward}
+                      >
+                        <Send className="h-4 w-4" /> 
+                        {selected.is_forwarded_to_patron ? "Revoke Forwarding to Patron" : "Forward to School Patron"}
+                      </Button>
+                    )}
                   </div>
 
                   {/* Evaluate — only for Pending */}
@@ -381,8 +476,9 @@ export default function StudentVoicesPage() {
                 /* ── Edit mode: status + comment only ── */
                 <div className="space-y-3 pt-1">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Status</label>
+                    <label htmlFor="voice-status" className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Status</label>
                     <select
+                      id="voice-status"
                       className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                       value={editStatus}
                       onChange={e => setEditStatus(e.target.value as "Pending" | "Approved" | "Rejected")}

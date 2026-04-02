@@ -6,41 +6,22 @@ import { WhoWeAre, CabinetGrid } from "@/components/CabinetSection";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 
-function PublicBlogSection() {
-  const [blogs, setBlogs] = useState<any[]>([]);
-  useEffect(() => {
-    api.get("/blogs/").then(({ data }) => setBlogs(data.results || [])).catch(() => {});
-  }, []);
-
-  if (blogs.length === 0) return null;
-
+function QuoteOfTheDaySection() {
   return (
-    <section className="bg-muted/30 py-12 sm:py-16">
+    <section className="bg-muted/30 py-12 sm:py-16 border-y">
       <div className="container mx-auto px-4">
-        <div className="mb-8 text-center">
-          <h2 className="font-serif text-2xl font-bold sm:text-3xl">Pillar News & Announcements</h2>
-          <p className="text-sm text-muted-foreground mt-2">Updates from the Publicity Office</p>
+        <div className="mb-6 text-center">
+          <h2 className="font-serif text-2xl font-bold sm:text-3xl">Quote of the Day</h2>
+          <p className="text-sm text-muted-foreground mt-2">from the CP, Gen Sec, & Publicity</p>
         </div>
-        <div className="mx-auto max-w-4xl space-y-4">
-          {blogs.map(b => (
-            <div key={b.id} className="rounded-xl border bg-card p-5 shadow-sm">
-              <h3 className="font-bold text-lg">{b.title}</h3>
-              <p className="text-xs text-primary mb-3 font-medium">{b.author} • {new Date(b.created_at).toLocaleDateString()}</p>
-              
-              {b.media_url && b.media_type === "image" && (
-                <div className="my-4 overflow-hidden rounded-lg bg-muted text-center border shadow-sm">
-                  <img src={b.media_url} alt="Blog Attachment" className="max-h-[60vh] w-full object-contain mx-auto" />
-                </div>
-              )}
-              {b.media_url && b.media_type === "video" && (
-                <div className="my-4 overflow-hidden rounded-lg bg-muted border shadow-sm flex justify-center">
-                  <video src={b.media_url} controls className="max-h-[60vh] w-full max-w-3xl" />
-                </div>
-              )}
-
-              <p className="text-card-foreground text-sm leading-relaxed whitespace-pre-wrap">{b.content}</p>
-            </div>
-          ))}
+        <div className="mx-auto max-w-3xl">
+          <div className="rounded-xl border bg-card p-8 sm:p-12 shadow-sm text-center relative overflow-hidden">
+            <span className="text-8xl text-primary/10 absolute -top-4 -left-2 font-serif select-none">"</span>
+             {/* Dynamic quote space intended for future backend connect */}
+             <p className="text-lg md:text-2xl font-medium italic text-card-foreground my-4 relative z-10">
+               Leadership is not about a title or a designation. It's about impact, influence, and inspiration.
+             </p>
+          </div>
         </div>
       </div>
     </section>
@@ -52,7 +33,7 @@ export default function HomePage() {
     <>
       {/* Hero — compact for mobile */}
       <section className="relative overflow-hidden bg-hero-gradient">
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
+        <div className="absolute inset-0 opacity-10 bg-pattern" />
         <div className="relative z-10 flex flex-col items-center px-4 py-16 text-center sm:py-24 md:py-32">
           <img src={mengoBadge} alt="Mengo Badge" className="mb-4 h-20 w-20 rounded-full border-4 border-gold object-cover shadow-xl sm:h-28 sm:w-28" />
           <h1 className="font-serif text-3xl font-extrabold text-primary-foreground sm:text-4xl md:text-6xl">
@@ -74,7 +55,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <PublicBlogSection />
+      <QuoteOfTheDaySection />
       <WhoWeAre />
       <CabinetGrid />
 

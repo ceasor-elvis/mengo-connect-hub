@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserPlus, ArrowUpCircle } from "lucide-react";
+import { UserPlus, ArrowUpCircle, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -29,23 +31,50 @@ const APP_ROLES = Object.keys(ROLE_LABELS);
 
 
 export default function RegisterMemberPage() {
+  const { hasAnyRole } = useAuth();
+  const canManageStreams = hasAnyRole(["chairperson", "adminabsolute", "general_secretary"]);
+
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [studentClass, setStudentClass] = useState("");
+  const [studentStream, setStudentStream] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
 
   const [profiles, setProfiles] = useState<any[]>([]);
+  const [streams, setStreams] = useState<any[]>([]);
   const [upgradeUserId, setUpgradeUserId] = useState("");
   const [upgradeRole, setUpgradeRole] = useState("");
   const [upgradeLoading, setUpgradeLoading] = useState(false);
 
+  const [addStreamOpen, setAddStreamOpen] = useState(false);
+  const [newStreamName, setNewStreamName] = useState("");
+  const [addingStream, setAddingStream] = useState(false);
+
+  const fetchProfiles = () => api.get("/users/all-profiles/").then(res => setProfiles(Array.isArray(res.data) ? res.data : (res.data.results || []))).catch(() => {});
+  const fetchStreams = () => api.get("/streams/").then(res => setStreams(res.data.results || [])).catch(() => {});
+
   useEffect(() => {
-    api.get("/users/all-profiles/")
-      .then(res => setProfiles(Array.isArray(res.data) ? res.data : (res.data.results || [])))
-      .catch(() => {});
+    fetchProfiles();
+    fetchStreams();
   }, []);
+
+  const handleAddStream = async () => {
+    if (!newStreamName) return;
+    setAddingStream(true);
+    try {
+      await api.post("/streams/", { name: newStreamName });
+      toast.success("Stream added!");
+      setNewStreamName("");
+      setAddStreamOpen(false);
+      fetchStreams();
+    } catch (e) {
+      toast.error("Failed to add stream");
+    } finally {
+      setAddingStream(false);
+    }
+  };
 
   const handleUpgrade = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +110,7 @@ export default function RegisterMemberPage() {
         username,
         full_name: fullName,
         student_class: studentClass,
+        stream: studentStream || null,
         role: selectedRole,
       });
 
@@ -90,6 +120,7 @@ export default function RegisterMemberPage() {
       setPassword("");
       setFullName("");
       setStudentClass("");
+      setStudentStream("");
       setSelectedRole("");
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Registration failed. This account may already exist.");
@@ -127,9 +158,54 @@ export default function RegisterMemberPage() {
             <p className="text-xs text-muted-foreground">They will use this to log in</p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="studentClass">Class</Label>
-            <Input id="studentClass" placeholder="e.g. S.4 Blue" value={studentClass} onChange={(e) => setStudentClass(e.target.value)} />
+            <Label>Class</Label>
+            <Select value={studentClass} onValueChange={setStudentClass}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select Class" />
+              </SelectTrigger>
+              <SelectContent>
+                {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Stream</Label>
+            {canManageStreams && (
+              <Dialog open={addStreamOpen} onOpenChange={setAddStreamOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="link" size="sm" className="h-auto p-0"><Plus className="h-3 w-3 mr-1" /> Add Stream</Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-sm">
+                  <DialogHeader><DialogTitle>Add New Stream</DialogTitle></DialogHeader>
+                  <div className="space-y-3 pt-2">
+                    <div>
+                      <Label>Stream Name</Label>
+                      <Input value={newStreamName} onChange={e => setNewStreamName(e.target.value)} placeholder="e.g. NORTH" />
+                    </div>
+                    <Button onClick={handleAddStream} className="w-full" disabled={addingStream}>
+                      {addingStream && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Stream
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+          <Select value={studentStream} onValueChange={setStudentStream}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select Stream (Optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              {streams.map((s) => (
+                <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
