@@ -181,8 +181,19 @@ export function setupMockApi(api: AxiosInstance) {
     { id: '1', offender_name: 'Student A', category: 'Insubordination', description: 'Refusal to follow head prefect instructions during assembly.', status: 'Pending', reported_by: 'merecouncillor', created_at: new Date().toISOString() }
   ];
 
-  let MOCK_GALLERY: any[] = [
-     { id: '8', url: 'https://images.unsplash.com/photo-1511629091441-ee46146481b6?auto=format&fit=crop&q=80', caption: 'Debate Club - Regional Finals', created_at: new Date().toISOString() }
+   let MOCK_GALLERY: any[] = [
+     { id: '1', url: 'C:\\Users\\Administrator\\.gemini\\antigravity\\brain\\08c7024b-0041-495b-92e4-45a85fefbc71\\mengo_campus_overview_1775100183030.png', caption: 'Aerial View of the Historic Mengo Senior School Campus', created_at: new Date().toISOString() },
+     { id: '2', url: 'C:\\Users\\Administrator\\.gemini\\antigravity\\brain\\08c7024b-0041-495b-92e4-45a85fefbc71\\mengo_student_council_meeting_1775100203952.png', caption: 'Student Council Strategic Leadership & Governance Session', created_at: new Date().toISOString() },
+     { id: '3', url: 'C:\\Users\\Administrator\\.gemini\\antigravity\\brain\\08c7024b-0041-495b-92e4-45a85fefbc71\\mengo_sports_festival_1775100236898.png', caption: 'Annual Inter-house Sports Day - Competition & Unity', created_at: new Date().toISOString() },
+     { id: '4', url: 'https://images.unsplash.com/photo-1577891729319-618bf5d70b4c?auto=format&fit=crop&q=80', caption: 'Main Hall Assembly - Termly Student Induction', created_at: new Date().toISOString() },
+     { id: '5', url: 'https://images.unsplash.com/photo-1544928147-79a2dbc1f389?auto=format&fit=crop&q=80', caption: 'Advanced Science Laboratory Practical Sessions', created_at: new Date().toISOString() },
+     { id: '6', url: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&q=80', caption: 'Prefects Induction & Swearing-In Ceremony', created_at: new Date().toISOString() },
+     { id: '7', url: 'https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&q=80', caption: 'Sunday Mass & Spiritual Guidance at the Chapel', created_at: new Date().toISOString() },
+     { id: '8', url: 'https://images.unsplash.com/photo-1541339907198-e08756eaa539?auto=format&fit=crop&q=80', caption: 'Quiet Study Hour in the Main Library', created_at: new Date().toISOString() },
+     { id: '9', url: 'https://images.unsplash.com/photo-1511629091441-ee46146481b6?auto=format&fit=crop&q=80', caption: 'National Debate Championship - Regional Semi-Finals', created_at: new Date().toISOString() },
+     { id: '10', url: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80', caption: 'Drama & Music Festival - Creative Arts Showcase', created_at: new Date().toISOString() },
+     { id: '11', url: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80', caption: 'Inter-House Football Finals - Spirit of Mengo', created_at: new Date().toISOString() },
+     { id: '12', url: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80', caption: 'Peer Mentorship Program - Student Outreach', created_at: new Date().toISOString() }
    ];
  
    let MOCK_STUDENT_VOICES: any[] = [
