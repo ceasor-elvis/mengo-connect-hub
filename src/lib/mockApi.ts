@@ -58,6 +58,22 @@ let MOCK_STREAMS = [
   { id: '2', name: 'WEST' },
 ];
 
+let MOCK_NOTIFICATIONS: any[] = [
+  { id: '1', user_id: 'usr_admin', title: 'System Update', message: 'The portal is now active.', type: 'info', read: false, created_at: new Date().toISOString() },
+];
+
+let MOCK_ACTIVITY_LOGS: any[] = [
+  { id: '1', action: 'Login', module: 'Auth', details: 'User adminabsolute logged in', created_at: new Date().toISOString() },
+];
+
+let MOCK_REQUISITIONS: any[] = [
+  { id: '1', item: 'Printer Ink', amount: 45000, requested_by: 'usr_pub', status: 'pending', approved_by: null, created_at: new Date().toISOString() },
+];
+
+let MOCK_ROTAS: any[] = [
+  { id: '1', week: 'Week 14 (Apr 6 – Apr 12)', duties: [{ day: 'Mon', task: 'Main gate duty', assigned: 'Mere Councillor' }], created_by: 'usr_admin' },
+];
+
 let MOCK_TREE = [...DEFAULT_TREE];
 
 export function setupMockApi(api: AxiosInstance) {
@@ -180,8 +196,8 @@ export function setupMockApi(api: AxiosInstance) {
     { id: '2', title: 'Council Strategy Meeting', description: 'Private meeting for incoming strategies.', event_date: new Date(Date.now() + 86400000 * 2).toISOString(), visibility: 'private', created_by: 'chairperson', created_at: new Date().toISOString() }
   ];
 
-  let MOCK_DC_CASES: any[] = [
-    { id: '1', offender_name: 'Student A', category: 'Insubordination', description: 'Refusal to follow head prefect instructions during assembly.', status: 'Pending', reported_by: 'merecouncillor', created_at: new Date().toISOString() }
+  let MOCK_ISSUES: any[] = [
+    { id: '1', title: 'Broken Lab Equipment', category: 'Infrastructure', description: 'Form 4 lab is lacking working microscopes.', status: 'Open', priority: 'High', raised_by: 'usr_councillor', reporter_name: 'Mere Councillor', created_at: new Date().toISOString() }
   ];
 
    let MOCK_GALLERY: any[] = [
@@ -216,7 +232,7 @@ export function setupMockApi(api: AxiosInstance) {
     return [200, {
       stats: {
         voices: voices.length,
-        issues: MOCK_DC_CASES.length,
+        issues: MOCK_ISSUES.length,
         events: 12,
         docs: 45
       },
@@ -226,7 +242,7 @@ export function setupMockApi(api: AxiosInstance) {
         status: v.status.toLowerCase(),
         date: new Date(v.created_at).toLocaleDateString()
       })),
-      recentIssues: MOCK_DC_CASES.slice(0, 3).map(c => ({
+      recentIssues: MOCK_ISSUES.slice(0, 3).map(c => ({
         title: c.title,
         status: c.status.toLowerCase(),
         raised: new Date(c.created_at).toLocaleDateString()
@@ -390,26 +406,97 @@ export function setupMockApi(api: AxiosInstance) {
     return [201, newProg];
   });
 
-  mock.onGet('/dc-cases/').reply((config) => {
-    return [200, { results: MOCK_DC_CASES }];
+  mock.onGet('/issues/').reply((config) => {
+    return [200, { results: MOCK_ISSUES }];
   });
 
-  mock.onPost('/dc-cases/').reply((config) => {
+  mock.onPost('/issues/').reply((config) => {
     const data = JSON.parse(config.data);
-    const newCase = { ...data, id: Date.now().toString(), status: 'Pending', created_at: new Date().toISOString() };
-    MOCK_DC_CASES.push(newCase);
-    return [201, newCase];
+    const newIssue = { ...data, id: Date.now().toString(), status: 'Open', created_at: new Date().toISOString() };
+    MOCK_ISSUES.push(newIssue);
+    return [201, newIssue];
   });
 
-  mock.onPatch(/\/dc-cases\/\d+\//).reply((config) => {
+  mock.onPatch(/\/issues\/\d+\//).reply((config) => {
     const id = config.url?.split('/')[2];
     const data = JSON.parse(config.data);
-    const caseIndex = MOCK_DC_CASES.findIndex(c => c.id === id);
-    if (caseIndex !== -1) {
-      MOCK_DC_CASES[caseIndex] = { ...MOCK_DC_CASES[caseIndex], ...data };
-      return [200, MOCK_DC_CASES[caseIndex]];
+    const index = MOCK_ISSUES.findIndex(c => c.id === id);
+    if (index !== -1) {
+      MOCK_ISSUES[index] = { ...MOCK_ISSUES[index], ...data };
+      return [200, MOCK_ISSUES[index]];
     }
-    return [404, { detail: 'Case not found' }];
+    return [404, { detail: 'Issue not found' }];
+  });
+
+  // Notifications
+  mock.onGet('/notifications/').reply(200, { results: MOCK_NOTIFICATIONS });
+  mock.onPost('/notifications/').reply((config) => {
+    const data = JSON.parse(config.data);
+    const newNotify = { ...data, id: Date.now().toString(), read: false, created_at: new Date().toISOString() };
+    MOCK_NOTIFICATIONS.unshift(newNotify);
+    return [201, newNotify];
+  });
+  mock.onPost('/notifications/all/').reply((config) => {
+    const data = JSON.parse(config.data);
+    const newNotify = { ...data, id: Date.now().toString(), user_id: 'all', read: false, created_at: new Date().toISOString() };
+    MOCK_NOTIFICATIONS.unshift(newNotify);
+    return [201, newNotify];
+  });
+  mock.onPost('/notifications/mark-all-read/').reply(() => {
+    MOCK_NOTIFICATIONS = MOCK_NOTIFICATIONS.map(n => ({ ...n, read: true }));
+    return [200, { message: 'All read' }];
+  });
+
+  // Activity Logs
+  mock.onGet('/activity-logs/').reply(200, { results: MOCK_ACTIVITY_LOGS });
+  mock.onPost('/activity-logs/').reply((config) => {
+    const data = JSON.parse(config.data);
+    const newLog = { ...data, id: Date.now().toString(), created_at: new Date().toISOString() };
+    MOCK_ACTIVITY_LOGS.unshift(newLog);
+    return [201, newLog];
+  });
+
+  // Requisitions
+  mock.onGet('/requisitions/').reply(200, { results: MOCK_REQUISITIONS });
+  mock.onPost('/requisitions/').reply((config) => {
+    const data = JSON.parse(config.data);
+    const newReq = { ...data, id: Date.now().toString(), status: 'pending', created_at: new Date().toISOString() };
+    MOCK_REQUISITIONS.push(newReq);
+    return [201, newReq];
+  });
+  mock.onPatch(/\/requisitions\/\d+\//).reply((config) => {
+    const id = config.url?.split('/')[2];
+    const data = JSON.parse(config.data);
+    const index = MOCK_REQUISITIONS.findIndex(r => r.id === id);
+    if (index !== -1) {
+      MOCK_REQUISITIONS[index] = { ...MOCK_REQUISITIONS[index], ...data };
+      return [200, MOCK_REQUISITIONS[index]];
+    }
+    return [404, {}];
+  });
+
+  // Rotas
+  mock.onGet('/rotas/').reply(200, { results: MOCK_ROTAS });
+  mock.onPost('/rotas/').reply((config) => {
+    const data = JSON.parse(config.data);
+    const newRota = { ...data, id: Date.now().toString(), created_at: new Date().toISOString() };
+    MOCK_ROTAS.push(newRota);
+    return [201, newRota];
+  });
+  mock.onPatch(/\/rotas\/\d+\//).reply((config) => {
+    const id = config.url?.split('/')[2];
+    const data = JSON.parse(config.data);
+    const index = MOCK_ROTAS.findIndex(r => r.id === id);
+    if (index !== -1) {
+      MOCK_ROTAS[index] = { ...MOCK_ROTAS[index], ...data };
+      return [200, MOCK_ROTAS[index]];
+    }
+    return [404, {}];
+  });
+  mock.onDelete(/\/rotas\/\d+\//).reply((config) => {
+    const id = config.url?.split('/')[2];
+    MOCK_ROTAS = MOCK_ROTAS.filter(r => r.id !== id);
+    return [204, {}];
   });
 
   mock.onGet('/gallery/').reply(200, { results: MOCK_GALLERY });

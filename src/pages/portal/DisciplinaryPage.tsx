@@ -36,7 +36,7 @@ export default function DisciplinaryPage() {
 
   const fetchCases = async () => {
     try {
-      const { data } = await api.get("/dc-cases/");
+      const { data } = await api.get("/issues/");
       setCases(data.results || []);
     } catch (error) {
       toast.error("Failed to load cases");
@@ -58,7 +58,7 @@ export default function DisciplinaryPage() {
     setSubmitting(true);
     try {
       const finalCategory = category === "Other" ? customCategory : category;
-      await api.post("/dc-cases/", {
+      await api.post("/issues/", {
         offender_name: offender,
         category: finalCategory,
         description,
@@ -78,7 +78,7 @@ export default function DisciplinaryPage() {
 
   const updateStatus = async (id: string, status: string) => {
     try {
-      await api.patch(`/dc-cases/${id}/`, { status });
+      await api.patch(`/issues/${id}/`, { status });
       toast.success(`Status updated to ${status}`);
       fetchCases();
     } catch (error) {
