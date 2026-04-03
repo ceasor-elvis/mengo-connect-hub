@@ -1003,131 +1003,135 @@ export default function ElectionsPage() {
         </CardContent>
       </Card>
 
-      {/* Filter Statistics Dashboard */}
-      <div className="bg-[#f2ebe9] dark:bg-stone-900 p-4 sm:p-6 rounded-2xl border border-stone-200 shadow-sm space-y-4">
-        <div className="flex items-center gap-2 text-stone-700 dark:text-stone-300">
-          <Settings2 className="h-5 w-5" />
-          <h3 className="font-bold text-sm uppercase tracking-wide">
-            Filter Statistics — Class: {filterClass.toUpperCase()} • Stream: {filterStream.toUpperCase()} • Gender: {filterGender.toUpperCase()}
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            { label: "Total Candidates", value: filteredApplicants.length },
-            { label: "Avg Total /30", value: avgTotal.toFixed(1) },
-            { label: "Avg Percentage", value: `${avgPerc.toFixed(1)}%` },
-            { label: "Highest", value: highest },
-            { label: "Lowest", value: lowest },
-            { label: "Qualified", value: `${qualified}/${filteredApplicants.length}` }
-          ].map((stat, i) => (
-            <div key={i} className="bg-white dark:bg-stone-800 p-3 flex flex-col items-center justify-center rounded-xl border border-stone-100 shadow-sm hover:shadow-md transition-shadow">
-              <p className="text-xl font-bold text-stone-900 dark:text-white">{stat.value}</p>
-              <p className="text-[10px] text-stone-500 uppercase font-medium mt-1">{stat.label}</p>
+      {/* Filter Statistics Dashboard + Settings — shown only when Settings is toggled */}
+      {showSettings && (
+        <>
+          <div className="bg-[#f2ebe9] dark:bg-stone-900 p-4 sm:p-6 rounded-2xl border border-stone-200 shadow-sm space-y-4 animate-in slide-in-from-top-2 fade-in duration-300">
+            <div className="flex items-center gap-2 text-stone-700 dark:text-stone-300">
+              <Settings2 className="h-5 w-5" />
+              <h3 className="font-bold text-sm uppercase tracking-wide">
+                Filter Statistics — Class: {filterClass.toUpperCase()} • Stream: {filterStream.toUpperCase()} • Gender: {filterGender.toUpperCase()}
+              </h3>
             </div>
-          ))}
-        </div>
 
-        <div className="flex flex-wrap items-end justify-between gap-4 pt-2 border-t border-stone-200/50">
-          <div className="space-y-3">
-            <p className="text-xs text-stone-500 font-medium tracking-tight">Set threshold based on average</p>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                className="bg-[#d4a035] hover:bg-[#c08e2a] text-white border-none text-xs" 
-                onClick={handleSetThresholdFromAvg}
-              >
-                Use Average ({avgPerc.toFixed(0)}%)
-              </Button>
-              <div className="w-20">
-                <Input 
-                  type="number" 
-                  className="bg-white dark:bg-stone-800 border-stone-200 h-9 text-xs font-bold text-center" 
-                  value={minAverage} 
-                  onChange={e => setMinAverage(Number(e.target.value))} 
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            {isLocked ? (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-1.5 text-destructive font-bold animate-pulse text-[10px] uppercase tracking-tighter">
-                  <Lock className="h-3 w-3" /> System Locked (Official Use Only)
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              {[
+                { label: "Total Candidates", value: filteredApplicants.length },
+                { label: "Avg Total /30", value: avgTotal.toFixed(1) },
+                { label: "Avg Percentage", value: `${avgPerc.toFixed(1)}%` },
+                { label: "Highest", value: highest },
+                { label: "Lowest", value: lowest },
+                { label: "Qualified", value: `${qualified}/${filteredApplicants.length}` }
+              ].map((stat, i) => (
+                <div key={i} className="bg-white dark:bg-stone-800 p-3 flex flex-col items-center justify-center rounded-xl border border-stone-100 shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-xl font-bold text-stone-900 dark:text-white">{stat.value}</p>
+                  <p className="text-[10px] text-stone-500 uppercase font-medium mt-1">{stat.label}</p>
                 </div>
-                {isTopHead && (
-                  <Button variant="outline" size="sm" className="h-7 text-[10px] border-destructive/30 text-destructive hover:bg-destructive/5" onClick={unlockFilter}>
-                    Unlock Configuration
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-end justify-between gap-4 pt-2 border-t border-stone-200/50">
+              <div className="space-y-3">
+                <p className="text-xs text-stone-500 font-medium tracking-tight">Set threshold based on average</p>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="bg-[#d4a035] hover:bg-[#c08e2a] text-white border-none text-xs" 
+                    onClick={handleSetThresholdFromAvg}
+                  >
+                    Use Average ({avgPerc.toFixed(0)}%)
+                  </Button>
+                  <div className="w-20">
+                    <Input 
+                      type="number" 
+                      className="bg-white dark:bg-stone-800 border-stone-200 h-9 text-xs font-bold text-center" 
+                      value={minAverage} 
+                      onChange={e => setMinAverage(Number(e.target.value))} 
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {isLocked ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-1.5 text-destructive font-bold animate-pulse text-[10px] uppercase tracking-tighter">
+                      <Lock className="h-3 w-3" /> System Locked (Official Use Only)
+                    </div>
+                    {isTopHead && (
+                      <Button variant="outline" size="sm" className="h-7 text-[10px] border-destructive/30 text-destructive hover:bg-destructive/5" onClick={unlockFilter}>
+                        Unlock Configuration
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <Button size="sm" className="h-7 text-[10px]" onClick={lockFilter} disabled={!isTopHead}>
+                    <Lock className="mr-1 h-3 w-3" /> Lock Criteria
                   </Button>
                 )}
+                <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={generateCriteriaPDF}>
+                  <FileText className="mr-1 h-3 w-3" /> Log Criteria
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="border-stone-300 text-xs px-6 font-bold hover:bg-white" 
+                  onClick={handleAutoScreen}
+                >
+                  Auto-Screen with {((minAverage / 30) * 100).toFixed(0)}%
+                </Button>
               </div>
-            ) : (
-              <Button size="sm" className="h-7 text-[10px]" onClick={lockFilter} disabled={!isTopHead}>
-                <Lock className="mr-1 h-3 w-3" /> Lock Criteria
-              </Button>
-            )}
-            <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={generateCriteriaPDF}>
-              <FileText className="mr-1 h-3 w-3" /> Log Criteria
-            </Button>
-            <Button 
-              variant="outline" 
-              className="border-stone-300 text-xs px-6 font-bold hover:bg-white" 
-              onClick={handleAutoScreen}
-            >
-              Auto-Screen with {((minAverage / 30) * 100).toFixed(0)}%
-            </Button>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Settings */}
-      {showSettings && isTopHead && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="p-4 space-y-4">
-            <h3 className="font-semibold text-sm flex items-center gap-2"><Settings2 className="h-4 w-4 text-primary" /> Screening & Access Settings</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label className="text-xs">Min Screening Total (/30)</Label>
-                <Input type="number" min={0} max={30} value={minAverage} onChange={e => setMinAverage(Number(e.target.value))} />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Election Title</Label>
-                <Input value={electionTitle} onChange={e => setElectionTitle(e.target.value)} />
-              </div>
-            </div>
-            <Button size="sm" onClick={handleAutoScreen}><UserCheck className="mr-1 h-4 w-4" /> Auto-Screen All</Button>
-
-            {/* EC Access Delegation */}
-            <div className="border-t pt-3 mt-3">
-              <h4 className="text-sm font-semibold flex items-center gap-2 mb-2"><ShieldCheck className="h-4 w-4 text-primary" /> EC Access Delegation</h4>
-              <p className="text-xs text-muted-foreground mb-2">Grant other councillors access to the Elections module.</p>
-              <div className="flex gap-2 flex-wrap">
-                <Select value={grantUserId} onValueChange={setGrantUserId}>
-                  <SelectTrigger className="w-48"><SelectValue placeholder="Select councillor" /></SelectTrigger>
-                  <SelectContent>
-                    {allProfiles.filter(p => !grants.some(g => g.granted_to === p.user_id)).map(p => (
-                      <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button size="sm" onClick={grantAccess} disabled={!grantUserId}>Grant Access</Button>
-              </div>
-              {grants.length > 0 && (
-                <div className="mt-2 space-y-1">
-                  {grants.map(g => {
-                    const p = allProfiles.find(pr => pr.user_id === g.granted_to);
-                    return (
-                      <div key={g.id} className="flex items-center justify-between rounded bg-background px-3 py-1.5 text-sm">
-                        <span>{p?.full_name || "Unknown"}</span>
-                        <Button size="sm" variant="ghost" className="text-destructive h-7 text-xs" onClick={() => revokeAccess(g.id)}>Revoke</Button>
-                      </div>
-                    );
-                  })}
+          {/* Screening & Access Settings */}
+          {isTopHead && (
+            <Card className="border-primary/30 bg-primary/5 animate-in slide-in-from-top-2 fade-in duration-300">
+              <CardContent className="p-4 space-y-4">
+                <h3 className="font-semibold text-sm flex items-center gap-2"><Settings2 className="h-4 w-4 text-primary" /> Screening & Access Settings</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Min Screening Total (/30)</Label>
+                    <Input type="number" min={0} max={30} value={minAverage} onChange={e => setMinAverage(Number(e.target.value))} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Election Title</Label>
+                    <Input value={electionTitle} onChange={e => setElectionTitle(e.target.value)} />
+                  </div>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                <Button size="sm" onClick={handleAutoScreen}><UserCheck className="mr-1 h-4 w-4" /> Auto-Screen All</Button>
+
+                {/* EC Access Delegation */}
+                <div className="border-t pt-3 mt-3">
+                  <h4 className="text-sm font-semibold flex items-center gap-2 mb-2"><ShieldCheck className="h-4 w-4 text-primary" /> EC Access Delegation</h4>
+                  <p className="text-xs text-muted-foreground mb-2">Grant other councillors access to the Elections module.</p>
+                  <div className="flex gap-2 flex-wrap">
+                    <Select value={grantUserId} onValueChange={setGrantUserId}>
+                      <SelectTrigger className="w-48"><SelectValue placeholder="Select councillor" /></SelectTrigger>
+                      <SelectContent>
+                        {allProfiles.filter(p => !grants.some(g => g.granted_to === p.user_id)).map(p => (
+                          <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" onClick={grantAccess} disabled={!grantUserId}>Grant Access</Button>
+                  </div>
+                  {grants.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {grants.map(g => {
+                        const p = allProfiles.find(pr => pr.user_id === g.granted_to);
+                        return (
+                          <div key={g.id} className="flex items-center justify-between rounded bg-background px-3 py-1.5 text-sm">
+                            <span>{p?.full_name || "Unknown"}</span>
+                            <Button size="sm" variant="ghost" className="text-destructive h-7 text-xs" onClick={() => revokeAccess(g.id)}>Revoke</Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
 

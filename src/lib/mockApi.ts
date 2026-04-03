@@ -619,7 +619,57 @@ export function setupMockApi(api: AxiosInstance) {
       } catch (e) {
         return [400, { detail: "Invalid JSON" }];
       }
+     });
+
+    // Issues Endpoints
+    let MOCK_ISSUES: any[] = [
+      { id: '1', title: 'Broken Lab Equipment', description: 'The chemistry lab lacks functioning Bunsen burners for practical sessions.', status: 'open', raised_by: 'usr_chair', reporter_name: 'Ssekandi Brian', category: 'Infrastructure', priority: 'High', created_at: new Date().toISOString() },
+      { id: '2', title: 'Library Closing Too Early', description: 'The library closes at 5pm which is too early for students who want to study after classes.', status: 'in_progress', raised_by: 'usr_gs', reporter_name: 'Okello James', category: 'Academic', priority: 'Medium', created_at: new Date(Date.now() - 86400000).toISOString() },
+      { id: '3', title: 'Cafeteria Hygiene Concerns', description: 'Students have reported seeing flies around the food serving area. Needs urgent attention.', status: 'open', raised_by: 'usr_sw', reporter_name: 'Namukasa Esther', category: 'Welfare', priority: 'Critical', created_at: new Date(Date.now() - 172800000).toISOString() },
+    ];
+
+    mock.onGet('/issues/').reply(() => {
+      return [200, { results: MOCK_ISSUES }];
     });
+
+    mock.onPost('/issues/').reply((config) => {
+      const data = JSON.parse(config.data);
+      const token = config.headers?.Authorization;
+      let reporterName = 'Unknown';
+      if (token) {
+        const username = token.split('-').pop();
+        if (username && USERS[username]) {
+          reporterName = USERS[username].profile.full_name;
+        }
+      }
+      const newIssue = {
+        ...data,
+        id: Date.now().toString(),
+        reporter_name: reporterName,
+        status: 'open',
+        created_at: new Date().toISOString()
+      };
+      MOCK_ISSUES.unshift(newIssue);
+      return [201, newIssue];
+    });
+
+    mock.onPatch(/\/issues\/\d+\//).reply((config) => {
+      const id = config.url?.split('/')[2];
+      const data = JSON.parse(config.data);
+      const index = MOCK_ISSUES.findIndex(i => i.id === id);
+      if (index !== -1) {
+        MOCK_ISSUES[index] = { ...MOCK_ISSUES[index], ...data };
+        return [200, MOCK_ISSUES[index]];
+      }
+      return [404, { detail: 'Issue not found' }];
+    });
+
+    // Notification stubs (no-op, just acknowledge)
+    mock.onPost('/notifications/').reply(201, { message: 'Notification sent' });
+    mock.onPost('/notifications/all/').reply(201, { message: 'Notifications sent to all' });
+
+    // Activity log stub
+    mock.onPost('/activity-logs/').reply(201, { message: 'Logged' });
 
     mock.onAny().passThrough();
 }
