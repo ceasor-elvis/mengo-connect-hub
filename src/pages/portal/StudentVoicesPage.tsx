@@ -9,12 +9,13 @@ import {
 } from "@/components/ui/dialog";
 import {
   CheckCircle, Search, XCircle, ExternalLink, Clock,
-  User, Calendar, Pencil, Save, X, Trash2, Send, ShieldCheck
+  User, Calendar, Pencil, Save, X, Trash2, Send, ShieldCheck, Eye, Download
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { analyzeVoice } from "@/lib/moderation";
+import DocumentViewer from "@/components/portal/DocumentViewer";
 
 interface Voice {
   id: string; title: string; category: string; description: string;
@@ -70,6 +71,9 @@ export default function StudentVoicesPage() {
   // Delete state
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Viewer state
+  const [viewerDoc, setViewerDoc] = useState<{ url: string; title: string } | null>(null);
 
   const fetchVoices = async () => {
     try {
@@ -260,7 +264,7 @@ export default function StudentVoicesPage() {
 
       {/* List */}
       {loading ? (
-        <p className="text-center py-8 text-muted-foreground animate-pulse">Loading...</p>
+        <p className="text-center py-8 text-muted-foreground animate-pulse italic">Loading discussions...</p>
       ) : filtered.length === 0 ? (
         <p className="text-center py-8 text-muted-foreground">No submissions found.</p>
       ) : (
@@ -301,13 +305,25 @@ export default function StudentVoicesPage() {
                   </div>
                   <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{v.description}</p>
                   <div className="flex items-center justify-between mt-1.5">
-                    <p className="text-[10px] text-muted-foreground flex items-center gap-1 flex-wrap">
-                      <User className="h-3 w-3" />
-                      {v.submitted_by || "Anonymous"}{v.submitted_class ? ` · ${v.submitted_class}` : ""}
-                      <span className="mx-0.5">·</span>
-                      <Calendar className="h-3 w-3" />
-                      {new Date(v.created_at).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" })}
-                    </p>
+                    <div className="text-[10px] text-muted-foreground flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        {v.submitted_by || "Anonymous"}{v.submitted_class ? ` · ${v.submitted_class}` : ""}
+                      </div>
+                      <span className="opacity-50">|</span>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(v.created_at).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" })}
+                      </div>
+                      {(v.file_url || v.file) && (
+                        <>
+                          <span className="opacity-50">|</span>
+                          <span className="flex items-center gap-1 text-primary lowercase font-bold tracking-tighter">
+                            <Eye className="h-3 w-3" /> Attachment
+                          </span>
+                        </>
+                      )}
+                    </div>
                     {days !== null && (
                       <span className={`text-[10px] font-medium ${days <= 7 ? "text-destructive" : "text-muted-foreground"}`}>
                         🗑 Auto-deletes in {days}d
@@ -323,7 +339,7 @@ export default function StudentVoicesPage() {
 
       {/* Detail / Edit Modal */}
       <Dialog open={!!selected} onOpenChange={(open) => { if (!open) closeModal(); }}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto border-none shadow-2xl">
           {selected && (
             <>
               <DialogHeader>
@@ -368,28 +384,55 @@ export default function StudentVoicesPage() {
                 <div className="space-y-4 pt-1">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Description</p>
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{selected.description}</p>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground bg-stone-50 p-4 rounded-xl border border-stone-100 italic">
+                      "{selected.description}"
+                    </p>
                   </div>
 
                   {(selected.file_url || selected.file) && (
-                    <a
-                      href={selected.file_url || selected.file || "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" /> View Attachment
-                    </a>
+                    <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10">
+                      <FileText className="h-5 w-5 text-primary" />
+                      <div className="flex-1 min-w-0">
+                         <p className="text-xs font-bold truncate">Attachment Found</p>
+                         <p className="text-[10px] text-muted-foreground">Council Document / Proof</p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 text-primary hover:bg-primary/10 gap-1.5"
+                          onClick={() => setViewerDoc({ 
+                            url: selected.file_url || selected.file || "#", 
+                            title: `Attachment - ${selected.title}` 
+                          })}
+                        >
+                          <Eye className="h-3.5 w-3.5" /> View
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-muted-foreground"
+                          onClick={() => {
+                            const a = document.createElement("a");
+                            a.href = selected.file_url || selected.file || "#";
+                            a.download = `Attachment_${selected.id}`;
+                            a.click();
+                          }}
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
                   )}
 
                   {selected.comments && (
-                    <div className="rounded-md bg-muted px-3 py-2.5">
+                    <div className="rounded-xl bg-slate-50 px-3 py-2.5 border border-slate-100">
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
                         Council Comment
                         {selected.evaluated_by_office && (
                           <span className="ml-1 normal-case font-normal">
                             — from{" "}
-                            <span className="font-semibold text-foreground">
+                            <span className="font-semibold text-foreground text-primary">
                               {selected.evaluated_by_office
                                 .split("_")
                                 .map(w => w.charAt(0).toUpperCase() + w.slice(1))
@@ -398,24 +441,24 @@ export default function StudentVoicesPage() {
                           </span>
                         )}
                       </p>
-                      <p className="text-xs italic">{selected.comments}</p>
+                      <p className="text-xs italic text-slate-700 leading-relaxed">"{selected.comments}"</p>
                     </div>
                   )}
 
                   {/* Actions row — Edit + Delete + Forward */}
                   <div className="flex flex-col gap-3 border-t pt-3">
                     <div className="flex items-center justify-between gap-2">
-                      <Button variant="outline" size="sm" className="gap-1.5" onClick={startEdit}>
+                      <Button variant="outline" size="sm" className="gap-1.5 h-9" onClick={startEdit}>
                         <Pencil className="h-3.5 w-3.5" /> Edit
                       </Button>
                       <div className="flex items-center gap-2">
                         {confirmDelete && (
-                          <span className="text-xs text-destructive font-medium">Confirm delete?</span>
+                          <span className="text-[10px] text-destructive font-bold uppercase tracking-tighter">Confirm delete?</span>
                         )}
                         <Button
                           variant={confirmDelete ? "destructive" : "outline"}
                           size="sm"
-                          className="gap-1.5"
+                          className="gap-1.5 h-9"
                           disabled={deleting}
                           onClick={handleDelete}
                           onBlur={() => setConfirmDelete(false)}
@@ -429,7 +472,7 @@ export default function StudentVoicesPage() {
                     {hasAnyRole(["chairperson", "general_secretary", "assistant_general_secretary"]) && (
                       <Button 
                         variant={selected.is_forwarded_to_patron ? "destructive" : "default"} 
-                        className="w-full gap-2 border-stone-200" 
+                        className="w-full gap-2 border-stone-200 shadow-sm" 
                         size="sm"
                         onClick={handleToggleForward}
                       >
@@ -442,31 +485,31 @@ export default function StudentVoicesPage() {
                   {/* Evaluate — only for Pending */}
                   {selected.status === "Pending" && (
                     <div className="space-y-2 border-t pt-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Evaluate</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Evaluation Session</p>
                       <Textarea
                         placeholder="Add a comment (optional)..."
                         rows={3}
-                        className="text-sm"
+                        className="text-sm bg-muted/20"
                         value={comment}
                         onChange={e => setComment(e.target.value)}
                       />
                       <div className="flex gap-2 pt-1">
                         <Button
-                          className="flex-1 gap-1.5"
+                          className="flex-1 gap-1.5 h-10 shadow-lg"
                           disabled={evaluating}
                           onClick={() => handleEvaluate("Approved")}
                         >
                           <CheckCircle className="h-4 w-4" />
-                          {evaluating ? "Saving..." : "Approve"}
+                          {evaluating ? "Saving..." : "Approve Voice"}
                         </Button>
                         <Button
                           variant="outline"
-                          className="flex-1 gap-1.5 text-destructive border-destructive/40 hover:bg-destructive/10"
+                          className="flex-1 gap-1.5 h-10 text-destructive border-destructive/40 hover:bg-destructive/10"
                           disabled={evaluating}
                           onClick={() => handleEvaluate("Rejected")}
                         >
                           <XCircle className="h-4 w-4" />
-                          {evaluating ? "Saving..." : "Reject"}
+                          {evaluating ? "Saving..." : "Reject Voice"}
                         </Button>
                       </div>
                     </div>
@@ -493,10 +536,10 @@ export default function StudentVoicesPage() {
                     <Textarea rows={3} placeholder="Optional..." value={editComments} onChange={e => setEditComments(e.target.value)} />
                   </div>
                   <div className="flex gap-2 pt-1 border-t">
-                    <Button className="flex-1 gap-1.5" disabled={saving} onClick={handleSaveEdit}>
+                    <Button className="flex-1 gap-1.5 h-10" disabled={saving} onClick={handleSaveEdit}>
                       <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save Changes"}
                     </Button>
-                    <Button variant="outline" className="gap-1.5" onClick={() => setEditing(false)}>
+                    <Button variant="outline" className="gap-1.5 h-10" onClick={() => setEditing(false)}>
                       <X className="h-4 w-4" /> Cancel
                     </Button>
                   </div>
@@ -506,6 +549,13 @@ export default function StudentVoicesPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <DocumentViewer 
+        isOpen={!!viewerDoc} 
+        onClose={() => setViewerDoc(null)} 
+        fileUrl={viewerDoc?.url || null} 
+        title={viewerDoc?.title || ""} 
+      />
     </div>
   );
 }

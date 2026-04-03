@@ -41,8 +41,8 @@ interface FinanceItem {
 
 const ROLE_INFO: Record<string, RoleInfo> = {
   adminabsolute: { title: "Admin Absolute", icon: Shield, color: "text-red-500", responsibilities: ["Full system access", "Bypass all restrictions", "Manage everything"] },
-  patron: { title: "Patron", icon: Shield, color: "text-gold", responsibilities: ["Overall oversight and guidance", "Approve requisitions", "Mentor council leadership", "Liaise with administration"] },
-  chairperson: { title: "Chairperson", icon: UserCheck, color: "text-primary", responsibilities: ["Lead the Student Council", "Oversee all offices", "Represent students", "Coordinate with Patron"] },
+  patron: { title: "Patron", icon: Shield, color: "text-gold", responsibilities: ["Overall oversight and guidance", "Final approval of council documents", "Mentor council leadership", "Liaise with administration"] },
+  chairperson: { title: "Chairperson", icon: UserCheck, color: "text-primary", responsibilities: ["Lead the Student Council", "Approve & Forward documents to Patron", "Oversee all offices", "Coordinate with Patron"] },
   vice_chairperson: { title: "Vice Chairperson", icon: UserCheck, color: "text-primary", responsibilities: ["Act as Chairperson when absent", "Assist in coordination", "Supervise delegated projects"] },
   speaker: { title: "Speaker", icon: Gavel, color: "text-gold", responsibilities: ["Preside over parliamentary sessions", "Maintain order", "Rule on motions", "Oversee EC processes"] },
   deputy_speaker: { title: "Deputy Speaker", icon: Gavel, color: "text-gold", responsibilities: ["Assist Speaker", "Preside when Speaker absent", "Maintain decorum"] },
@@ -58,13 +58,13 @@ const ROLE_INFO: Record<string, RoleInfo> = {
 };
 
 export default function DashboardPage() {
-  const { profile, roles, hasAnyRole } = useAuth();
+  const { profile, roles, isAbsoluteAdmin, isCouncillor, hasAnyRole } = useAuth();
   const primaryRole = roles[0];
-  const info = primaryRole ? ROLE_INFO[primaryRole] : null;
+  const info = isAbsoluteAdmin ? ROLE_INFO.adminabsolute : (primaryRole ? ROLE_INFO[primaryRole] : null);
 
   const showFinance = hasAnyRole(["patron", "chairperson", "secretary_finance"]);
-  const showVoices = hasAnyRole(["patron", "chairperson", "general_secretary", "assistant_general_secretary"]) || roles.length === 0;
-  const showAllProgress = hasAnyRole(["patron", "chairperson"]) || roles.length === 0;
+  const showVoices = hasAnyRole(["patron", "chairperson", "general_secretary", "assistant_general_secretary"]) || isCouncillor;
+  const showAllProgress = hasAnyRole(["patron", "chairperson"]) || isCouncillor;
 
   const [dashboardData, setDashboardData] = useState<{
     stats: DashboardStats[];
@@ -107,7 +107,7 @@ export default function DashboardPage() {
     { label: "Docs", value: "...", icon: FileText, color: "text-gold", change: "..." },
   ];
   
-  const isPatronStrict = roles.includes("patron") && !roles.includes("adminabsolute");
+  const isPatronStrict = roles.includes("patron") && !isAbsoluteAdmin;
   const recentVoices = (dashboardData?.recentVoices || []).filter(v => {
     if (isPatronStrict) return v.status === "Approved"; // Simple filter for safety, or we assume backend handles it.
     return true;

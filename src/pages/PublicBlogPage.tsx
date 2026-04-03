@@ -2,12 +2,121 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Calendar, momentLocalizer } from "react-big-calendar";
-import moment from "moment";
-import "react-big-calendar/lib/css/react-big-calendar.css";
-import { DomeGallery } from "@/components/gallery/DomeGallery";
+import { InteractiveCalendar } from "@/components/calendar/InteractiveCalendar";
+import { MasonryGallery } from "@/components/gallery/MasonryGallery";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
+import { Calendar, User, Share2, Heart, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-const localizer = momentLocalizer(moment);
+function BlogCard({ blog }: { blog: any }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const contentThreshold = 200; // Character count before showing "Read More"
+  const isLongContent = blog.content.length > contentThreshold;
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="group rounded-2xl border bg-card shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden"
+    >
+      <div className="p-6 sm:p-8">
+        <LayoutGroup>
+          <motion.h3 layout className="font-serif text-2xl font-bold mb-3 group-hover:text-primary transition-colors">
+            {blog.title}
+          </motion.h3>
+
+          <motion.div layout className="flex flex-wrap gap-4 mb-6 text-xs font-medium text-muted-foreground border-b pb-4">
+            <span className="flex items-center gap-1.5 bg-muted/50 px-2.5 py-1 rounded-full">
+              <User className="h-3.5 w-3.5 text-primary" />
+              {blog.author}
+            </span>
+            <span className="flex items-center gap-1.5 bg-muted/50 px-2.5 py-1 rounded-full">
+              <Calendar className="h-3.5 w-3.5 text-primary" />
+              {new Date(blog.created_at).toLocaleDateString("en-US", { month: 'long', day: 'numeric', year: 'numeric' })}
+            </span>
+          </motion.div>
+
+          <AnimatePresence mode="wait">
+            {blog.media_url && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-6 overflow-hidden rounded-xl bg-muted border shadow-inner relative group/media"
+              >
+                {blog.media_type === "image" ? (
+                  <img 
+                    src={blog.media_url} 
+                    alt="Blog Cover" 
+                    className="max-h-[60vh] w-full object-cover transition-transform duration-700 group-hover/media:scale-105" 
+                  />
+                ) : (
+                  <video src={blog.media_url} controls className="max-h-[60vh] w-full" />
+                )}
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 group-hover/media:opacity-100 transition-opacity">
+                   <p className="text-white text-[10px] uppercase tracking-widest font-bold">Press to Expand Media</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <motion.div layout className="relative">
+            <motion.p 
+              layout
+              className={`text-card-foreground text-base leading-relaxed whitespace-pre-wrap ${!isExpanded && isLongContent ? 'line-clamp-4' : ''}`}
+            >
+              {blog.content}
+            </motion.p>
+            
+            {!isExpanded && isLongContent && (
+              <div className="absolute bottom-0 inset-x-0 h-12 bg-gradient-to-t from-card to-transparent pointer-events-none" />
+            )}
+          </motion.div>
+
+          {(isLongContent) && (
+            <motion.div layout className="mt-4 flex justify-center">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="text-primary hover:text-primary/80 hover:bg-primary/5 font-bold gap-2 text-xs uppercase tracking-tighter"
+              >
+                {isExpanded ? (
+                  <><ChevronUp className="h-4 w-4" /> Show Less</>
+                ) : (
+                  <><ChevronDown className="h-4 w-4" /> Read More</>
+                )}
+              </Button>
+            </motion.div>
+          )}
+
+          <motion.div layout className="mt-8 pt-4 border-t flex items-center justify-between">
+             <div className="flex items-center gap-4">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsLiked(!isLiked)}
+                  className={`gap-2 h-9 rounded-full ${isLiked ? 'text-red-500 bg-red-50' : 'text-muted-foreground'}`}
+                >
+                  <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+                  <span className="text-[10px] font-bold">24+</span>
+                </Button>
+                <Button variant="ghost" size="sm" className="gap-2 h-9 rounded-full text-muted-foreground">
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="text-[10px] font-bold">8</span>
+                </Button>
+             </div>
+             <Button variant="ghost" size="icon" className="text-muted-foreground rounded-full h-9 w-9">
+                <Share2 className="h-4 w-4" />
+             </Button>
+          </motion.div>
+        </LayoutGroup>
+      </div>
+    </motion.div>
+  );
+}
 
 export default function PublicBlogPage() {
   const [blogs, setBlogs] = useState<any[]>([]);
@@ -58,27 +167,9 @@ export default function PublicBlogPage() {
               ) : blogs.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">No blog posts available at the moment.</div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-8">
                   {blogs.map(b => (
-                    <div key={b.id} className="rounded-xl border bg-card p-6 shadow-sm hover:shadow-md transition-shadow">
-                      <h3 className="font-bold text-2xl mb-2">{b.title}</h3>
-                      <p className="text-xs text-primary mb-4 font-medium px-2 py-1 bg-primary/10 rounded-full inline-block">
-                        {b.author} • {new Date(b.created_at).toLocaleDateString()}
-                      </p>
-                      
-                      {b.media_url && b.media_type === "image" && (
-                        <div className="my-5 overflow-hidden rounded-lg bg-muted text-center border shadow-sm">
-                          <img src={b.media_url} alt="Blog Attachment" className="max-h-[60vh] w-full object-contain mx-auto" />
-                        </div>
-                      )}
-                      {b.media_url && b.media_type === "video" && (
-                        <div className="my-5 overflow-hidden rounded-lg bg-muted border shadow-sm flex justify-center">
-                          <video src={b.media_url} controls className="max-h-[60vh] w-full max-w-3xl" />
-                        </div>
-                      )}
-
-                      <p className="text-card-foreground text-base leading-relaxed whitespace-pre-wrap">{b.content}</p>
-                    </div>
+                    <BlogCard key={b.id} blog={b} />
                   ))}
                 </div>
               )}
@@ -88,39 +179,18 @@ export default function PublicBlogPage() {
               {loadingProgs ? (
                 <div className="text-center py-12 text-muted-foreground animate-pulse">Loading calendar...</div>
               ) : (
-                <Card className="p-2 sm:p-4 shadow-sm w-full bg-card">
-                  <div className="h-[60vh] min-h-[500px] w-full">
-                    <Calendar
-                      localizer={localizer}
-                      events={programmes.map((p) => ({
+                <Card className="p-4 sm:p-6 shadow-sm w-full bg-card">
+                  <InteractiveCalendar
+                    events={programmes
+                      .filter((p) => p.visibility === "public")
+                      .map((p) => ({
                         id: p.id,
                         title: p.title,
                         start: p.event_date ? new Date(p.event_date) : new Date(),
                         end: p.event_date ? new Date(p.event_date) : new Date(),
                         resource: p,
                       }))}
-                      startAccessor="start"
-                      endAccessor="end"
-                      defaultView="month"
-                      views={['month', 'agenda', 'week', 'day']}
-                      eventPropGetter={(event) => {
-                        const isPrivate = event.resource?.visibility === "private";
-                        return {
-                          style: {
-                            backgroundColor: isPrivate ? "#6366f1" : "#039be5",
-                            borderColor: isPrivate ? "#4f46e5" : "#0288d1",
-                            color: "white",
-                            borderRadius: "4px",
-                            opacity: 0.9,
-                            display: "block",
-                          },
-                        };
-                      }}
-                      onSelectEvent={(event) => {
-                        alert(`${event.title}\n\n${event.resource?.description || "No specific details provided."}`);
-                      }}
-                    />
-                  </div>
+                  />
                 </Card>
               )}
             </TabsContent>
@@ -131,8 +201,8 @@ export default function PublicBlogPage() {
               ) : gallery.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">No photos in the gallery yet.</div>
               ) : (
-                <div className="rounded-2xl bg-black/5 border shadow-inner">
-                   <DomeGallery images={gallery} />
+                <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
+                   <MasonryGallery images={gallery} />
                 </div>
               )}
             </TabsContent>

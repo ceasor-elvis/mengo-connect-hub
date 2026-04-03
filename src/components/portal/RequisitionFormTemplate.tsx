@@ -48,7 +48,7 @@ export default function RequisitionFormTemplate({ onSuccess }: { onSuccess: () =
   const OFFICES = [
     { id: "secretary_finance", label: "Secretary Finance" },
     { id: "chairperson", label: "Chairperson" },
-    { id: "patron", label: "Patron / Staff Office" }
+    { id: "patron_pending_chairperson", label: "Patron (via Chairperson)" }
   ];
 
   const generatePDF = async () => {

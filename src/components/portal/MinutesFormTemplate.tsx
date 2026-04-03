@@ -45,7 +45,7 @@ export default function MinutesFormTemplate({ onSuccess }: { onSuccess: () => vo
   const OFFICES = [
     { id: "general_secretary", label: "General Secretary" },
     { id: "chairperson", label: "Chairperson" },
-    { id: "patron", label: "Patron / Staff Office" },
+    { id: "patron_pending_chairperson", label: "Patron (via Chairperson)" },
     { id: "speaker", label: "Speaker" }
   ];
 
