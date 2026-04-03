@@ -116,8 +116,8 @@ export default function RotaPage() {
     const validDuties = editDuties.filter((d) => d.task.trim() && d.assigned.trim());
     try {
       await api.patch(`/rotas/${editingId}/`, {
-        week: editWeek.trim(), 
-        duties: validDuties 
+        week: editWeek.trim(),
+        duties: validDuties
       });
       toast.success("Rota updated");
       setEditingId(null);
