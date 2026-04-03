@@ -179,7 +179,7 @@ export default function PortalLayout() {
   );
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       {/* Desktop sidebar */}
       <aside className="hidden w-56 flex-col border-r bg-sidebar lg:flex">
         <div className="flex h-12 items-center gap-2 border-b border-sidebar-border px-3">
