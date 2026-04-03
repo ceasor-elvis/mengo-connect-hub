@@ -22,7 +22,7 @@ const navItems = [
 ];
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
-  const { user, profile, logout, hasRole, isAbsoluteAdmin } = useAuth();
+  const { user, profile, roles, signOut, hasRole, isAbsoluteAdmin } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -63,6 +63,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     } catch (e) {
        toast.error("Failed to clear notifications");
     }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
   };
 
   // Visibility logic for sidebar links
@@ -125,7 +130,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                  variant="ghost" 
                  size="sm" 
                  className="w-full justify-start text-slate-500 hover:text-destructive hover:bg-destructive/5"
-                 onClick={logout}
+                 onClick={handleLogout}
                >
                  <LogOut className="mr-2 h-4 w-4" /> Logout
                </Button>
@@ -215,7 +220,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                     </Avatar>
                     <div className="hidden md:flex flex-col items-start truncate max-w-[120px]">
                        <span className="text-xs font-bold text-slate-900 truncate leading-tight">{profile?.full_name}</span>
-                       <span className="text-[9px] text-slate-500 font-medium uppercase tracking-tighter">{isAbsoluteAdmin ? "Overseer" : user?.roles?.[0] || "Council Member"}</span>
+                       <span className="text-[9px] text-slate-500 font-medium uppercase tracking-tighter">{isAbsoluteAdmin ? "Overseer" : roles?.[0] || "Council Member"}</span>
                     </div>
                     <ChevronDown className="h-3 w-3 text-slate-400 group-hover:text-primary transition-colors mt-0.5" />
                   </Button>
@@ -224,11 +229,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                   <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-3 py-2">My Account</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => navigate("/portal/settings")} className="rounded-lg cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" /> Settings
-                  </MenuItem>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-50" />
-                  <DropdownMenuItem onClick={logout} className="rounded-lg text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer font-bold">
+                  <DropdownMenuItem onClick={handleLogout} className="rounded-lg text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer font-bold">
                     <LogOut className="mr-2 h-4 w-4" /> Logout
-                  </MenuItem>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
