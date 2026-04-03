@@ -2,15 +2,20 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Calendar, FileText, AlertTriangle, Users,
   MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network, UserPlus, Lock, Settings, Scale, Shield, ShieldCheck,
-  Target
+  Target, Video
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { toast } from "sonner";
 import NotificationsBell from "@/components/portal/NotificationsBell";
 
 type AppRole = string;
@@ -67,6 +72,43 @@ export default function PortalLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [ecGranted, setEcGranted] = useState(false);
   const [activeLocks, setActiveLocks] = useState<any[]>([]);
+
+  // Meeting request state
+  const canRequestMeeting = hasAnyRole(["chairperson", "vice_chairperson", "general_secretary"]);
+  const [meetOpen, setMeetOpen] = useState(false);
+  const [meetDate, setMeetDate] = useState("");
+  const [meetTime, setMeetTime] = useState("");
+  const [meetNote, setMeetNote] = useState("");
+  const [meetSending, setMeetSending] = useState(false);
+
+  const handleSendMeetingRequest = async () => {
+    if (!meetDate || !meetTime) {
+      toast.error("Please select a date and time");
+      return;
+    }
+    setMeetSending(true);
+    try {
+      const senderName = profile?.full_name || "A councillor";
+      const roleTitle = roles[0] ? (ROLE_LABELS[roles[0]] || roles[0]) : "Councillor";
+      const formattedDate = new Date(`${meetDate}T${meetTime}`).toLocaleString("en-UG", {
+        weekday: "short", day: "numeric", month: "short", year: "numeric",
+        hour: "2-digit", minute: "2-digit"
+      });
+      await api.post("/notifications/", {
+        user_id: "usr_patron",
+        title: "📋 Meeting Request",
+        message: `${senderName} (${roleTitle}) is requesting a meeting on ${formattedDate}.${meetNote ? " Note: " + meetNote : ""}`,
+        type: "meeting"
+      });
+      toast.success("Meeting request sent to Patron!");
+      setMeetOpen(false);
+      setMeetDate(""); setMeetTime(""); setMeetNote("");
+    } catch (e) {
+      toast.error("Failed to send meeting request");
+    } finally {
+      setMeetSending(false);
+    }
+  };
 
   useEffect(() => {
     if (!loading && !user) navigate("/login", { replace: true });
@@ -232,6 +274,52 @@ export default function PortalLayout() {
             <h2 className="font-serif text-sm font-semibold text-foreground sm:text-base">Portal</h2>
           </div>
           <div className="flex items-center gap-1">
+            {canRequestMeeting && (
+              <Dialog open={meetOpen} onOpenChange={setMeetOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 relative group" title="Request Meeting with Patron">
+                    <Video className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Video className="h-5 w-5 text-primary" />
+                      Request Meeting with Patron
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-2">
+                    <p className="text-xs text-muted-foreground">
+                      Send a meeting request notification to the School Patron with your preferred date and time.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Date *</Label>
+                        <Input type="date" value={meetDate} onChange={e => setMeetDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Time *</Label>
+                        <Input type="time" value={meetTime} onChange={e => setMeetTime(e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Note (optional)</Label>
+                      <Textarea
+                        value={meetNote}
+                        onChange={e => setMeetNote(e.target.value)}
+                        placeholder="e.g. Regarding cafeteria improvement budget..."
+                        rows={2}
+                        className="text-sm"
+                      />
+                    </div>
+                    <Button onClick={handleSendMeetingRequest} disabled={meetSending} className="w-full">
+                      <Video className="mr-2 h-4 w-4" />
+                      {meetSending ? "Sending..." : "Send Meeting Request"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
             <NotificationsBell />
             <Button variant="ghost" size="sm" className="text-xs h-8" asChild>
               <Link to="/">← Home</Link>

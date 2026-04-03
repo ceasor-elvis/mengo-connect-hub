@@ -41,6 +41,7 @@ export default function RegisterMemberPage() {
   const [studentClass, setStudentClass] = useState("");
   const [studentStream, setStudentStream] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
+  const [gender, setGender] = useState("");
 
   const [profiles, setProfiles] = useState<any[]>([]);
   const [streams, setStreams] = useState<any[]>([]);
@@ -111,6 +112,7 @@ export default function RegisterMemberPage() {
         full_name: fullName,
         student_class: studentClass,
         stream: studentStream || null,
+        gender: gender || null,
         role: selectedRole,
       });
 
@@ -122,6 +124,7 @@ export default function RegisterMemberPage() {
       setStudentClass("");
       setStudentStream("");
       setSelectedRole("");
+      setGender("");
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Registration failed. This account may already exist.");
     } finally {
@@ -170,6 +173,19 @@ export default function RegisterMemberPage() {
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Gender *</Label>
+          <Select value={gender} onValueChange={setGender}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select Gender" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="male">Male</SelectItem>
+              <SelectItem value="female">Female</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">

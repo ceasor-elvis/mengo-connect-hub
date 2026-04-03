@@ -24,6 +24,7 @@ interface Voice {
   comments: string | null; created_at: string; rejected_at: string | null;
   evaluated_by_name: string | null; evaluated_by_office: string | null;
   is_forwarded_to_patron?: boolean;
+  pending_chairperson_approval?: boolean;
 }
 
 type StatusFilter = "All" | "Pending" | "Approved" | "Rejected";
@@ -159,15 +160,46 @@ export default function StudentVoicesPage() {
     }
   };
 
-  const handleToggleForward = async () => {
+  const isChairperson = hasAnyRole(["chairperson"]);
+
+  const handleRequestForward = async () => {
     if (!selected) return;
-    const newState = !selected.is_forwarded_to_patron;
     try {
       await api.patch(`/student-voices/${selected.id}/`, {
-        is_forwarded_to_patron: newState
+        pending_chairperson_approval: true
       });
-      toast.success(newState ? "Forwarded to Patron" : "Forwarding revoked");
-      setSelected({ ...selected, is_forwarded_to_patron: newState });
+      toast.success("Forwarding request sent to Chairperson for approval");
+      setSelected({ ...selected, pending_chairperson_approval: true });
+      fetchVoices();
+    } catch (e) {
+      toast.error("Action failed");
+    }
+  };
+
+  const handleApproveForward = async () => {
+    if (!selected) return;
+    try {
+      await api.patch(`/student-voices/${selected.id}/`, {
+        is_forwarded_to_patron: true,
+        pending_chairperson_approval: false
+      });
+      toast.success("Approved & forwarded to Patron");
+      setSelected({ ...selected, is_forwarded_to_patron: true, pending_chairperson_approval: false });
+      fetchVoices();
+    } catch (e) {
+      toast.error("Action failed");
+    }
+  };
+
+  const handleRevokeForward = async () => {
+    if (!selected) return;
+    try {
+      await api.patch(`/student-voices/${selected.id}/`, {
+        is_forwarded_to_patron: false,
+        pending_chairperson_approval: false
+      });
+      toast.success("Forwarding revoked");
+      setSelected({ ...selected, is_forwarded_to_patron: false, pending_chairperson_approval: false });
       fetchVoices();
     } catch (e) {
       toast.error("Action failed");
@@ -295,6 +327,11 @@ export default function StudentVoicesPage() {
                       {v.is_forwarded_to_patron && (
                         <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] flex items-center gap-1 shrink-0">
                           <ShieldCheck className="h-3 w-3" /> Forwarded
+                        </Badge>
+                      )}
+                      {v.pending_chairperson_approval && !v.is_forwarded_to_patron && (
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-[10px] flex items-center gap-1 shrink-0">
+                          <Clock className="h-3 w-3" /> Pending Approval
                         </Badge>
                       )}
                     </div>
@@ -426,16 +463,43 @@ export default function StudentVoicesPage() {
                       </div>
                     </div>
 
-                    {hasAnyRole(["chairperson", "general_secretary", "assistant_general_secretary"]) && (
-                      <Button 
-                        variant={selected.is_forwarded_to_patron ? "destructive" : "default"} 
-                        className="w-full gap-2 border-stone-200" 
-                        size="sm"
-                        onClick={handleToggleForward}
-                      >
-                        <Send className="h-4 w-4" /> 
-                        {selected.is_forwarded_to_patron ? "Revoke Forwarding to Patron" : "Forward to School Patron"}
-                      </Button>
+                    {/* Chairperson: can approve pending requests or directly forward, and revoke */}
+                    {isChairperson && (
+                      <>
+                        {selected.pending_chairperson_approval && !selected.is_forwarded_to_patron && (
+                          <div className="w-full p-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-md mb-1">
+                            <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">⏳ A councillor has requested this be forwarded to the Patron. Please review and approve.</p>
+                          </div>
+                        )}
+                        {selected.is_forwarded_to_patron ? (
+                          <Button variant="destructive" className="w-full gap-2" size="sm" onClick={handleRevokeForward}>
+                            <Send className="h-4 w-4" /> Revoke Forwarding to Patron
+                          </Button>
+                        ) : (
+                          <Button variant="default" className="w-full gap-2" size="sm" onClick={handleApproveForward}>
+                            <Send className="h-4 w-4" /> Approve & Forward to School Patron
+                          </Button>
+                        )}
+                      </>
+                    )}
+
+                    {/* Gen Sec / Asst Gen Sec: can only REQUEST forwarding */}
+                    {hasAnyRole(["general_secretary", "assistant_general_secretary"]) && !isChairperson && (
+                      <>
+                        {selected.is_forwarded_to_patron ? (
+                          <div className="w-full p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 rounded-md">
+                            <p className="text-xs text-amber-700 dark:text-amber-300 font-medium flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Already forwarded to Patron by Chairperson</p>
+                          </div>
+                        ) : selected.pending_chairperson_approval ? (
+                          <div className="w-full p-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-md">
+                            <p className="text-xs text-blue-700 dark:text-blue-300 font-medium flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Awaiting Chairperson approval to forward</p>
+                          </div>
+                        ) : (
+                          <Button variant="outline" className="w-full gap-2 border-blue-200 text-blue-700 hover:bg-blue-50" size="sm" onClick={handleRequestForward}>
+                            <Send className="h-4 w-4" /> Request Forwarding to Patron
+                          </Button>
+                        )}
+                      </>
                     )}
                   </div>
 

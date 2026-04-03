@@ -4,19 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 
 export default function SettingsPage() {
-  const { profile, hasAnyRole } = useAuth();
-  
-  const [profileName, setProfileName] = useState(profile?.full_name || "");
+  const { user, profile } = useAuth();
+
+  const [username, setUsername] = useState(user?.username || "");
   const [profileDesc, setProfileDesc] = useState((profile as any)?.description || "");
   const [profilePic, setProfilePic] = useState((profile as any)?.profile_pic || "");
   const [savingProfile, setSavingProfile] = useState(false);
-  const canEditName = hasAnyRole(["chairperson", "patron", "adminabsolute"]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -32,10 +31,12 @@ export default function SettingsPage() {
   const handleSaveProfile = async () => {
     setSavingProfile(true);
     try {
-      const payload: any = { description: profileDesc, profile_pic: profilePic };
-      if (canEditName) payload.full_name = profileName;
-      await api.patch('/users/me/profile/', payload);
-      toast.success("Profile updated globally! (Refresh to see header update)");
+      await api.patch('/users/me/profile/', {
+        username,
+        description: profileDesc,
+        profile_pic: profilePic,
+      });
+      toast.success("Profile updated! (Refresh to see header update)");
     } catch(e) {
       toast.error("Failed to update profile");
     } finally {
@@ -50,20 +51,59 @@ export default function SettingsPage() {
         <p className="mt-1 text-sm text-muted-foreground">Manage your public information on the council portal.</p>
       </div>
 
+      {/* Read-Only Info — set during registration */}
+      <Card className="border-stone-200 bg-stone-50/50 dark:bg-stone-900/30">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+            Registration Details
+          </CardTitle>
+          <CardDescription className="text-xs">These fields were set during registration and cannot be changed here.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Full Name</Label>
+            <div className="h-9 flex items-center rounded-md border border-stone-200 bg-stone-100/70 dark:bg-stone-800/50 px-3 text-sm font-medium text-foreground">
+              {profile?.full_name || "—"}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Class</Label>
+              <div className="h-9 flex items-center rounded-md border border-stone-200 bg-stone-100/70 dark:bg-stone-800/50 px-3 text-sm text-foreground">
+                {(profile as any)?.student_class || "—"}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Stream</Label>
+              <div className="h-9 flex items-center rounded-md border border-stone-200 bg-stone-100/70 dark:bg-stone-800/50 px-3 text-sm text-foreground">
+                {(profile as any)?.stream || "—"}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Gender</Label>
+              <div className="h-9 flex items-center rounded-md border border-stone-200 bg-stone-100/70 dark:bg-stone-800/50 px-3 text-sm text-foreground capitalize">
+                {(profile as any)?.gender || "—"}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Editable Info */}
       <Card>
         <CardHeader>
           <CardTitle>Edit Your Profile</CardTitle>
-          <CardDescription>Update your public information.</CardDescription>
+          <CardDescription>Update your username, bio, and profile picture.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Full Name</Label>
-            <Input 
-              value={profileName} 
-              onChange={e => setProfileName(e.target.value)} 
-              disabled={!canEditName} 
+            <Label>Username</Label>
+            <Input
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="Your display username"
             />
-            {!canEditName && <p className="text-xs text-muted-foreground">Only Admins can change official names.</p>}
           </div>
           <div className="space-y-2">
             <Label>Profile Picture</Label>
@@ -81,23 +121,23 @@ export default function SettingsPage() {
                     Upload Picture
                   </div>
                 </Label>
-                <Input 
+                <Input
                   id="picture"
-                  type="file" 
+                  type="file"
                   accept="image/*"
-                  onChange={handleImageChange} 
-                  className="hidden" 
+                  onChange={handleImageChange}
+                  className="hidden"
                 />
               </div>
             </div>
           </div>
           <div className="space-y-2">
             <Label>Introduction / Bio</Label>
-            <Textarea 
-              value={profileDesc} 
-              onChange={e => setProfileDesc(e.target.value)} 
-              rows={4} 
-              placeholder="Tell the school about yourself..." 
+            <Textarea
+              value={profileDesc}
+              onChange={e => setProfileDesc(e.target.value)}
+              rows={4}
+              placeholder="Tell the school about yourself..."
             />
           </div>
           <Button onClick={handleSaveProfile} disabled={savingProfile}>

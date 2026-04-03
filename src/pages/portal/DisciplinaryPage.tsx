@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Scale, Plus, AlertCircle, FileText, CheckCircle2, Clock } from "lucide-react";
+import { Scale, Plus, AlertCircle, FileText, CheckCircle2, Clock, Send, ShieldCheck } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,10 +20,13 @@ interface DCCase {
   status: 'Pending' | 'Under Investigation' | 'Summoned' | 'Closed';
   reported_by: string;
   created_at: string;
+  is_forwarded_to_patron?: boolean;
+  pending_chairperson_approval?: boolean;
 }
 
 export default function DisciplinaryPage() {
-  const { user } = useAuth();
+  const { user, hasAnyRole } = useAuth();
+  const isChairperson = hasAnyRole(["chairperson"]);
   const [cases, setCases] = useState<DCCase[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -86,6 +89,29 @@ export default function DisciplinaryPage() {
     }
   };
 
+  const handleRequestForward = async (id: string) => {
+    try {
+      await api.patch(`/dc-cases/${id}/`, { pending_chairperson_approval: true });
+      toast.success("Forwarding request sent to Chairperson");
+      fetchCases();
+    } catch { toast.error("Action failed"); }
+  };
+
+  const handleApproveForward = async (id: string) => {
+    try {
+      await api.patch(`/dc-cases/${id}/`, { is_forwarded_to_patron: true, pending_chairperson_approval: false });
+      toast.success("Case approved & forwarded to Patron");
+      fetchCases();
+    } catch { toast.error("Action failed"); }
+  };
+
+  const handleRevokeForward = async (id: string) => {
+    try {
+      await api.patch(`/dc-cases/${id}/`, { is_forwarded_to_patron: false, pending_chairperson_approval: false });
+      toast.success("Forwarding revoked");
+      fetchCases();
+    } catch { toast.error("Action failed"); }
+  };
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'Pending': return <Clock className="h-4 w-4 text-yellow-500" />;
@@ -142,6 +168,60 @@ export default function DisciplinaryPage() {
                       <Button variant="ghost" size="sm" className="text-xs" onClick={() => updateStatus(c.id, 'Under Investigation')}>Investigate</Button>
                       <Button variant="ghost" size="sm" className="text-xs" onClick={() => updateStatus(c.id, 'Summoned')}>Summon</Button>
                       <Button variant="ghost" size="sm" className="text-xs hover:text-green-600" onClick={() => updateStatus(c.id, 'Closed')}>Close Case</Button>
+                    </div>
+
+                    {/* Forwarding section */}
+                    <div className="pt-2 border-t mt-2">
+                      {/* Show forwarding status badges */}
+                      {c.is_forwarded_to_patron && (
+                        <div className="flex items-center gap-1 mb-2">
+                          <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] flex items-center gap-1">
+                            <ShieldCheck className="h-3 w-3" /> Forwarded to Patron
+                          </Badge>
+                        </div>
+                      )}
+                      {c.pending_chairperson_approval && !c.is_forwarded_to_patron && (
+                        <div className="flex items-center gap-1 mb-2">
+                          <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-[10px] flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> Pending Chairperson Approval
+                          </Badge>
+                        </div>
+                      )}
+
+                      {/* Chairperson actions */}
+                      {isChairperson && (
+                        <>
+                          {c.pending_chairperson_approval && !c.is_forwarded_to_patron && (
+                            <div className="w-full p-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-md mb-2">
+                              <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">⏳ A committee member has requested this case be forwarded to the Patron.</p>
+                            </div>
+                          )}
+                          {c.is_forwarded_to_patron ? (
+                            <Button variant="destructive" size="sm" className="w-full gap-2 text-xs" onClick={() => handleRevokeForward(c.id)}>
+                              <Send className="h-3.5 w-3.5" /> Revoke Forwarding
+                            </Button>
+                          ) : (
+                            <Button variant="default" size="sm" className="w-full gap-2 text-xs" onClick={() => handleApproveForward(c.id)}>
+                              <Send className="h-3.5 w-3.5" /> Approve & Forward to Patron
+                            </Button>
+                          )}
+                        </>
+                      )}
+
+                      {/* DC / Gen Sec: can only request */}
+                      {hasAnyRole(["disciplinary_committee", "general_secretary", "vice_chairperson"]) && !isChairperson && (
+                        <>
+                          {c.is_forwarded_to_patron ? (
+                            <p className="text-xs text-amber-700 font-medium flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Forwarded to Patron by Chairperson</p>
+                          ) : c.pending_chairperson_approval ? (
+                            <p className="text-xs text-blue-700 font-medium flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Awaiting Chairperson approval</p>
+                          ) : (
+                            <Button variant="outline" size="sm" className="w-full gap-2 text-xs border-blue-200 text-blue-700 hover:bg-blue-50" onClick={() => handleRequestForward(c.id)}>
+                              <Send className="h-3.5 w-3.5" /> Request Forwarding to Patron
+                            </Button>
+                          )}
+                        </>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
