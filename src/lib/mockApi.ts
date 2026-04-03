@@ -181,51 +181,30 @@ export function setupMockApi(api: AxiosInstance) {
   ];
 
   let MOCK_DC_CASES: any[] = [
-    { 
-      id: '1', 
-      offender_name: 'Student A', 
-      category: 'Insubordination', 
-      description: 'Refusal to follow head prefect instructions during assembly.', 
-      status: 'Pending', 
-      reported_by: 'merecouncillor', 
-      assigned_to_id: null,
-      assigned_to_name: null,
-      forwarded_to_office: null,
-      created_at: new Date().toISOString() 
-    }
+    { id: '1', offender_name: 'Student A', category: 'Insubordination', description: 'Refusal to follow head prefect instructions during assembly.', status: 'Pending', reported_by: 'merecouncillor', created_at: new Date().toISOString() }
   ];
 
-  let MOCK_DC_DOCS: any[] = [
-    { id: '1', title: 'Disciplinary Procedures 2026', category: 'Official Guidelines', file_url: '#', created_at: new Date().toISOString() },
-    { id: '2', title: 'Summon Template Official', category: 'Template', file_url: '#', created_at: new Date().toISOString() }
-  ];
-
-  let MOCK_GALLERY: any[] = [
-     { id: '1', url: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80', caption: 'Aerial View of the Historic Mengo Senior School Campus', created_at: new Date().toISOString() },
-     { id: '2', url: 'https://images.unsplash.com/photo-1544928147-79a2dbc1f389?auto=format&fit=crop&q=80', caption: 'Student Council Strategic Leadership & Governance Session', created_at: new Date().toISOString() },
-     { id: '3', url: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&q=80', caption: 'Annual Inter-house Sports Day - Competition & Unity', created_at: new Date().toISOString() },
-     { id: '4', url: 'https://images.unsplash.com/photo-1577891729319-618bf5d70b4c?auto=format&fit=crop&q=80', caption: 'Main Hall Assembly - Termly Student Induction', created_at: new Date().toISOString() }
-  ];
-
-  let MOCK_TIMELINE: any[] = [
-    { id: "1", date: "May 22, 2026", status: "Completed", title: "Leadership Handover", description: "The official handover ceremony where the outgoing prefects pass on their responsibilities to the newly elected council.", location: "Main Hall" },
-    { id: "2", date: "June 15, 2026", status: "Completed", title: "First Council Meeting", description: "Inaugural meeting of the new cabinet to discuss the term's agenda, allocate duties, and swear in deputies.", location: "Board Room" },
-    { id: "3", date: "July 20, 2026", status: "In Progress", title: "Inter-Class Debates", description: "Annual debate tournament focusing on current affairs, encouraging public speaking and critical thinking among students.", location: "Library" },
-    { id: "4", date: "August 05, 2026", status: "Upcoming", title: "Sports Gala Registration", description: "Houses open registration for athletes for the termly intra-school sports competition.", location: "Online Portal" },
-    { id: "5", date: "September 12, 2026", status: "Upcoming", title: "Academic Fair", description: "Showcasing student projects across sciences and arts to parents and the public.", location: "School Quadrangle" }
-  ];
+   let MOCK_GALLERY: any[] = [
+     { id: '1', url: 'C:\\Users\\Administrator\\.gemini\\antigravity\\brain\\08c7024b-0041-495b-92e4-45a85fefbc71\\mengo_campus_overview_1775100183030.png', caption: 'Aerial View of the Historic Mengo Senior School Campus', created_at: new Date().toISOString() },
+     { id: '2', url: 'C:\\Users\\Administrator\\.gemini\\antigravity\\brain\\08c7024b-0041-495b-92e4-45a85fefbc71\\mengo_student_council_meeting_1775100203952.png', caption: 'Student Council Strategic Leadership & Governance Session', created_at: new Date().toISOString() },
+     { id: '3', url: 'C:\\Users\\Administrator\\.gemini\\antigravity\\brain\\08c7024b-0041-495b-92e4-45a85fefbc71\\mengo_sports_festival_1775100236898.png', caption: 'Annual Inter-house Sports Day - Competition & Unity', created_at: new Date().toISOString() },
+     { id: '4', url: 'https://images.unsplash.com/photo-1577891729319-618bf5d70b4c?auto=format&fit=crop&q=80', caption: 'Main Hall Assembly - Termly Student Induction', created_at: new Date().toISOString() },
+     { id: '5', url: 'https://images.unsplash.com/photo-1544928147-79a2dbc1f389?auto=format&fit=crop&q=80', caption: 'Advanced Science Laboratory Practical Sessions', created_at: new Date().toISOString() },
+     { id: '6', url: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&q=80', caption: 'Prefects Induction & Swearing-In Ceremony', created_at: new Date().toISOString() },
+     { id: '7', url: 'https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&q=80', caption: 'Sunday Mass & Spiritual Guidance at the Chapel', created_at: new Date().toISOString() },
+     { id: '8', url: 'https://images.unsplash.com/photo-1541339907198-e08756eaa539?auto=format&fit=crop&q=80', caption: 'Quiet Study Hour in the Main Library', created_at: new Date().toISOString() },
+     { id: '9', url: 'https://images.unsplash.com/photo-1511629091441-ee46146481b6?auto=format&fit=crop&q=80', caption: 'National Debate Championship - Regional Semi-Finals', created_at: new Date().toISOString() },
+     { id: '10', url: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80', caption: 'Drama & Music Festival - Creative Arts Showcase', created_at: new Date().toISOString() },
+     { id: '11', url: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80', caption: 'Inter-House Football Finals - Spirit of Mengo', created_at: new Date().toISOString() },
+     { id: '12', url: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80', caption: 'Peer Mentorship Program - Student Outreach', created_at: new Date().toISOString() }
+   ];
  
-  let MOCK_STUDENT_VOICES: any[] = [
+   let MOCK_STUDENT_VOICES: any[] = [
      { id: '1', title: 'Better Cafeteria Menu', category: 'ideas', description: 'The menu is currently repetitive. Requesting more variety in fruits and snacks for students.', status: 'Pending', submitted_by: 'Musa John', submitted_class: 'S.3', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: false },
      { id: '2', title: 'Broken Lab Equipment', category: 'complaints', description: 'Form 4 lab is lacking working microscopes. This makes practical sessions difficult.', status: 'Pending', submitted_by: 'Sarah Faith', submitted_class: 'S.4', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: true },
-     { id: '3', title: 'New Science Kits', category: 'ideas', description: 'We need more kits for the chemistry lab.', status: 'Pending', submitted_by: 'Anonymous', submitted_class: 'S.2', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: false },
-     { id: '4', title: 'URGENT: Locker Security', category: 'complaints', description: 'Someone broke into a locker. We need better security.', status: 'Pending', submitted_by: 'Kato Paul', submitted_class: 'S.5', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: false }
-  ];
-
-  let MOCK_NOTIFICATIONS: any[] = [
-    { id: '1', title: 'Welcome to MCH', message: 'The Mengo Connect Hub portal is now fully functional.', type: 'info', read: false, created_at: new Date().toISOString() },
-    { id: '2', title: 'New Document Uploaded', message: 'The Term 1 Council Report has been added to the archive.', type: 'success', read: false, created_at: new Date().toISOString() }
-  ];
+     { id: '3', title: 'aaaaaaaaaaaaaaa', category: 'ideas', description: 'sdsdsdsdsdsdsdsdsdsd sdsdsdsdsdsdsdsdsd', status: 'Pending', submitted_by: 'Anonymous', submitted_class: 'S.2', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: false },
+     { id: '4', title: 'URGENT: Stolen Phone', category: 'complaints', description: 'Someone stole my phone in the locker room. This is unfair and I want a strike if it is not found!', status: 'Pending', submitted_by: 'Kato Paul', submitted_class: 'S.5', file: null, created_at: new Date().toISOString(), is_forwarded_to_patron: false }
+   ];
 
   const getFilteredVoices = (config: any) => {
     const isPatronMock = config.headers?.["Authorization"]?.includes("patron_token") || false;
@@ -318,37 +297,6 @@ export function setupMockApi(api: AxiosInstance) {
       created_at: new Date().toISOString(),
     };
     MOCK_DOCS.push(newDoc);
-    
-    // Trigger notification
-    MOCK_NOTIFICATIONS.unshift({
-        id: Date.now().toString(),
-        title: 'Document Uploaded',
-        message: `"${newDoc.title}" has been uploaded by ${username}.`,
-        type: 'success',
-        read: false,
-        created_at: new Date().toISOString()
-    });
-
-    return [201, newDoc];
-  });
-
-  // Mock DC Docs
-  mock.onGet('/dc-docs/').reply(200, { results: MOCK_DC_DOCS });
-  mock.onPost('/dc-docs/').reply((config) => {
-    const data = JSON.parse(config.data);
-    const newDoc = { ...data, id: Date.now().toString(), created_at: new Date().toISOString() };
-    MOCK_DC_DOCS.push(newDoc);
-    
-    // Trigger notification
-    MOCK_NOTIFICATIONS.unshift({
-        id: Date.now().toString(),
-        title: 'New DC Resource',
-        message: `New official resource: "${newDoc.title}" has been published.`,
-        type: 'info',
-        read: false,
-        created_at: new Date().toISOString()
-    });
-
     return [201, newDoc];
   });
 
@@ -385,13 +333,14 @@ export function setupMockApi(api: AxiosInstance) {
   mock.onPost('/users/upgrade-role/').reply((config) => {
     const { user_id, new_role } = JSON.parse(config.data);
     
-    // 1. CLEAR role from PREVIOUS holder (if it's a leadership role)
-    // The requirement is that they lose all rights of that role and become a mere councillor
+    // 1. Clear this role from anyone else who might have it (if it's a leadership role)
+    // We only enforce 1-to-1 for non-general roles like 'councillor'
     if (new_role !== 'councillor' && new_role !== 'adminabsolute') {
       Object.keys(USERS).forEach(username => {
         if (USERS[username].roles.includes(new_role)) {
-          // Absolute demotion: strip all roles and set to mere 'councillor'
-          USERS[username].roles = ['councillor'];
+          USERS[username].roles = USERS[username].roles.filter((r: string) => r !== new_role);
+          // If they end up with no roles, give them 'councillor'
+          if (USERS[username].roles.length === 0) USERS[username].roles = ['councillor'];
         }
       });
     }
@@ -402,7 +351,7 @@ export function setupMockApi(api: AxiosInstance) {
       if (new_role === 'councillor') {
         userToUpdate.roles = ['councillor'];
       } else {
-        // Upgrade them to the new role
+        // Replace existing roles or specific logic? Let's just set the primary role.
         userToUpdate.roles = [new_role];
       }
       return [200, { message: "Cabinet position updated!" }];
@@ -447,27 +396,8 @@ export function setupMockApi(api: AxiosInstance) {
 
   mock.onPost('/dc-cases/').reply((config) => {
     const data = JSON.parse(config.data);
-    const newCase = { 
-      ...data, 
-      id: Date.now().toString(), 
-      status: 'Pending', 
-      assigned_to_id: null,
-      assigned_to_name: null,
-      forwarded_to_office: null,
-      created_at: new Date().toISOString() 
-    };
+    const newCase = { ...data, id: Date.now().toString(), status: 'Pending', created_at: new Date().toISOString() };
     MOCK_DC_CASES.push(newCase);
-
-    // Trigger notification
-    MOCK_NOTIFICATIONS.unshift({
-        id: Date.now().toString(),
-        title: 'New Disciplinary Case',
-        message: `A new case against "${newCase.offender_name}" has been filed.`,
-        type: 'warning',
-        read: false,
-        created_at: new Date().toISOString()
-    });
-
     return [201, newCase];
   });
 
@@ -495,19 +425,6 @@ export function setupMockApi(api: AxiosInstance) {
     return [201, newPhoto];
   });
 
-  mock.onGet('/timeline/').reply(200, { results: MOCK_TIMELINE });
-  mock.onPost('/timeline/').reply((config) => {
-    const data = JSON.parse(config.data);
-    const newEvent = { ...data, id: Date.now().toString() };
-    MOCK_TIMELINE.push(newEvent);
-    return [201, newEvent];
-  });
-  mock.onDelete(/\/timeline\/\d+/).reply((config) => {
-    const id = config.url?.split('/').pop();
-    MOCK_TIMELINE = MOCK_TIMELINE.filter(e => e.id !== id);
-    return [204, {}];
-  });
-
    mock.onGet('/student-voices/').reply(200, { results: MOCK_STUDENT_VOICES });
    mock.onPost('/student-voices/').reply((config) => {
      let title = "Voice Sub", description = "", category = "General";
@@ -521,17 +438,6 @@ export function setupMockApi(api: AxiosInstance) {
      }
      const newVoice = { id: Date.now().toString(), title, description, category, status: 'Pending', created_at: new Date().toISOString(), is_forwarded_to_patron: false };
      MOCK_STUDENT_VOICES.unshift(newVoice);
-
-     // Trigger notification
-     MOCK_NOTIFICATIONS.unshift({
-         id: Date.now().toString(),
-         title: 'New Student Voice',
-         message: `A new idea/complaint regarding "${newVoice.title}" has been submitted.`,
-         type: 'info',
-         read: false,
-         created_at: new Date().toISOString()
-     });
-
      return [201, newVoice];
    });
    mock.onPatch(/\/student-voices\/\d+\//).reply((config) => {
@@ -562,24 +468,6 @@ export function setupMockApi(api: AxiosInstance) {
      } catch (e) {
        return [400, { detail: "Invalid JSON" }];
      }
-   });
-
-   // Notifications Endpoints
-   mock.onGet('/notifications/').reply(200, { results: MOCK_NOTIFICATIONS });
-   mock.onPost('/notifications/all/').reply((config) => {
-       const data = JSON.parse(config.data);
-       const newNotif = { ...data, id: Date.now().toString(), read: false, created_at: new Date().toISOString() };
-       MOCK_NOTIFICATIONS.unshift(newNotif);
-       return [201, newNotif];
-   });
-   mock.onPatch(/\/notifications\/\d+\//).reply((config) => {
-       const id = config.url?.split('/')[2];
-       const index = MOCK_NOTIFICATIONS.findIndex(n => n.id === id);
-       if (index !== -1) {
-           MOCK_NOTIFICATIONS[index].read = true;
-           return [200, MOCK_NOTIFICATIONS[index]];
-       }
-       return [404, {}];
    });
 
    mock.onAny().passThrough();

@@ -24,16 +24,15 @@ export const DEFAULT_TREE: RoleNode[] = [
   { role: "secretary_welfare", label: "Welfare", iconName: "Heart", color: "bg-muted text-muted-foreground", children: [] },
   { role: "secretary_health", label: "Health", iconName: "Stethoscope", color: "bg-muted text-muted-foreground", children: [] },
 
-  { role: "general_secretary", label: "General Secretary", iconName: "FileText", color: "bg-accent text-accent-foreground", children: ["dpo", "secretary_publicity", "secretary_pwd", "secretary_women_affairs", "secretary_finance"] },
+  { role: "general_secretary", label: "General Secretary", iconName: "FileText", color: "bg-accent text-accent-foreground", children: ["dpo"] },
   { role: "assistant_general_secretary", label: "Asst. Gen. Secretary", iconName: "FileText", color: "bg-accent text-accent-foreground", children: [] },
 
-  { role: "dpo", label: "DPO", iconName: "Users", color: "bg-primary text-primary-foreground", children: ["class_coordinators"] },
+  { role: "dpo", label: "DPO", iconName: "Users", color: "bg-primary text-primary-foreground", children: ["secretary_publicity", "secretary_pwd", "secretary_women_affairs", "secretary_finance", "class_coordinators", "councillors"] },
   { role: "secretary_publicity", label: "Publicity", iconName: "Megaphone", color: "bg-muted text-muted-foreground", children: [] },
   { role: "secretary_pwd", label: "PWD", iconName: "Accessibility", color: "bg-muted text-muted-foreground", children: [] },
   { role: "secretary_women_affairs", label: "Women Affairs", iconName: "Users", color: "bg-muted text-muted-foreground", children: [] },
   { role: "secretary_finance", label: "Finance", iconName: "DollarSign", color: "bg-muted text-muted-foreground", children: [] },
-  
-  { role: "class_coordinators", label: "Class Coordinators", iconName: "Users", color: "bg-muted text-muted-foreground", children: ["councillors"] },
+  { role: "class_coordinators", label: "Class Coordinators", iconName: "Users", color: "bg-muted text-muted-foreground", children: [] },
   { role: "councillors", label: "Councilors", iconName: "User", color: "bg-muted text-muted-foreground", children: [] },
 
   { role: "speaker", label: "Speaker", iconName: "Gavel", color: "bg-accent text-accent-foreground", children: ["electoral_commission"] },

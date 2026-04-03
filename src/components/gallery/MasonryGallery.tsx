@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import { X, ZoomIn } from "lucide-react";
 import { useDrag } from "@use-gesture/react";
@@ -34,11 +34,8 @@ export const MasonryGallery: React.FC<MasonryGalleryProps> = ({ images }) => {
   const gridSize = 36; // 6x6
   const cols = 6;
   const gridImages: GalleryItem[] = [];
-  
-  if (images.length > 0) {
-    for (let i = 0; i < gridSize; i++) {
-      gridImages.push(images[i % images.length]);
-    }
+  for (let i = 0; i < gridSize; i++) {
+    gridImages.push(images[i % images.length]);
   }
 
   return (
@@ -58,19 +55,26 @@ export const MasonryGallery: React.FC<MasonryGalleryProps> = ({ images }) => {
 
       {/* 3D Tilted Grid */}
       <div
-        className="relative w-full h-[500px] sm:h-[600px] overflow-hidden cursor-grab active:cursor-grabbing touch-none select-none [perspective:1200px]"
+        className="relative w-full h-[500px] sm:h-[600px] overflow-hidden cursor-grab active:cursor-grabbing touch-none select-none"
+        style={{ perspective: "1200px" }}
         {...bind()}
       >
         <motion.div
-          className="absolute inset-0 flex items-center justify-center [transform-style:preserve-3d]"
+          className="absolute inset-0 flex items-center justify-center"
           style={{
             rotateX: springX,
             rotateY: springY,
+            transformStyle: "preserve-3d",
           }}
         >
           {/* The tilted grid plane */}
           <div
-            className="grid gap-3 sm:gap-4 [grid-template-columns:repeat(6,120px)] [grid-auto-rows:120px] -rotate-12 scale-110"
+            className="grid gap-3 sm:gap-4"
+            style={{
+              gridTemplateColumns: `repeat(${cols}, 120px)`,
+              gridAutoRows: "120px",
+              transform: "rotate(-12deg) scale(1.1)",
+            }}
           >
             {gridImages.map((img, i) => {
               const row = Math.floor(i / cols);

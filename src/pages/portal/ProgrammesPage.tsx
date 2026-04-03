@@ -11,7 +11,9 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useActivityLog } from "@/hooks/useActivityLog";
 import { notifyAllCouncillors } from "@/hooks/useNotify";
+import { InteractiveCalendar } from "@/components/calendar/InteractiveCalendar";
 import { Calendar, momentLocalizer } from "react-big-calendar";
+import { LayoutGrid, CalendarDays } from "lucide-react";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
@@ -37,7 +39,8 @@ export default function ProgrammesPage() {
   const [description, setDescription] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [visibility, setVisibility] = useState<"public" | "private">("public");
+   const [visibility, setVisibility] = useState<"public" | "private">("public");
+   const [viewMode, setViewMode] = useState<"calendar" | "visual">("calendar");
 
   const canAdd = hasAnyRole(["general_secretary", "secretary_publicity", "adminabsolute", "chairperson"]);
 
@@ -121,15 +124,66 @@ export default function ProgrammesPage() {
         )}
       </div>
 
+      <div className="flex justify-end gap-2 px-1">
+        <Button 
+          variant={viewMode === "calendar" ? "default" : "outline"} 
+          size="sm" 
+          onClick={() => setViewMode("calendar")}
+          className="rounded-full px-4 h-8 text-[11px] font-bold uppercase tracking-wider"
+        >
+          <CalendarDays className="w-3.5 h-3.5 mr-1.5" /> Detailed View
+        </Button>
+        <Button 
+          variant={viewMode === "visual" ? "default" : "outline"} 
+          size="sm" 
+          onClick={() => setViewMode("visual")}
+          className="rounded-full px-4 h-8 text-[11px] font-bold uppercase tracking-wider"
+        >
+          <LayoutGrid className="w-3.5 h-3.5 mr-1.5" /> Visual View
+        </Button>
+      </div>
+
       {loading ? (
         <p className="text-center py-8 text-muted-foreground">Loading...</p>
       ) : programmes.length === 0 ? (
         <p className="text-center py-8 text-muted-foreground">No programmes yet.</p>
       ) : (
-        <Card className="p-4 shadow-sm">
-          <div className="h-[600px] w-full">
-            <Calendar
-              localizer={localizer}
+        <Card className="p-2 sm:p-4 shadow-sm border-none bg-transparent sm:bg-card sm:border">
+          {viewMode === "calendar" ? (
+            <div className="h-[600px] w-full">
+              <Calendar
+                localizer={localizer}
+                events={programmes.map((p) => ({
+                  id: p.id,
+                  title: p.title,
+                  start: p.event_date ? new Date(p.event_date) : new Date(),
+                  end: p.event_date ? new Date(p.event_date) : new Date(),
+                  resource: p,
+                }))}
+                startAccessor="start"
+                endAccessor="end"
+                defaultView="month"
+                views={['month', 'agenda', 'week', 'day']}
+                eventPropGetter={(event) => {
+                  const isPrivate = event.resource?.visibility === "private";
+                  return {
+                    style: {
+                      backgroundColor: isPrivate ? "#6366f1" : "#039be5",
+                      borderColor: isPrivate ? "#4f46e5" : "#0288d1",
+                      color: "white",
+                      borderRadius: "4px",
+                      opacity: 0.9,
+                      display: "block",
+                    },
+                  };
+                }}
+                onSelectEvent={(event) => {
+                  toast(`Event: ${event.title}`, { description: event.resource?.description || "No description provided." });
+                }}
+              />
+            </div>
+          ) : (
+            <InteractiveCalendar 
               events={programmes.map((p) => ({
                 id: p.id,
                 title: p.title,
@@ -137,29 +191,8 @@ export default function ProgrammesPage() {
                 end: p.event_date ? new Date(p.event_date) : new Date(),
                 resource: p,
               }))}
-              startAccessor="start"
-              endAccessor="end"
-              defaultView="month"
-              views={['month', 'agenda', 'week', 'day']}
-              eventPropGetter={(event) => {
-                const isPrivate = event.resource?.visibility === "private";
-                // Google Calendar style Blue for public, Apple style slate/purple for private
-                return {
-                  style: {
-                    backgroundColor: isPrivate ? "#6366f1" : "#039be5",
-                    borderColor: isPrivate ? "#4f46e5" : "#0288d1",
-                    color: "white",
-                    borderRadius: "4px",
-                    opacity: 0.9,
-                    display: "block",
-                  },
-                };
-              }}
-              onSelectEvent={(event) => {
-                toast(`Event: ${event.title}`, { description: event.resource?.description || "No description provided." });
-              }}
             />
-          </div>
+          )}
         </Card>
       )}
     </div>

@@ -34,7 +34,7 @@ export default function RequisitionsPage() {
   const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const canApprove = hasAnyRole(["secretary_finance", "chairperson", "patron"]);
+  const canApprove = hasAnyRole(["secretary_finance", "patron"]);
 
   const fetchReqs = async () => {
     try {

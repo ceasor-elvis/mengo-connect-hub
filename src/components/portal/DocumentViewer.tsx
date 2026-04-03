@@ -71,7 +71,7 @@ export default function DocumentViewer({ isOpen, onClose, fileUrl, title }: Docu
 
         <DialogFooter className="p-3 bg-white border-t flex sm:justify-center">
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
-              Secure Document Viewer • Mengo Connect Hub
+              Secure Document Viewer • Hermonas Copycat
             </p>
         </DialogFooter>
       </DialogContent>

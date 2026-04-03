@@ -67,7 +67,7 @@ export default function StructureEditor({ onTreeUpdated }: { onTreeUpdated: () =
     // Update the node's role and all parent references
     const oldRole = selectedRole;
     setNodes(nodes.map(n => {
-      if (n.role === oldRole) return { ...n, role: newRole, ...updates }; // wait, not ...updates, just change role.
+      if (n.role === oldRole) return { ...n, role: newRole };
       if (n.children.includes(oldRole)) {
         return { ...n, children: n.children.map(c => c === oldRole ? newRole : c) };
       }

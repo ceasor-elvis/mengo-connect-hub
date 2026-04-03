@@ -53,7 +53,7 @@ export default function MonthlyReportForm({ onSuccess }: { onSuccess: () => void
     { id: "vice_chairperson", label: "Vice Chairperson" },
     { id: "speaker", label: "Speaker" },
     { id: "general_secretary", label: "General Secretary" },
-    { id: "patron_pending_chairperson", label: "Patron (via Chairperson)" },
+    { id: "patron", label: "Patron / Staff Office" },
     { id: "electoral_commission", label: "Electoral Commission" }
   ];
 

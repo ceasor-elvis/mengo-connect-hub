@@ -30,7 +30,6 @@ export function TimelineSection() {
     };
     fetchTimeline();
   }, []);
-
   return (
     <section className="bg-[#0b0416] py-20 overflow-hidden relative border-t-4 border-gold">
       {/* Decorative blurry gradients background */}

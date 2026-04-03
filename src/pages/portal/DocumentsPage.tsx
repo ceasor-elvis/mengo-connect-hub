@@ -262,44 +262,9 @@ export default function DocumentsPage() {
                     </Select>
                   </div>
                 )}
-                <div>
-                  <Label>File Selection</Label>
-                  <Input 
-                    type="file" 
-                    className="hidden" 
-                    ref={fileInputRef} 
-                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" 
-                    onChange={e => setFile(e.target.files?.[0] || null)} 
-                  />
-                  <div 
-                    className={`mt-1 border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all hover:bg-stone-50 group
-                      ${file ? 'border-primary bg-primary/5' : 'border-stone-200'}`}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {file ? (
-                      <div className="flex items-center gap-3">
-                         <div className="h-10 w-10 flex items-center justify-center bg-primary rounded-lg text-white">
-                           <CheckCircle2 className="h-5 w-5" />
-                         </div>
-                         <div className="flex-1 text-left min-w-0">
-                            <p className="text-xs font-bold truncate text-primary">{file.name}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase font-bold">Ready to upload</p>
-                         </div>
-                         <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setFile(null); }}>
-                           <Loader2 className="h-4 w-4" />
-                         </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <Upload className="h-8 w-8 mx-auto text-stone-400 group-hover:text-primary transition-colors" />
-                        <p className="text-[11px] font-bold mt-2 group-hover:text-primary">Click to select from computer directory</p>
-                        <p className="text-[9px] text-stone-400">PDF, DOC, DOCX, PNG, JPG</p>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <Button onClick={handleUpload} disabled={uploading || !file || !title || (accessLevel === 'shared' && !targetOffice)} className="w-full h-11 shadow-lg ring-offset-2 hover:ring-2 hover:ring-primary/20 transition-all">
-                  {uploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> : "Upload to Archive"}
+                <div><Label>File</Label><Input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={e => setFile(e.target.files?.[0] || null)} /></div>
+                <Button onClick={handleUpload} disabled={uploading || !file || !title || (accessLevel === 'shared' && !targetOffice)} className="w-full">
+                  {uploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> : "Upload"}
                 </Button>
               </div>
             </DialogContent>
@@ -309,11 +274,11 @@ export default function DocumentsPage() {
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input placeholder="Search documents..." className="pl-9 h-11 rounded-xl shadow-sm border-stone-200" value={search} onChange={e => setSearch(e.target.value)} />
+        <Input placeholder="Search documents..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
       <div className="space-y-2">
-        {loading ? <p className="text-center py-8 text-muted-foreground italic">Fetching archive...</p> :
+        {loading ? <p className="text-center py-8 text-muted-foreground">Loading...</p> :
          filtered.length === 0 ? <p className="text-center py-8 text-muted-foreground">No documents found.</p> :
          filtered.map((doc) => {
            const isPending = doc.target_office === 'patron_pending_chairperson';
@@ -382,13 +347,11 @@ export default function DocumentsPage() {
            );
          })}
       </div>
-
       <DocumentViewer 
         isOpen={!!viewerDoc} 
         onClose={() => setViewerDoc(null)} 
         fileUrl={viewerDoc?.url || null} 
         title={viewerDoc?.title || ""} 
-      />
-    </div>
+      />    </div>
   );
 }

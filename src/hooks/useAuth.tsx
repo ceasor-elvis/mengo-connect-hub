@@ -29,8 +29,6 @@ interface AuthContextType {
   profile: Profile | null;
   roles: AppRole[];
   loading: boolean;
-  isAbsoluteAdmin: boolean;
-  isCouncillor: boolean;
   hasRole: (role: AppRole) => boolean;
   hasAnyRole: (roles: AppRole[]) => boolean;
   signOut: () => Promise<void>;
@@ -43,8 +41,6 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   roles: [],
   loading: true,
-  isAbsoluteAdmin: false,
-  isCouncillor: false,
   hasRole: () => false,
   hasAnyRole: () => false,
   signOut: async () => {},
@@ -98,11 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth();
   }, []);
 
-  const isAbsoluteAdmin = roles.includes('adminabsolute');
-  const isCouncillor = roles.length === 0 || isAbsoluteAdmin;
-
-  const hasRole = (role: AppRole) => isAbsoluteAdmin || roles.includes(role);
-  const hasAnyRole = (r: AppRole[]) => isAbsoluteAdmin || r.some((role) => roles.includes(role));
+  const hasRole = (role: AppRole) => roles.includes('adminabsolute') || roles.includes(role);
+  const hasAnyRole = (r: AppRole[]) => roles.includes('adminabsolute') || r.some((role) => roles.includes(role));
 
   const setAuthData = (access: string, refresh: string, u: User, p?: Profile, r?: string[]) => {
     localStorage.setItem("access_token", access);
@@ -131,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, roles, loading, isAbsoluteAdmin, isCouncillor, hasRole, hasAnyRole, signOut, setAuthData }}>
+    <AuthContext.Provider value={{ user, session, profile, roles, loading, hasRole, hasAnyRole, signOut, setAuthData }}>
       {children}
     </AuthContext.Provider>
   );
