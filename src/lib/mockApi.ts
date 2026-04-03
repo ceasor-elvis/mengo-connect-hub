@@ -7,44 +7,104 @@ const USERS: Record<string, any> = {
   'adminabsolute': {
     password: 'absolute2026!',
     user: { id: 'usr_admin', username: 'adminabsolute', email: 'admin@mengo.sc' },
-    profile: { id: 'prof_admin', user_id: 'usr_admin', full_name: 'Absolute Admin', profile_pic: null, student_class: null },
+    profile: { id: 'prof_admin', user_id: 'usr_admin', full_name: 'Absolute Admin', profile_pic: null, student_class: null, gender: 'male' },
     roles: ['adminabsolute'],
   },
   'patron': {
     password: 'patron123',
     user: { id: 'usr_patron', username: 'patron', email: 'patron@mengo.sc' },
-    profile: { id: 'prof_patron', user_id: 'usr_patron', full_name: 'School Patron', profile_pic: null, student_class: null },
+    profile: { id: 'prof_patron', user_id: 'usr_patron', full_name: 'Mr. Kabuye Robert', profile_pic: null, student_class: null, gender: 'male' },
     roles: ['patron'],
   },
   'chairperson': {
     password: 'chairperson123',
     user: { id: 'usr_chair', username: 'chairperson', email: 'chairperson@mengo.sc' },
-    profile: { id: 'prof_chair', user_id: 'usr_chair', full_name: 'Chair Person', profile_pic: null, student_class: 'S.5' },
+    profile: { id: 'prof_chair', user_id: 'usr_chair', full_name: 'Ssekandi Brian', profile_pic: null, student_class: 'S.6 Arts', gender: 'male' },
     roles: ['chairperson'],
   },
   'merecouncillor': {
     password: 'merecouncillor123',
     user: { id: 'usr_councillor', username: 'merecouncillor', email: 'mere@mengo.sc' },
-    profile: { id: 'prof_councillor', user_id: 'usr_councillor', full_name: 'Mere Councillor', profile_pic: null, student_class: 'S.3' },
+    profile: { id: 'prof_councillor', user_id: 'usr_councillor', full_name: 'Mugisha David', profile_pic: null, student_class: 'S.5 Arts', gender: 'male' },
     roles: ['councillor'],
   },
   'publicity': {
     password: 'publicity123',
     user: { id: 'usr_pub', username: 'publicity', email: 'publicity@mengo.sc' },
-    profile: { id: 'prof_pub', user_id: 'usr_pub', full_name: 'Secretary Publicity', profile_pic: null, student_class: 'S.4' },
+    profile: { id: 'prof_pub', user_id: 'usr_pub', full_name: 'Lubega Isaac', profile_pic: null, student_class: 'S.4 Blue', gender: 'male' },
     roles: ['secretary_publicity'],
   },
   'disciplinary': {
     password: 'disciplinary123',
     user: { id: 'usr_dc', username: 'disciplinary', email: 'dc@mengo.sc' },
-    profile: { id: 'prof_dc', user_id: 'usr_dc', full_name: 'Disciplinary Committee', profile_pic: null, student_class: 'S.5' },
+    profile: { id: 'prof_dc', user_id: 'usr_dc', full_name: 'Kigozi Emmanuel', profile_pic: null, student_class: 'S.5 Science', gender: 'male' },
     roles: ['disciplinary_committee'],
   },
   'vicechair': {
     password: 'vicechair123',
     user: { id: 'usr_vc', username: 'vicechair', email: 'vc@mengo.sc' },
-    profile: { id: 'prof_vc', user_id: 'usr_vc', full_name: 'Vice Chairperson (DP)', profile_pic: null, student_class: 'S.6' },
+    profile: { id: 'prof_vc', user_id: 'usr_vc', full_name: 'Nalubega Grace', profile_pic: null, student_class: 'S.6 Science', gender: 'female' },
     roles: ['vice_chairperson'],
+  },
+  'gensec': {
+    password: 'gensec123',
+    user: { id: 'usr_gs', username: 'gensec', email: 'gensec@mengo.sc' },
+    profile: { id: 'prof_gs', user_id: 'usr_gs', full_name: 'Okello James', profile_pic: null, student_class: 'S.5 Arts', gender: 'male' },
+    roles: ['general_secretary'],
+  },
+  'asstgensec': {
+    password: 'asstgensec123',
+    user: { id: 'usr_ags', username: 'asstgensec', email: 'ags@mengo.sc' },
+    profile: { id: 'prof_ags', user_id: 'usr_ags', full_name: 'Atim Patricia', profile_pic: null, student_class: 'S.4 Blue', gender: 'female' },
+    roles: ['assistant_general_secretary'],
+  },
+  'secfinance': {
+    password: 'secfinance123',
+    user: { id: 'usr_sf', username: 'secfinance', email: 'finance@mengo.sc' },
+    profile: { id: 'prof_sf', user_id: 'usr_sf', full_name: 'Tumusiime Allan', profile_pic: null, student_class: 'S.5 Science', gender: 'male' },
+    roles: ['secretary_finance'],
+  },
+  'secwelfare': {
+    password: 'secwelfare123',
+    user: { id: 'usr_sw', username: 'secwelfare', email: 'welfare@mengo.sc' },
+    profile: { id: 'prof_sw', user_id: 'usr_sw', full_name: 'Namukasa Esther', profile_pic: null, student_class: 'S.4 Red', gender: 'female' },
+    roles: ['secretary_welfare'],
+  },
+  'sechealth': {
+    password: 'sechealth123',
+    user: { id: 'usr_sh', username: 'sechealth', email: 'health@mengo.sc' },
+    profile: { id: 'prof_sh', user_id: 'usr_sh', full_name: 'Ouma Peter', profile_pic: null, student_class: 'S.4 Green', gender: 'male' },
+    roles: ['secretary_health'],
+  },
+  'secwomen': {
+    password: 'secwomen123',
+    user: { id: 'usr_swa', username: 'secwomen', email: 'women@mengo.sc' },
+    profile: { id: 'prof_swa', user_id: 'usr_swa', full_name: 'Nakamya Faith', profile_pic: null, student_class: 'S.5 Arts', gender: 'female' },
+    roles: ['secretary_women_affairs'],
+  },
+  'deputyspeaker': {
+    password: 'deputyspeaker123',
+    user: { id: 'usr_ds', username: 'deputyspeaker', email: 'ds@mengo.sc' },
+    profile: { id: 'prof_ds', user_id: 'usr_ds', full_name: 'Namutebi Sharon', profile_pic: null, student_class: 'S.5 Science', gender: 'female' },
+    roles: ['deputy_speaker'],
+  },
+  'speaker': {
+    password: 'speaker123',
+    user: { id: 'usr_spk', username: 'speaker', email: 'speaker@mengo.sc' },
+    profile: { id: 'prof_spk', user_id: 'usr_spk', full_name: 'Mugisha David (Speaker)', profile_pic: null, student_class: 'S.5 Arts', gender: 'male' },
+    roles: ['speaker'],
+  },
+  'ec': {
+    password: 'ec123',
+    user: { id: 'usr_ec', username: 'ec', email: 'ec@mengo.sc' },
+    profile: { id: 'prof_ec', user_id: 'usr_ec', full_name: 'Nantongo Juliet', profile_pic: null, student_class: 'S.6 Arts', gender: 'female' },
+    roles: ['electoral_commission'],
+  },
+  'secpwd': {
+    password: 'secpwd123',
+    user: { id: 'usr_sp', username: 'secpwd', email: 'pwd@mengo.sc' },
+    profile: { id: 'prof_sp', user_id: 'usr_sp', full_name: 'Kigozi Emmanuel (PWD)', profile_pic: null, student_class: 'S.5 Science', gender: 'male' },
+    roles: ['secretary_pwd'],
   }
 };
 
@@ -362,7 +422,10 @@ export function setupMockApi(api: AxiosInstance) {
   });
 
   mock.onGet('/users/councillors/').reply(200, { 
-    results: Object.values(USERS).map(u => u.profile) 
+    results: Object.values(USERS).map(u => ({
+      ...u.profile,
+      roles: u.roles,
+    }))
   });
 
 
