@@ -33,13 +33,14 @@ export default function NotificationsBell() {
   const [feedbackText, setFeedbackText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = Array.isArray(notifications) ? notifications.filter((n) => n && !n.read).length : 0;
 
   const fetchNotifications = async () => {
     if (!user) return;
     try {
       const { data } = await api.get("/notifications/", { params: { limit: 20 } });
-      if (data) setNotifications(data);
+      const list = Array.isArray(data) ? data : (data?.results || []);
+      setNotifications(list);
     } catch (e) {
       console.error("Failed to load notifications", e);
     }
@@ -131,16 +132,18 @@ export default function NotificationsBell() {
             )}
           </div>
           <ScrollArea className="max-h-72">
-            {notifications.length === 0 ? (
+            {!Array.isArray(notifications) || notifications.length === 0 ? (
               <p className="p-4 text-center text-xs text-muted-foreground">No notifications yet</p>
             ) : (
               <div className="divide-y text-left">
-                {notifications.map((n) => (
-                  <div key={n.id} className={`px-3 py-2 ${!n.read ? "bg-primary/5" : ""}`}>
-                    <div className="flex items-start gap-2">
-                      <Badge variant="outline" className={`text-[9px] mt-0.5 shrink-0 ${typeColors[n.type] || ""}`}>
-                        {n.type}
-                      </Badge>
+                {(notifications as any[]).map((n) => {
+                  if (!n) return null;
+                  return (
+                    <div key={n.id} className={`px-3 py-2 ${!n.read ? "bg-primary/5" : ""}`}>
+                      <div className="flex items-start gap-2">
+                        <Badge variant="outline" className={`text-[9px] mt-0.5 shrink-0 ${typeColors[n.type] || ""}`}>
+                          {n.type}
+                        </Badge>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium">{n.title}</p>
                         <p className="text-[10px] text-muted-foreground">{n.message}</p>
@@ -152,7 +155,7 @@ export default function NotificationsBell() {
                         )}
                         <div className="flex items-center justify-between mt-1">
                           <p className="text-[9px] text-muted-foreground">
-                            {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                            {n.created_at ? formatDistanceToNow(new Date(n.created_at), { addSuffix: true }) : "recently"}
                           </p>
                           {n.type === "meeting" && isPatron && (
                             <Button 
@@ -166,10 +169,11 @@ export default function NotificationsBell() {
                             </Button>
                           )}
                         </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </ScrollArea>

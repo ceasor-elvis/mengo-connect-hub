@@ -14,6 +14,8 @@
 - `POST /api/users/upgrade-role/` : Updates a user's cabinet position. Payload: `{ user_id, new_role }`.
 - `POST /api/users/change-password/` : Allows a user to update their password. Payload: `{ current_password, new_password }`.
 - `POST /api/users/forgot-password/` : Requests a password reset. Payload: `{ username }`.
+- `POST /api/users/admin-reset-password/` : Administrative password override. Payload: `{ user_id, new_password }`.
+- `PATCH /api/users/<id>/profile/admin/` : Administrative profile editing (Name, Role, Class, etc.).
 
 > [!IMPORTANT]
 > **Password Management Protocol**:
@@ -23,6 +25,8 @@
 > 3. If a user forgets their password, the `forgot-password` endpoint must trigger an **Urgent Notification** to the **Admin Absolute** and **Patron** to regenerate a new temporary password for that user.
 >
 > **Automatic Role Swapping**: The base level for students is `councillor`. If a leadership position (e.g., Chairperson, Speaker) is assigned to a user, the backend **must automatically** demote the current holder of that position to a regular `councillor`. Only one user can hold a leadership position at a time.
+>
+> **Administrative Edits**: Administrative endpoints (`admin-reset-password`, `admin/profile`) are restricted to users with `Admin Absolute` or `Patron` roles. All administrative changes must be logged in the `activity-logs`.
 
 ## Notifications (`/api/notifications/`)
 

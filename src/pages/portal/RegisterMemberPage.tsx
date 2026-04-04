@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserPlus, ArrowUpCircle, Plus, Loader2 } from "lucide-react";
+import { UserPlus, ArrowUpCircle, Plus, Loader2, Search, Edit2, ShieldAlert, Key } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
@@ -53,12 +53,22 @@ export default function RegisterMemberPage() {
   const [newStreamName, setNewStreamName] = useState("");
   const [addingStream, setAddingStream] = useState(false);
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [editingMember, setEditingMember] = useState<any | null>(null);
+  const [resetingUser, setResetingUser] = useState<any | null>(null);
+  const [newTempPassword, setNewTempPassword] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [reseting, setReseting] = useState(false);
+
   const fetchProfiles = () => api.get("/users/all-profiles/").then(res => setProfiles(Array.isArray(res.data) ? res.data : (res.data.results || []))).catch(() => {});
   const fetchStreams = () => api.get("/streams/").then(res => setStreams(res.data.results || [])).catch(() => {});
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const fetchNotifications = () => api.get("/notifications/").then(res => setNotifications(res.data)).catch(() => {});
 
   useEffect(() => {
     fetchProfiles();
     fetchStreams();
+    fetchNotifications();
   }, []);
 
   const handleAddStream = async () => {
@@ -74,6 +84,48 @@ export default function RegisterMemberPage() {
       toast.error("Failed to add stream");
     } finally {
       setAddingStream(false);
+    }
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember) return;
+    setSavingEdit(true);
+    try {
+      await api.patch(`/users/${editingMember.user_id}/profile/admin/`, {
+        full_name: editingMember.full_name,
+        username: editingMember.username,
+        student_class: editingMember.student_class,
+        gender: editingMember.gender,
+        role: editingMember.role,
+      });
+      toast.success("Member updated successfully!");
+      setEditingMember(null);
+      fetchProfiles();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Update failed");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleAdminReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetingUser || !newTempPassword) return;
+    setReseting(true);
+    try {
+      await api.post("/users/admin-reset-password/", {
+        user_id: resetingUser.id,
+        new_password: newTempPassword,
+      });
+      toast.success("Password reset successfully!");
+      setResetingUser(null);
+      setNewTempPassword("");
+      fetchNotifications();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Reset failed");
+    } finally {
+      setReseting(false);
     }
   };
 
@@ -142,9 +194,11 @@ export default function RegisterMemberPage() {
       </div>
 
       <Tabs defaultValue="register">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="register">Register Member</TabsTrigger>
-          <TabsTrigger value="upgrade">Upgrade Role</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 mb-4">
+          <TabsTrigger value="register">Register</TabsTrigger>
+          <TabsTrigger value="upgrade">Upgrade</TabsTrigger>
+          <TabsTrigger value="members">Members</TabsTrigger>
+          <TabsTrigger value="requests">Requests</TabsTrigger>
         </TabsList>
 
         <TabsContent value="register">
@@ -253,45 +307,195 @@ export default function RegisterMemberPage() {
         </form>
       </TabsContent>
 
-      <TabsContent value="upgrade">
-        <form onSubmit={handleUpgrade} className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
-          <div className="space-y-2">
-            <Label>Select Existing Member</Label>
-            <Select value={upgradeUserId} onValueChange={setUpgradeUserId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Search member..." />
-              </SelectTrigger>
-              <SelectContent>
-                {profiles.map(p => (
-                  <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <TabsContent value="upgrade">
+          <form onSubmit={handleUpgrade} className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+            <div className="space-y-2">
+              <Label>Select Existing Member</Label>
+              <Select value={upgradeUserId} onValueChange={setUpgradeUserId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Search member..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {profiles.map(p => (
+                    <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <Label>New Leadership Position</Label>
-            <Select value={upgradeRole} onValueChange={setUpgradeRole}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select new role..." />
-              </SelectTrigger>
-              <SelectContent>
-                {APP_ROLES.map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {ROLE_LABELS[role]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-2">
+              <Label>New Leadership Position</Label>
+              <Select value={upgradeRole} onValueChange={setUpgradeRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select new role..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {APP_ROLES.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {ROLE_LABELS[role]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <Button type="submit" className="w-full" disabled={upgradeLoading}>
-            <ArrowUpCircle className="mr-2 h-4 w-4" />
-            {upgradeLoading ? "Upgrading..." : "Upgrade Member"}
-          </Button>
-        </form>
+            <Button type="submit" className="w-full" disabled={upgradeLoading}>
+              <ArrowUpCircle className="mr-2 h-4 w-4" />
+              {upgradeLoading ? "Upgrading..." : "Upgrade Member"}
+            </Button>
+          </form>
+        </TabsContent>
+
+      <TabsContent value="members" className="space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input 
+            placeholder="Search members..." 
+            className="pl-9" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <div className="divide-y">
+            {profiles.filter(p => 
+              p.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+              p.username?.toLowerCase().includes(searchTerm.toLowerCase())
+            ).map((p) => {
+              const isAdminEdit = hasAnyRole(["adminabsolute", "chairperson"]);
+              return (
+                <div key={p.user_id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                  <div>
+                    <p className="font-medium">{p.full_name}</p>
+                    <p className="text-xs text-muted-foreground">@{p.username} • {p.student_class || "Staff"} • {p.role ? ROLE_LABELS[p.role] : "Councillor"}</p>
+                  </div>
+                  {isAdminEdit && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setEditingMember(p)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="requests" className="space-y-4">
+        <div className="rounded-xl border bg-card p-6 shadow-sm text-center">
+          <ShieldAlert className="mx-auto h-8 w-8 text-amber-500 mb-2" />
+          <h3 className="font-bold">Pending Password Resets</h3>
+          <p className="text-sm text-muted-foreground">Members who clicked 'Forgot Password' will appear here.</p>
+        </div>
+
+        <div className="space-y-3">
+          {notifications.filter(n => n.title === "Password Reset Request" && !n.read).map((n) => (
+            <div key={n.id} className="flex items-center justify-between p-4 rounded-xl border bg-card shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center">
+                  <Key className="h-4 w-4 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{n.message.split('(')[0]}</p>
+                  <p className="text-xs text-muted-foreground">Sent {new Date(n.created_at || n.timestamp).toLocaleTimeString()}</p>
+                </div>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setResetingUser({ id: n.target_user_id || n.user_id, fullName: n.message.split('(')[0].replace('User ', '') })}>Reset</Button>
+            </div>
+          ))}
+          {notifications.filter(n => n.title === "Password Reset Request" && !n.read).length === 0 && (
+            <p className="text-center text-sm text-muted-foreground py-10">No pending requests.</p>
+          )}
+        </div>
       </TabsContent>
       </Tabs>
+
+      {/* Edit Member Dialog */}
+      <Dialog open={!!editingMember} onOpenChange={(open) => !open && setEditingMember(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Member Information</DialogTitle>
+          </DialogHeader>
+          {editingMember && (
+            <form onSubmit={handleSaveEdit} className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Full Name</Label>
+                <Input value={editingMember.full_name} onChange={e => setEditingMember({...editingMember, full_name: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Username</Label>
+                <Input value={editingMember.username} onChange={e => setEditingMember({...editingMember, username: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Class</Label>
+                  <Select value={editingMember.student_class} onValueChange={v => setEditingMember({...editingMember, student_class: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Gender</Label>
+                  <Select value={editingMember.gender} onValueChange={v => setEditingMember({...editingMember, gender: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Position</Label>
+                <Select value={editingMember.role || "councillor"} onValueChange={v => setEditingMember({...editingMember, role: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {APP_ROLES.map(r => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit" className="w-full" disabled={savingEdit}>
+                {savingEdit && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Reset Dialog */}
+      <Dialog open={!!resetingUser} onOpenChange={(open) => !open && setResetingUser(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Administrative Reset</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+              <p className="text-xs text-amber-800 leading-relaxed">
+                You are generating a new temporary password for <strong>{resetingUser?.fullName}</strong>. They must change it upon login.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>New Temporary Password</Label>
+              <Input 
+                type="password" 
+                placeholder="Enter new password" 
+                value={newTempPassword} 
+                onChange={e => setNewTempPassword(e.target.value)} 
+              />
+            </div>
+            <Button onClick={handleAdminReset} className="w-full" disabled={reseting || !newTempPassword}>
+              {reseting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Reset Password
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

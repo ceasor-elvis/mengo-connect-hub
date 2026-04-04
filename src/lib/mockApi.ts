@@ -113,7 +113,19 @@ let MOCK_APPLICANTS: any[] = [
 ];
 
 let MOCK_NOTIFICATIONS: any[] = [
-  { id: '1', title: 'Welcome!', message: 'Welcome to the new portal.', type: 'info', read: false, created_at: new Date().toISOString(), sender_id: 'usr_admin', feedback: null }
+  { id: '1', title: 'Welcome!', message: 'Welcome to the new portal.', type: 'info', read: false, created_at: new Date().toISOString(), sender_id: 'usr_admin', feedback: null },
+  {
+    id: "99",
+    user_id: "usr_admin",
+    sender_id: "usr_chair",
+    title: "Password Reset Request",
+    message: "User Ssekandi Brian (chairperson) has requested a password reset. Please provide a new temporary password.",
+    type: "urgent_alert",
+    created_at: new Date().toISOString(),
+    read: false,
+    target_username: "chairperson",
+    target_user_id: "usr_chair"
+  },
 ];
 
 let MOCK_ROTAS: any[] = [];
@@ -208,6 +220,38 @@ export function setupMockApi(api: AxiosInstance) {
       return [200, { message: "Password updated successfully" }];
     }
     return [401, {}];
+  });
+
+  mock.onPost("/users/admin-reset-password/").reply((config) => {
+    const { user_id, new_password } = JSON.parse(config.data);
+    const user = Object.values(USERS).find((u) => u.user.id === user_id);
+    if (!user) return [404, { detail: "User not found" }];
+    user.password = new_password;
+    const notif = MOCK_NOTIFICATIONS.find(n => n.user_id === user_id && n.title === "Password Reset Request" && !n.read);
+    if (notif) notif.read = true;
+    return [200, { detail: "Password reset successful" }];
+  });
+
+  mock.onPatch(/\/users\/[\w-]+\/profile\/admin\//).reply((config) => {
+    const userId = config.url?.split('/')[2];
+    const { full_name, username, student_class, gender, role } = JSON.parse(config.data);
+    const user = Object.values(USERS).find((u) => u.user.id === userId);
+    if (!user) return [404, { detail: "User not found" }];
+
+    if (full_name) user.profile.full_name = full_name;
+    if (username) user.user.username = username;
+    if (student_class) user.profile.student_class = student_class;
+    if (gender) user.profile.gender = gender;
+
+    if (role && !user.roles.includes(role)) {
+      if (role !== "councillor") {
+        Object.values(USERS).forEach(u => {
+          if (u.roles.includes(role) && u.user.id !== userId) u.roles = ["councillor"];
+        });
+      }
+      user.roles = [role];
+    }
+    return [200, { detail: "Profile updated successfully", user }];
   });
 
   mock.onPost('/users/forgot-password/').reply((config) => {
