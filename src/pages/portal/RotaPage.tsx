@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Users, Plus, Pencil, Trash2, Save, Printer } from "lucide-react";
@@ -166,12 +167,19 @@ export default function RotaPage() {
   const [exportH1, setExportH1] = useState("Supervisors");
   const [exportH2, setExportH2] = useState("Females");
   const [exportH3, setExportH3] = useState("Males");
+  const [exportNotes, setExportNotes] = useState("");
 
   const startExport = (rota: RotaRow) => {
     setExportTitle(rota.week.toUpperCase());
     setExportH1("Supervisors");
     setExportH2("Females");
     setExportH3("Males");
+    setExportNotes(
+      "ALL COUNCILLORS AND SUPERVISORS ARE EXPECTED AT THE LUNCH LINES BY 1:15 P.M.\n" +
+      "DEFAULTING WILL RESULT INTO PAYMENT OF A FINE OF sh.3000 TO THE SEC. FINANCE\n" +
+      "ANY COUNCILLOR THAT WILL NOT BE ABLE TO SHOW UP ON THE LUNCH LINES SHOULD ENSURE PRIOR COMMUNICATION IS MADE TO THEIR SUPERVISORS.\n" +
+      "FOR CONCERNS RELATING TO THE ROTA, REACH OUT TO THE GEN. SEC. OR ASST. GEN. SEC."
+    );
     setExportingRota(rota);
   };
 
@@ -304,25 +312,36 @@ export default function RotaPage() {
 
         <div className="max-w-4xl mx-auto space-y-6 pt-4 pb-12">
           {/* Controls - Hidden on print */}
-          <div className="no-print flex flex-col md:flex-row gap-4 justify-between items-center bg-card p-4 rounded-xl border shadow-sm">
-             <div className="flex-1 space-y-3 w-full">
-               <div className="flex flex-col sm:flex-row gap-2">
-                 <Input value={exportSubtitle} onChange={e => setExportSubtitle(e.target.value)} placeholder="Subtitle (e.g. THE OFFICE OF...)" className="flex-1 text-xs sm:text-sm" />
-                 <Input value={exportTitle} onChange={e => setExportTitle(e.target.value)} placeholder="Main Title (e.g. ROTA 2026)" className="flex-1 text-xs sm:text-sm font-bold border-primary" />
-               </div>
-               <div className="flex flex-col sm:flex-row gap-2">
-                 <Input value={exportH1} onChange={e => setExportH1(e.target.value)} placeholder="Column 1 Header" className="flex-1 text-xs sm:text-sm" />
-                 <Input value={exportH2} onChange={e => setExportH2(e.target.value)} placeholder="Column 2 Header" className="flex-1 text-xs sm:text-sm" />
-                 <Input value={exportH3} onChange={e => setExportH3(e.target.value)} placeholder="Column 3 Header" className="flex-1 text-xs sm:text-sm" />
-               </div>
-               <div className="bg-muted/50 rounded-lg p-2 text-[10px] text-muted-foreground">
-                 <span className="font-semibold">Auto-sort:</span> Councillors are automatically sorted into <span className="text-pink-500 font-semibold">Female</span> and <span className="text-blue-500 font-semibold">Male</span> columns based on their gender in the system.
-               </div>
-             </div>
-             <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full md:w-auto">
-                <Button variant="outline" className="w-full sm:w-auto" onClick={() => setExportingRota(null)}>Cancel</Button>
-                <Button className="w-full sm:w-auto" onClick={() => window.print()}><Printer className="w-4 h-4 mr-2"/> Print</Button>
-             </div>
+          <div className="no-print flex flex-col gap-4 bg-card p-4 rounded-xl border shadow-sm">
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+              <div className="flex-1 space-y-3 w-full">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input value={exportSubtitle} onChange={e => setExportSubtitle(e.target.value)} placeholder="Subtitle (e.g. THE OFFICE OF...)" className="flex-1 text-xs sm:text-sm" />
+                  <Input value={exportTitle} onChange={e => setExportTitle(e.target.value)} placeholder="Main Title (e.g. ROTA 2026)" className="flex-1 text-xs sm:text-sm font-bold border-primary" />
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input value={exportH1} onChange={e => setExportH1(e.target.value)} placeholder="Column 1 Header" className="flex-1 text-xs sm:text-sm" />
+                  <Input value={exportH2} onChange={e => setExportH2(e.target.value)} placeholder="Column 2 Header" className="flex-1 text-xs sm:text-sm" />
+                  <Input value={exportH3} onChange={e => setExportH3(e.target.value)} placeholder="Column 3 Header" className="flex-1 text-xs sm:text-sm" />
+                </div>
+                <div className="bg-muted/50 rounded-lg p-2 text-[10px] text-muted-foreground">
+                  <span className="font-semibold">Auto-sort:</span> Councillors are automatically sorted into <span className="text-pink-500 font-semibold">Female</span> and <span className="text-blue-500 font-semibold">Male</span> columns based on their gender in the system.
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full md:w-auto">
+                 <Button variant="outline" className="w-full sm:w-auto" onClick={() => setExportingRota(null)}>Cancel</Button>
+                 <Button className="w-full sm:w-auto" onClick={() => window.print()}><Printer className="w-4 h-4 mr-2"/> Print</Button>
+              </div>
+            </div>
+            <div className="border-t pt-4">
+              <label className="text-xs font-bold uppercase mb-2 block">Edit Notes / Instructions</label>
+              <Textarea 
+                value={exportNotes} 
+                onChange={e => setExportNotes(e.target.value)} 
+                placeholder="Enter notes to appear at the bottom..."
+                className="text-xs h-32"
+              />
+            </div>
           </div>
 
           {/* Printable Template */}
@@ -365,10 +384,10 @@ export default function RotaPage() {
                           <td className="border border-black p-0">
                             <div className="flex h-full min-h-[60px]">
                               <div className="flex-1 border-r border-black p-3">
-                                {females.map((f, i) => <span key={i} className="block">{f}</span>)}
+                                {females.length > 0 ? females.map((f, i) => <span key={i} className="block">{f}</span>) : <span className="text-black/20 italic">None</span>}
                               </div>
                               <div className="flex-1 p-3">
-                                {males.map((m, i) => <span key={i} className="block">{m}</span>)}
+                                {males.length > 0 ? males.map((m, i) => <span key={i} className="block">{m}</span>) : <span className="text-black/20 italic">None</span>}
                               </div>
                             </div>
                           </td>
@@ -381,17 +400,16 @@ export default function RotaPage() {
                 <div className="mt-8 text-xs p-5 pb-0 text-black">
                   <h4 className="font-bold underline mb-2">NOTE:</h4>
                   <ul className="list-disc pl-5 space-y-1.5 font-medium uppercase text-[10px] sm:text-xs text-black/80">
-                    <li>ALL COUNCILLORS AND SUPERVISORS ARE EXPECTED AT THE LUNCH LINES BY 1:15 P.M.</li>
-                    <li>DEFAULTING WILL RESULT INTO PAYMENT OF A FINE OF sh.3000 TO THE SEC. FINANCE</li>
-                    <li>ANY COUNCILLOR THAT WILL NOT BE ABLE TO SHOW UP ON THE LUNCH LINES SHOULD ENSURE PRIOR COMMUNICATION IS MADE TO THEIR SUPERVISORS.</li>
-                    <li>FOR CONCERNS RELATING TO THE ROTA, REACH OUT TO THE GEN. SEC. OR ASST. GEN. SEC.</li>
+                    {exportNotes.split('\n').filter(line => line.trim()).map((line, i) => (
+                      <li key={i}>{line.trim()}</li>
+                    ))}
                   </ul>
                 </div>
 
                 <div className="mt-12 flex justify-between items-start pt-8 p-5 text-black">
                   <div className="space-y-4">
                     <p className="font-bold uppercase text-xs">ASSISTANT GENERAL SECRETARY</p>
-                    <div className="h-10 italic text-black/40 text-xl font-serif">Signed</div>
+                    <div className="h-10 italic text-black/40 text-xl font-serif"></div>
                     <p className="font-bold uppercase text-sm border-t border-dashed border-black pt-1">{asstGenSec}</p>
                   </div>
                   
