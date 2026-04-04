@@ -22,7 +22,7 @@ const catColor = (c: string) => {
 };
 
 export default function DocumentsPage() {
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, hasAnyRole } = useAuth();
   const [docs, setDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -165,6 +165,7 @@ export default function DocumentsPage() {
               </DialogHeader>
               {!activeTemplate ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4">
+                  {/* Monthly Report - Everyone */}
                   <div 
                     className="flex items-center gap-4 p-4 rounded-xl border border-primary/10 hover:bg-primary/5 cursor-pointer transition-all hover:border-primary/30"
                     onClick={() => setActiveTemplate("monthly_report")}
@@ -178,31 +179,37 @@ export default function DocumentsPage() {
                     </div>
                   </div>
 
-                  <div 
-                    className="flex items-center gap-4 p-4 rounded-xl border border-primary/10 hover:bg-primary/5 cursor-pointer transition-all hover:border-primary/30"
-                    onClick={() => setActiveTemplate("requisition")}
-                  >
-                    <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-600 shrink-0">
-                      <FileText className="h-5 w-5" />
+                  {/* Requisition - Finance & Leadership */}
+                  {hasAnyRole(["secretary_finance", "chairperson", "adminabsolute"]) && (
+                    <div 
+                      className="flex items-center gap-4 p-4 rounded-xl border border-primary/10 hover:bg-primary/5 cursor-pointer transition-all hover:border-primary/30"
+                      onClick={() => setActiveTemplate("requisition")}
+                    >
+                      <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-600 shrink-0">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-xs">Financial Requisition</p>
+                        <p className="text-[10px] text-muted-foreground">Formal printable fund request voucher.</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-xs">Financial Requisition</p>
-                      <p className="text-[10px] text-muted-foreground">Formal printable fund request voucher.</p>
-                    </div>
-                  </div>
+                  )}
 
-                  <div 
-                    className="flex items-center gap-4 p-4 rounded-xl border border-primary/10 hover:bg-primary/5 cursor-pointer transition-all hover:border-primary/30"
-                    onClick={() => setActiveTemplate("minutes")}
-                  >
-                    <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
-                      <FileText className="h-5 w-5" />
+                  {/* Meeting Minutes - GS & Leadership */}
+                  {hasAnyRole(["general_secretary", "chairperson", "adminabsolute"]) && (
+                    <div 
+                      className="flex items-center gap-4 p-4 rounded-xl border border-primary/10 hover:bg-primary/5 cursor-pointer transition-all hover:border-primary/30"
+                      onClick={() => setActiveTemplate("minutes")}
+                    >
+                      <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-xs">Meeting Minutes</p>
+                        <p className="text-[10px] text-muted-foreground">Structured meeting record & resolutions.</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-xs">Meeting Minutes</p>
-                      <p className="text-[10px] text-muted-foreground">Structured meeting record & resolutions.</p>
-                    </div>
-                  </div>
+                  )}
 
                   <div className="p-4 rounded-xl border border-dashed border-muted-foreground/20 text-center opacity-50 select-none flex items-center justify-center">
                     <p className="text-[10px] font-medium italic">More templates coming soon...</p>
@@ -296,85 +303,85 @@ export default function DocumentsPage() {
         {loading ? <p className="text-center py-8 text-muted-foreground">Loading...</p> :
          filtered.length === 0 ? <p className="text-center py-8 text-muted-foreground">No documents found.</p> :
          filtered.map((doc) => {
-           const isPending = doc.target_office === 'patron_pending_chairperson';
-           const canApprove = isPending && hasRole('chairperson');
-           const canDelete = doc.uploaded_by === user?.username || hasRole('adminabsolute');
-           const fileUrl = doc.file_url || doc.file || "#";
+            const isPending = doc.target_office === 'patron_pending_chairperson';
+            const canApprove = isPending && hasRole('chairperson');
+            const canDelete = doc.uploaded_by === user?.username || hasRole('adminabsolute');
+            const fileUrl = doc.file_url || doc.file || "#";
 
-           return (
-            <Card key={doc.id} className={isPending ? "border-amber-500/50 bg-amber-500/5 shadow-none" : "hover:shadow-sm transition-shadow shadow-none border-stone-200"}>
-              <CardContent className="flex items-center justify-between p-3 gap-2">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg shrink-0 ${isPending ? 'bg-amber-500/20 text-amber-600' : 'bg-primary/10 text-primary'}`}>
-                    {isPending ? <ShieldAlert className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-medium truncate">{doc.title}</p>
-                    <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
-                      {doc.uploaded_by} • {new Date(doc.created_at).toLocaleDateString()}
-                      {doc.access_level === 'private' && <span className="bg-stone-100 text-stone-600 px-1 rounded">Private</span>}
-                      {doc.access_level === 'shared' && (
-                        <span className={isPending ? "text-amber-600 font-medium" : "text-primary/70"}>
-                          {` (Shared with ${ROLE_LABELS[doc.target_office] || doc.target_office})`}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Badge variant={catColor(doc.category)} className="text-[10px] hidden sm:inline-flex">{doc.category}</Badge>
-                  
-                  {canApprove && (
-                    <Button 
-                      size="sm" 
-                      variant="default" 
-                      className="h-7 px-2 text-[10px] bg-green-600 hover:bg-green-700 shadow-md"
-                      onClick={() => handleApprove(doc.id)}
-                      disabled={approving === doc.id}
-                    >
-                      {approving === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3 mr-1" />}
-                      Approve & Forward
-                    </Button>
-                  )}
+            return (
+             <Card key={doc.id} className={isPending ? "border-amber-500/50 bg-amber-500/5 shadow-none" : "hover:shadow-sm transition-shadow shadow-none border-stone-200"}>
+               <CardContent className="flex items-center justify-between p-3 gap-2">
+                 <div className="flex items-center gap-2 min-w-0 flex-1">
+                   <div className={`flex h-8 w-8 items-center justify-center rounded-lg shrink-0 ${isPending ? 'bg-amber-500/20 text-amber-600' : 'bg-primary/10 text-primary'}`}>
+                     {isPending ? <ShieldAlert className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                   </div>
+                   <div className="min-w-0">
+                     <p className="text-xs sm:text-sm font-medium truncate">{doc.title}</p>
+                     <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                       {doc.uploaded_by} • {new Date(doc.created_at).toLocaleDateString()}
+                       {doc.access_level === 'private' && <span className="bg-stone-100 text-stone-600 px-1 rounded">Private</span>}
+                       {doc.access_level === 'shared' && (
+                         <span className={isPending ? "text-amber-600 font-medium" : "text-primary/70"}>
+                           {` (Shared with ${ROLE_LABELS[doc.target_office] || doc.target_office})`}
+                         </span>
+                       )}
+                     </p>
+                   </div>
+                 </div>
+                 <div className="flex items-center gap-1 shrink-0">
+                   <Badge variant={catColor(doc.category)} className="text-[10px] hidden sm:inline-flex">{doc.category}</Badge>
+                   
+                   {canApprove && (
+                     <Button 
+                       size="sm" 
+                       variant="default" 
+                       className="h-7 px-2 text-[10px] bg-green-600 hover:bg-green-700 shadow-md"
+                       onClick={() => handleApprove(doc.id)}
+                       disabled={approving === doc.id}
+                     >
+                       {approving === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3 mr-1" />}
+                       Approve & Forward
+                     </Button>
+                   )}
 
-                  <div className="flex items-center gap-0.5">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-primary hover:bg-primary/5" 
-                      onClick={() => setViewerDoc({ url: fileUrl, title: doc.title })}
-                      title="View Inbuilt"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-muted-foreground hover:text-primary" 
-                      onClick={() => handleDownload(fileUrl, doc.title)}
-                      title="Download locally"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
+                   <div className="flex items-center gap-0.5">
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       className="h-8 w-8 text-primary hover:bg-primary/5" 
+                       onClick={() => setViewerDoc({ url: fileUrl, title: doc.title })}
+                       title="View Inbuilt"
+                     >
+                       <Eye className="h-4 w-4" />
+                     </Button>
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       className="h-8 w-8 text-muted-foreground hover:text-primary" 
+                       onClick={() => handleDownload(fileUrl, doc.title)}
+                       title="Download locally"
+                     >
+                       <Download className="h-4 w-4" />
+                     </Button>
 
-                    {canDelete && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive" 
-                        onClick={() => handleDelete(doc.id)}
-                        disabled={deleting === doc.id}
-                        title="Delete document"
-                      >
-                        {deleting === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-           );
-         })}
+                     {canDelete && (
+                       <Button 
+                         variant="ghost" 
+                         size="icon" 
+                         className="h-8 w-8 text-muted-foreground hover:text-destructive" 
+                         onClick={() => handleDelete(doc.id)}
+                         disabled={deleting === doc.id}
+                         title="Delete document"
+                       >
+                         {deleting === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                       </Button>
+                     )}
+                   </div>
+                 </div>
+               </CardContent>
+             </Card>
+            );
+          })}
       </div>
       <DocumentViewer 
         isOpen={!!viewerDoc} 

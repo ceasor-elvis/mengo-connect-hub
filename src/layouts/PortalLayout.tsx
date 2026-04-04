@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Calendar, FileText, AlertTriangle, Users,
   MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network, UserPlus, Lock, Settings, Scale, Shield, ShieldCheck,
-  Target, Video
+  Target, Video, BarChart3
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,8 @@ const sidebarLinks: NavItem[] = [
   { label: "Rota Management", path: "/portal/rota", icon: Users },
   { label: "Documents & Minutes", path: "/portal/documents", icon: FileText },
   { label: "Requisitions", path: "/portal/requisitions", icon: DollarSign,
+    roles: ["patron", "chairperson", "secretary_finance"] },
+  { label: "Financial Summary", path: "/portal/financial-summary", icon: BarChart3,
     roles: ["patron", "chairperson", "secretary_finance"] },
   { label: "Elections", path: "/portal/elections", icon: Vote,
     roles: ["patron", "chairperson", "speaker", "electoral_commission"] },

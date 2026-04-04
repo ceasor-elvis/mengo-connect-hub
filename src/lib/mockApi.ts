@@ -131,6 +131,12 @@ let MOCK_NOTIFICATIONS: any[] = [
 let MOCK_ROTAS: any[] = [];
 let MOCK_EC_GRANTS: any[] = [];
 let MOCK_ELECTION_LOCKS: any[] = [];
+let MOCK_SUBSCRIPTIONS: Record<string, boolean> = {
+  'usr_chair': true,
+  'usr_gs': true,
+  'usr_sf': false,
+  'usr_councillor': false
+};
 
 // ── Setup Function ──
 export function setupMockApi(api: AxiosInstance) {
@@ -531,6 +537,14 @@ export function setupMockApi(api: AxiosInstance) {
   mock.onPost('/notifications/all/').reply(201, {});
   mock.onPost('/activity-logs/').reply(201, {});
   mock.onGet('/activity-logs/').reply(() => [200, { results: [] }]);
+
+  // Subscriptions
+  mock.onGet('/subscriptions/').reply(() => [200, { results: MOCK_SUBSCRIPTIONS }]);
+  mock.onPost('/subscriptions/toggle/').reply((config) => {
+    const { user_id, paid } = JSON.parse(config.data);
+    MOCK_SUBSCRIPTIONS[user_id] = paid;
+    return [200, { user_id, paid }];
+  });
 
   // Pass through anything else
   mock.onAny().passThrough();

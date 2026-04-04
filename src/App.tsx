@@ -27,6 +27,7 @@ import BlogManagerPage from "@/pages/portal/BlogManagerPage";
 import DisciplinaryPage from "@/pages/portal/DisciplinaryPage";
 import ActionPlanPage from "@/pages/portal/ActionPlanPage";
 import SettingsPage from "@/pages/portal/SettingsPage";
+import FinancialSummaryPage from "@/pages/portal/FinancialSummaryPage";
 import NotFound from "./pages/NotFound.tsx";
 const queryClient = new QueryClient();
 
@@ -62,9 +63,10 @@ const App = () => (
                 <Route path="student-voices" element={<StudentVoicesPage />} />
               </Route>
 
-              {/* Requisitions – finance chain */}
-              <Route element={<RoleGuard allowedRoles={["patron", "chairperson", "secretary_finance"]} />}>
+              {/* Requisitions & Finance Summary – finance chain */}
+              <Route element={<RoleGuard allowedRoles={["patron", "chairperson", "secretary_finance", "adminabsolute"]} />}>
                 <Route path="requisitions" element={<RequisitionsPage />} />
+                <Route path="financial-summary" element={<FinancialSummaryPage />} />
               </Route>
 
               {/* Blog Manager – Publicity & leadership */}
