@@ -13,9 +13,13 @@ Here is the complete list of all the endpoints the React frontend expects the Dj
 
 ## Notifications (`/api/notifications/`)
 - `GET /api/notifications/` : Returns the notifications for the current user. Supports `?limit=20`.
-- `POST /api/notifications/` : Creates a targeted notification. Payload: `{ user_id, title, message, type }`.
+- `POST /api/notifications/` : Creates a targeted notification. Payload: `{ user_id, sender_id?, title, message, type }`.
+- `PATCH /api/notifications/<id>/` : Updates a specific notification. Payload: `{ feedback?, read? }`.
 - `POST /api/notifications/all/` : Broadcasts a notification to all users.
 - `POST /api/notifications/mark-all-read/` : Marks all current user's notifications as read.
+
+> [!NOTE]
+> The Notification object should support a `sender_id` (UUID or string) and a `feedback` text field. Meeting requests (`type: 'meeting'`) use these to allow Patrons to respond back to the original requester.
 
 ## Activity Logs (`/api/activity-logs/`)
 - `GET /api/activity-logs/` : Returns activity logs. Supports `?limit=200`.
