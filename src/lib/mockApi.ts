@@ -171,6 +171,29 @@ export function setupMockApi(api: AxiosInstance) {
   mock.onGet('/users/all-roles/').reply(() => [200, Object.values(USERS).map(u => ({ user_id: u.user.id, role: u.roles[0] }))]);
 
   mock.onPost('/users/register/').reply(() => [201, { message: "Registered" }]);
+  
+  mock.onPost('/users/upgrade-role/').reply((config) => {
+    const { user_id, new_role } = JSON.parse(config.data);
+    
+    // Automatic stripping logic for leadership roles
+    if (new_role !== "councillor" && new_role !== "adminabsolute") {
+      Object.values(USERS).forEach((u: any) => {
+        if (u.roles && u.roles.includes(new_role) && u.user.id !== user_id) {
+          // demote old holder to councillor
+          u.roles = ["councillor"];
+        }
+      });
+    }
+
+    // Update target user
+    const targetUser = Object.values(USERS).find((u: any) => u.user.id === user_id);
+    if (targetUser) {
+      targetUser.roles = [new_role];
+      return [200, { message: "User role updated successfully", user: targetUser.user, roles: targetUser.roles }];
+    }
+    
+    return [404, { detail: "User not found" }];
+  });
 
   mock.onGet(/\/users\/councillors\/?$/).reply(() => {
     return [200, { results: Object.values(USERS).map(u => ({ ...u.profile, roles: u.roles })) }];

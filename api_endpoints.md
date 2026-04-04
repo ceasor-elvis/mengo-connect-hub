@@ -10,6 +10,10 @@ Here is the complete list of all the endpoints the React frontend expects the Dj
 - `GET /api/users/me/roles/` : Returns the active roles array for the current user.
 - `GET /api/users/all-roles/` : Returns an array of all assigned user roles (used in Hierarchy Tree).
 - `GET /api/users/all-profiles/` : Returns basic profile info mapped by user ID for looking up names.
+- `POST /api/users/upgrade-role/` : Updates a user's cabinet position. Payload: `{ user_id, new_role }`.
+
+> [!IMPORTANT]
+> **Automatic Role Swapping**: The base level for students is `councillor`. If a leadership position (e.g., Chairperson, Speaker) is assigned to a user, the backend **must automatically** demote the current holder of that position to a regular `councillor`. Only one user can hold a leadership position at a time.
 
 ## Notifications (`/api/notifications/`)
 - `GET /api/notifications/` : Returns the notifications for the current user. Supports `?limit=20`.
