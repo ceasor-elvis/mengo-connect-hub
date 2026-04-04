@@ -1,12 +1,13 @@
-# Required Django API Endpoints
+# Council Hub API Specification
 
-Here is the complete list of all the endpoints the React frontend expects the Django backend to provide:
+## Authentication & Profiles (`/api/users/`)
 
-## Authentication & Users (`/api/users/`)
-- `POST /api/users/login/` : Accepts `{ email, password }`, returns JWT tokens.
-- `POST /api/users/register/` : Accepts `{ email, password, full_name, role? }`.
-- `POST /api/users/logout/` : Accepts `{ refresh }` to blacklist the refresh token.
-- `GET /api/users/me/profile/` : Returns the currently logged in user's profile.
+- `GET /api/dashboard/stats/` : Returns summary stats for the administrator dashboard.
+- `POST /api/users/login/` : Standard credentials login.
+- `POST /api/users/register/` : Unified Registration for Councillors and Patrons.
+  Payload: `{ username, password, full_name, role, [student_class, stream, gender] }`.
+- `GET /api/users/me/profile/` : Returns the logged-in user's profile information.
+- `PATCH /api/users/me/profile/` : Allows users to update their display name, bio, and profile picture.
 - `GET /api/users/me/roles/` : Returns the active roles array for the current user.
 - `GET /api/users/all-roles/` : Returns an array of all assigned user roles (used in Hierarchy Tree).
 - `GET /api/users/all-profiles/` : Returns basic profile info mapped by user ID for looking up names.
@@ -15,15 +16,15 @@ Here is the complete list of all the endpoints the React frontend expects the Dj
 - `POST /api/users/forgot-password/` : Requests a password reset. Payload: `{ username }`.
 
 > [!IMPORTANT]
-> **Password Management Protocol**: 
+> **Password Management Protocol**:
 > 1. New members are registered with a **temporary password** set by the Admin.
 > 2. Members are expected to change this password immediately via the **Security** section in their profile settings.
 > 3. If a user forgets their password, the `forgot-password` endpoint must trigger an **Urgent Notification** to the **Admin Absolute** and **Patron** to regenerate a new temporary password for that user.
-
-> [!IMPORTANT]
+>
 > **Automatic Role Swapping**: The base level for students is `councillor`. If a leadership position (e.g., Chairperson, Speaker) is assigned to a user, the backend **must automatically** demote the current holder of that position to a regular `councillor`. Only one user can hold a leadership position at a time.
 
 ## Notifications (`/api/notifications/`)
+
 - `GET /api/notifications/` : Returns the notifications for the current user. Supports `?limit=20`.
 - `POST /api/notifications/` : Creates a targeted notification. Payload: `{ user_id, sender_id?, title, message, type }`.
 - `PATCH /api/notifications/<id>/` : Updates a specific notification. Payload: `{ feedback?, read? }`.
@@ -34,27 +35,33 @@ Here is the complete list of all the endpoints the React frontend expects the Dj
 > The Notification object should support a `sender_id` (UUID or string) and a `feedback` text field. Meeting requests (`type: 'meeting'`) use these to allow Patrons to respond back to the original requester.
 
 ## Activity Logs (`/api/activity-logs/`)
+
 - `GET /api/activity-logs/` : Returns activity logs. Supports `?limit=200`.
 - `POST /api/activity-logs/` : Creates a new log entry. Payload: `{ action, entity_type, entity_id }`.
 
 ## Documents (`/api/documents/`)
+
 - `GET /api/documents/` : Returns a list of uploaded documents/minutes.
 - `POST /api/documents/` : Creates a document. **Must accept `multipart/form-data`** (includes [file](file:///c:/Users/Riton/Downloads/mengo-connect-hub/src/hooks/useAuth.tsx#17-25), `title`, `description`, `category`).
 
 ## Student Voices (`/api/student-voices/`)
+
 - `GET /api/student-voices/` : Returns all student submissions.
 - `POST /api/student-voices/` : Creates a new submission. **Must accept `multipart/form-data`** (includes `title`, `category`, `description`, [file](file:///c:/Users/Riton/Downloads/mengo-connect-hub/src/hooks/useAuth.tsx#17-25)).
 - `PATCH /api/student-voices/<id>/` : Updates status and comments (e.g., Approve / Reject).
 
 ## Issues (`/api/issues/`)
+
 - `GET /api/issues/` : Returns a list of council issues.
 - `POST /api/issues/` : Creates a new issue. Payload `{ title, description, priority, category... }`.
 
 ## Programmes / Calendar (`/api/programmes/`)
+
 - `GET /api/programmes/` : Returns the list of programmes & calendar events.
 - `POST /api/programmes/` : Creates a new programme.
 
 ## Requisitions (`/api/requisitions/`)
+
 - `GET /api/requisitions/` : Returns all requisitions.
 - `POST /api/requisitions/` : Submits a new financial requisition.
 - `PATCH /api/requisitions/<id>/` : Updates the status (Approve / Reject).
