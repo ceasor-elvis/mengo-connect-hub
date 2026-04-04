@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertTriangle, Plus, MoreHorizontal } from "lucide-react";
+import { AlertTriangle, Plus, MoreHorizontal, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,10 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useActivityLog } from "@/hooks/useActivityLog";
 import { notifyAllCouncillors } from "@/hooks/useNotify";
+import jsPDF from "jspdf";
+import mengoBadge from "@/assets/mengo-badge.jpg";
+import { unsaLogoB64 } from "@/assets/unsaBase64";
+import { format } from "date-fns";
 
 interface Issue {
   id: string; title: string; description: string; status: string;
@@ -63,7 +67,6 @@ export default function IssuesPage() {
 
   useEffect(() => {
     fetchIssues();
-    // In absence of websockets, we could poll, but let's just fetch once on mount for now
   }, []);
 
   const handleAdd = async () => {
@@ -87,9 +90,8 @@ export default function IssuesPage() {
       setPriority("Medium");
       setOpen(false);
       fetchIssues();
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } } };
-      toast.error(err.response?.data?.detail || "Error raising issue");
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Error raising issue");
     } finally {
       setSubmitting(false);
     }
@@ -100,9 +102,73 @@ export default function IssuesPage() {
       await api.patch(`/issues/${id}/`, { status: newStatus });
       toast.success("Status updated");
       fetchIssues();
-    } catch (e: unknown) {
+    } catch (e: any) {
       toast.error("Failed to update status");
     }
+  };
+
+  const generatePDFReport = async () => {
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    let y = 15;
+
+    const addImageToDoc = (src: string, x: number, y: number, w: number, h: number, format: string) => {
+      return new Promise<void>((resolve) => {
+        const img = new Image();
+        img.src = src;
+        img.crossOrigin = "Anonymous";
+        img.onload = () => { doc.addImage(img, format, x, y, w, h); resolve(); };
+        img.onerror = () => resolve();
+      });
+    };
+
+    await Promise.all([
+      addImageToDoc(mengoBadge, 15, 10, 20, 20, "JPEG"),
+      addImageToDoc(unsaLogoB64, pageW - 35, 10, 20, 20, "PNG")
+    ]);
+
+    doc.setFont("helvetica", "bold"); doc.setFontSize(14);
+    doc.text("MENGO SENIOR SCHOOL", pageW / 2, y, { align: "center" });
+    y += 6; doc.setFontSize(11);
+    doc.text("VINE STUDENTS' COUNCIL BODY", pageW / 2, y, { align: "center" });
+    y += 10; doc.setFontSize(12);
+    doc.text("COUNCIL ISSUES & GRIEVANCES REPORT", pageW / 2, y, { align: "center" });
+    y += 10;
+
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    doc.text(`Generated on: ${format(new Date(), 'PPP')}`, 15, y);
+    doc.text(`Total Issues: ${filteredIssues.length}`, pageW - 40, y);
+    y += 10;
+
+    doc.setFontSize(8); doc.setTextColor(100, 100, 100);
+    doc.text(`Filters: Status(${statusFilter}), Category(${categoryFilter}), Priority(${priorityFilter})`, 15, y);
+    doc.setTextColor(0, 0, 0);
+    y += 8;
+
+    filteredIssues.forEach((issue, idx) => {
+      if (y > 250) { doc.addPage(); y = 20; }
+      
+      doc.setFillColor(245, 245, 245); doc.rect(15, y, pageW - 30, 7, "F");
+      doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+      doc.text(`${idx + 1}. ${issue.title.toUpperCase()}`, 17, y + 4.5);
+      y += 8;
+
+      doc.setFontSize(8); doc.setFont("helvetica", "normal");
+      const descLines = doc.splitTextToSize(issue.description, pageW - 40);
+      doc.text(descLines, 20, y);
+      y += (descLines.length * 4) + 3;
+
+      doc.text(`Category: ${issue.category} | Priority: ${issue.priority} | Status: ${issue.status.replace('_', ' ')}`, 20, y);
+      y += 5;
+      doc.text(`Raised by: ${issue.reporter_name || "Unknown councillor"} on ${format(new Date(issue.created_at), 'MMM d, yyyy')}`, 20, y);
+      y += 10;
+    });
+
+    doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
+
+    doc.save(`Council_Issues_Report_${Date.now()}.pdf`);
+    toast.success("Issues report exported!");
   };
 
   return (
@@ -112,47 +178,52 @@ export default function IssuesPage() {
           <h1 className="font-serif text-xl font-bold text-foreground sm:text-2xl">Issues at Hand</h1>
           <p className="text-sm text-muted-foreground">Track issues raised by councillors.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Raise Issue</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>Raise New Issue</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div><Label>Title *</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Broken lab equipment" /></div>
-              <div><Label>Description *</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Describe the issue..." /></div>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label>Category *</Label>
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Infrastructure">Infrastructure</SelectItem>
-                      <SelectItem value="Academic">Academic</SelectItem>
-                      <SelectItem value="Welfare">Welfare</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={generatePDFReport} disabled={filteredIssues.length === 0}>
+            <FileText className="mr-1 h-4 w-4" /> Export PDF
+          </Button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Raise Issue</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader><DialogTitle>Raise New Issue</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <div><Label>Title *</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Broken lab equipment" /></div>
+                <div><Label>Description *</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Describe the issue..." /></div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label>Category *</Label>
+                    <Select value={category} onValueChange={setCategory}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Infrastructure">Infrastructure</SelectItem>
+                        <SelectItem value="Academic">Academic</SelectItem>
+                        <SelectItem value="Welfare">Welfare</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Priority *</Label>
+                    <Select value={priority} onValueChange={setPriority}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Low">Low</SelectItem>
+                        <SelectItem value="Medium">Medium</SelectItem>
+                        <SelectItem value="High">High</SelectItem>
+                        <SelectItem value="Critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div>
-                  <Label>Priority *</Label>
-                  <Select value={priority} onValueChange={setPriority}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Low">Low</SelectItem>
-                      <SelectItem value="Medium">Medium</SelectItem>
-                      <SelectItem value="High">High</SelectItem>
-                      <SelectItem value="Critical">Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
 
-              <Button onClick={handleAdd} disabled={submitting} className="w-full">{submitting ? "Saving..." : "Raise Issue"}</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+                <Button onClick={handleAdd} disabled={submitting} className="w-full">{submitting ? "Saving..." : "Raise Issue"}</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -214,7 +285,7 @@ export default function IssuesPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <Badge variant={statusColor(issue.status) as "default" | "secondary" | "outline"} className="text-[10px]">{issue.status.replace("_", " ")}</Badge>
+                    <Badge variant={statusColor(issue.status) as any} className="text-[10px]">{issue.status.replace("_", " ")}</Badge>
                     {canManage && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

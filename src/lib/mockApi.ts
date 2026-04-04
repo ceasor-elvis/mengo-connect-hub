@@ -69,13 +69,13 @@ const USERS: Record<string, any> = {
 let MOCK_ACTION_PLANS: any[] = [
   {
     id: '1', title: 'Digitalize Council Records', objective: 'Move all manual paper-based council records to the digital hub.',
-    category: 'Digital', steps: [{ id: '1-1', text: 'Finalize portal', status: 'completed' }],
+    category: 'Digital', steps: [{ id: '1-1', text: 'Finalize portal', status: 'completed' }, { id: '1-2', text: 'Train members', status: 'pending' }],
     start_date: new Date().toISOString(), target_date: new Date(Date.now() + 86400000 * 30).toISOString(),
-    responsible_role: 'general_secretary', status: 'in_progress', progress: 33, created_by: 'usr_admin', created_at: new Date().toISOString()
+    responsible_role: 'general_secretary', status: 'in_progress', progress: 50, created_by: 'usr_admin', created_at: new Date().toISOString()
   }
 ];
 
-let MOCK_STREAMS = [{ id: '1', name: 'EAST' }, { id: '2', name: 'WEST' }];
+let MOCK_STREAMS = [{ id: '1', name: 'NORTH' }, { id: '2', name: 'SOUTH' }, { id: '3', name: 'EAST' }, { id: '4', name: 'WEST' }];
 let MOCK_TREE = [...DEFAULT_TREE];
 
 let MOCK_ISSUES: any[] = [
@@ -97,7 +97,11 @@ let MOCK_DC_CASES: any[] = [
 ];
 
 let MOCK_PROGRAMMES: any[] = [
-  { id: '1', title: 'Opening Ceremony', description: 'Assembly.', event_date: new Date().toISOString(), visibility: 'public', is_big_event: true, created_by: 'adminabsolute', created_at: new Date().toISOString() }
+  { id: '1', title: 'Opening Ceremony', description: 'Annual assembly.', event_date: new Date().toISOString(), visibility: 'public', is_big_event: true, created_by: 'adminabsolute', created_at: new Date().toISOString() }
+];
+
+let MOCK_BLOGS: any[] = [
+  { id: '1', title: 'Welcome to Mengo Student Hub', content: 'This is the first official blog post regarding our new portal.', author: 'Publicity Team', media_url: null, media_type: 'none', created_at: new Date().toISOString() }
 ];
 
 let MOCK_DOCS: any[] = [
@@ -105,12 +109,27 @@ let MOCK_DOCS: any[] = [
 ];
 
 let MOCK_APPLICANTS: any[] = [
-  { id: '1', applicant_name: 'Jane Doe', class: 'S.2', stream: 'North', average_score: 25, status: 'qualified', gender: 'female' }
+  { id: '1', applicant_name: 'Jane Doe', class: 'S.2', stream: 'North', average_score: 25, status: 'qualified', gender: 'female', smart_score: 8, conf_score: 9, qapp_score: 8, comment: "Excellent" }
 ];
+
+let MOCK_NOTIFICATIONS: any[] = [
+  { id: '1', title: 'Welcome!', message: 'Welcome to the new portal.', type: 'info', read: false, created_at: new Date().toISOString() }
+];
+
+let MOCK_EC_GRANTS: any[] = [];
+let MOCK_ELECTION_LOCKS: any[] = [];
 
 // ── Setup Function ──
 export function setupMockApi(api: AxiosInstance) {
   const mock = new MockAdapter(api, { delayResponse: 500 });
+
+  // Dashboard Stats
+  mock.onGet('/dashboard/stats/').reply(() => [200, {
+    stats: { voices: MOCK_STUDENT_VOICES.length, issues: MOCK_ISSUES.length, events: MOCK_PROGRAMMES.length, docs: MOCK_DOCS.length },
+    recentVoices: MOCK_STUDENT_VOICES.slice(-3).map(v => ({ title: v.title, category: v.category, status: v.status, date: 'Today' })),
+    recentIssues: MOCK_ISSUES.slice(-3).map(i => ({ title: i.title, status: i.status, raised: i.reporter_name })),
+    finance: [{ v: 'UGX 2M', l: 'Budget' }, { v: 'UGX 500K', l: 'Spent' }, { v: 'UGX 1.5M', l: 'Left' }]
+  }]);
 
   // Auth
   mock.onPost('/users/login/').reply((config) => {
@@ -147,7 +166,95 @@ export function setupMockApi(api: AxiosInstance) {
     return [401, {}];
   });
 
+  mock.onGet('/users/all-profiles/').reply(() => [200, Object.values(USERS).map(u => u.profile)]);
+  mock.onGet('/users/all-roles/').reply(() => [200, Object.values(USERS).map(u => ({ user_id: u.user.id, role: u.roles[0] }))]);
+
   mock.onPost('/users/register/').reply(() => [201, { message: "Registered" }]);
+
+  // Action Plans
+  mock.onGet('/action-plans/').reply(() => [200, { results: MOCK_ACTION_PLANS }]);
+  mock.onPost('/action-plans/').reply((config) => {
+    const data = JSON.parse(config.data);
+    MOCK_ACTION_PLANS.push(data);
+    return [201, data];
+  });
+  mock.onPatch(/\/action-plans\/[\w-]+\//).reply((config) => {
+    const id = config.url?.split('/').slice(-2, -1)[0];
+    const data = JSON.parse(config.data);
+    const idx = MOCK_ACTION_PLANS.findIndex(p => p.id === id);
+    if (idx !== -1) { MOCK_ACTION_PLANS[idx] = { ...MOCK_ACTION_PLANS[idx], ...data }; return [200, MOCK_ACTION_PLANS[idx]]; }
+    return [404, {}];
+  });
+  mock.onDelete(/\/action-plans\/[\w-]+\//).reply((config) => {
+    const id = config.url?.split('/').slice(-2, -1)[0];
+    const idx = MOCK_ACTION_PLANS.findIndex(p => p.id === id);
+    if (idx !== -1) { MOCK_ACTION_PLANS.splice(idx, 1); return [204, {}]; }
+    return [404, {}];
+  });
+
+  // Elections
+  mock.onGet('/applications/').reply(() => [200, { results: MOCK_APPLICANTS }]);
+  mock.onPost('/applications/').reply((config) => {
+    const data = JSON.parse(config.data);
+    const app = { id: Date.now().toString(), ...data };
+    MOCK_APPLICANTS.push(app);
+    return [201, app];
+  });
+  mock.onPatch(/\/applications\/[\w-]+\//).reply((config) => {
+    const id = config.url?.split('/').slice(-2, -1)[0];
+    const data = JSON.parse(config.data);
+    const idx = MOCK_APPLICANTS.findIndex(a => a.id === id);
+    if (idx !== -1) { MOCK_APPLICANTS[idx] = { ...MOCK_APPLICANTS[idx], ...data }; return [200, MOCK_APPLICANTS[idx]]; }
+    return [404, {}];
+  });
+  mock.onDelete(/\/applications\/[\w-]+\//).reply((config) => {
+    const id = config.url?.split('/').slice(-2, -1)[0];
+    const idx = MOCK_APPLICANTS.findIndex(a => a.id === id);
+    if (idx !== -1) { MOCK_APPLICANTS.splice(idx, 1); return [204, {}]; }
+    return [404, {}];
+  });
+  mock.onPost('/applications/auto-screen/').reply((config) => {
+    const { min_average } = JSON.parse(config.data);
+    MOCK_APPLICANTS.forEach(a => {
+      a.status = a.average_score >= min_average ? 'qualified' : 'disqualified';
+    });
+    return [200, { message: "Auto-screening completed" }];
+  });
+
+  mock.onGet('/ec-access-grants/').reply(() => [200, { results: MOCK_EC_GRANTS }]);
+  mock.onPost('/ec-access-grants/').reply((config) => {
+    const data = JSON.parse(config.data);
+    const g = { id: Date.now().toString(), ...data };
+    MOCK_EC_GRANTS.push(g);
+    return [201, g];
+  });
+  mock.onDelete(/\/ec-access-grants\/[\w-]+\//).reply((config) => {
+    const id = config.url?.split('/').slice(-2, -1)[0];
+    const idx = MOCK_EC_GRANTS.findIndex(g => g.id === id);
+    if (idx !== -1) { MOCK_EC_GRANTS.splice(idx, 1); return [204, {}]; }
+    return [404, {}];
+  });
+
+  mock.onGet('/election-locks/').reply(() => [200, { results: MOCK_ELECTION_LOCKS }]);
+  mock.onPost('/election-locks/').reply((config) => {
+    const data = JSON.parse(config.data);
+    const l = { id: Date.now().toString(), ...data };
+    MOCK_ELECTION_LOCKS.push(l);
+    return [201, l];
+  });
+  mock.onDelete(/\/election-locks\/[\w-]+\//).reply((config) => {
+    const id = config.url?.split('/').slice(-2, -1)[0];
+    const idx = MOCK_ELECTION_LOCKS.findIndex(l => l.id === id);
+    if (idx !== -1) { MOCK_ELECTION_LOCKS.splice(idx, 1); return [204, {}]; }
+    return [404, {}];
+  });
+
+  mock.onPost('/streams/').reply((config) => {
+    const data = JSON.parse(config.data);
+    const s = { id: Date.now().toString(), ...data };
+    MOCK_STREAMS.push(s);
+    return [201, s];
+  });
 
   // Issues
   mock.onGet('/issues/').reply(() => [200, { results: MOCK_ISSUES }]);
@@ -158,7 +265,7 @@ export function setupMockApi(api: AxiosInstance) {
     return [201, issue];
   });
   mock.onPatch(/\/issues\/\d+\//).reply((config) => {
-    const id = config.url?.split('/')[2];
+    const id = config.url?.split('/').slice(-2, -1)[0];
     const data = JSON.parse(config.data);
     const idx = MOCK_ISSUES.findIndex(i => i.id === id);
     if (idx !== -1) { MOCK_ISSUES[idx] = { ...MOCK_ISSUES[idx], ...data }; return [200, MOCK_ISSUES[idx]]; }
@@ -208,7 +315,11 @@ export function setupMockApi(api: AxiosInstance) {
   });
 
   // Hierarchy
-  mock.onGet('/users/hierarchy-tree/').reply(() => [200, { results: MOCK_TREE }]);
+  mock.onGet(/\/users\/hierarchy-tree\/|^\/hierarchy-tree\//).reply(() => [200, { results: MOCK_TREE }]);
+  mock.onPut(/\/users\/hierarchy-tree\/|^\/hierarchy-tree\//).reply((config) => {
+      MOCK_TREE = JSON.parse(config.data);
+      return [200, { results: MOCK_TREE }];
+  });
   mock.onPost('/users/update-hierarchy/').reply((config) => {
     MOCK_TREE = JSON.parse(config.data);
     return [200, { results: MOCK_TREE }];
@@ -216,16 +327,52 @@ export function setupMockApi(api: AxiosInstance) {
 
   // Others
   mock.onGet('/documents/').reply(() => [200, { results: MOCK_DOCS }]);
-  mock.onPost('/documents/').reply(() => [201, {}]);
-  mock.onPatch(/\/documents\/[\w-]+\//).reply(() => [200, {}]);
+  
+  mock.onPost('/documents/').reply((config) => {
+    const token = config.headers?.Authorization;
+    const username = token?.split('-').pop() || 'anonymous';
+    const newDoc = {
+      id: `doc-${Date.now()}`,
+      title: "New Uploaded Document",
+      category: "Other",
+      uploaded_by: username,
+      access_level: "public",
+      created_at: new Date().toISOString(),
+      file_url: "#"
+    };
+    MOCK_DOCS.push(newDoc);
+    return [201, newDoc];
+  });
+
+  mock.onPatch(/\/documents\/[\w-]+\//).reply((config) => {
+    const id = config.url?.match(/\/documents\/([\w-]+)\//)?.[1];
+    const data = JSON.parse(config.data || '{}');
+    const idx = MOCK_DOCS.findIndex(d => d.id === id);
+    if (idx !== -1) { MOCK_DOCS[idx] = { ...MOCK_DOCS[idx], ...data }; return [200, MOCK_DOCS[idx]]; }
+    return [404, {}];
+  });
+
+  mock.onDelete(/\/documents\/[\w-]+\//).reply((config) => {
+    const id = config.url?.match(/\/documents\/([\w-]+)\//)?.[1];
+    const idx = MOCK_DOCS.findIndex(d => d.id === id);
+    if (idx !== -1) { MOCK_DOCS.splice(idx, 1); return [204, {}]; }
+    return [404, {}];
+  });
   
   mock.onGet('/programmes/').reply(() => [200, { results: MOCK_PROGRAMMES }]);
   mock.onGet('/blogs/').reply(() => [200, { results: MOCK_BLOGS }]);
   mock.onGet('/streams/').reply(() => [200, { results: MOCK_STREAMS }]);
   
+  mock.onGet('/notifications/').reply(() => [200, MOCK_NOTIFICATIONS]);
+  mock.onPost('/notifications/mark-all-read/').reply(() => {
+    MOCK_NOTIFICATIONS.forEach(n => n.read = true);
+    return [200, {}];
+  });
+  
   mock.onPost('/notifications/').reply(201, {});
   mock.onPost('/notifications/all/').reply(201, {});
   mock.onPost('/activity-logs/').reply(201, {});
+  mock.onGet('/activity-logs/').reply(() => [200, { results: [] }]);
 
   // Pass through anything else
   mock.onAny().passThrough();

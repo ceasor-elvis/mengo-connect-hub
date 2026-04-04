@@ -53,7 +53,7 @@ export default function MonthlyReportForm({ onSuccess }: { onSuccess: () => void
     { id: "vice_chairperson", label: "Vice Chairperson" },
     { id: "speaker", label: "Speaker" },
     { id: "general_secretary", label: "General Secretary" },
-    { id: "patron", label: "Patron / Staff Office" },
+    { id: "patron_pending_chairperson", label: "Patron (Requires Chairperson Approval)" },
     { id: "electoral_commission", label: "Electoral Commission" }
   ];
 
@@ -165,6 +165,24 @@ export default function MonthlyReportForm({ onSuccess }: { onSuccess: () => void
     doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
 
     return doc.output("blob");
+  };
+
+  const handleDownloadPreview = async () => {
+    setLoading(true);
+    try {
+      const pdfBlob = await generatePDF();
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Report_Preview_${formData.classStream.replace(/\s+/g, "_")}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("PDF Preview downloaded!");
+    } catch (e) {
+      toast.error("Failed to generate preview");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -325,8 +343,17 @@ export default function MonthlyReportForm({ onSuccess }: { onSuccess: () => void
         </CardContent>
       </Card>
 
-      <div className="flex gap-3 justify-end pt-4 pb-8">
+      <div className="flex flex-wrap gap-3 justify-end pt-4 pb-8">
         <Button variant="ghost" type="button" onClick={onSuccess}>Cancel</Button>
+        <Button 
+          variant="outline" 
+          type="button" 
+          onClick={handleDownloadPreview} 
+          disabled={loading}
+          className="border-primary text-primary hover:bg-primary/5"
+        >
+          <FileText className="mr-2 h-4 w-4"/> Download PDF Preview
+        </Button>
         <Dialog open={showOfficeSelect} onOpenChange={setShowOfficeSelect}>
           <DialogTrigger asChild>
             <Button type="button" size="lg" disabled={loading}>

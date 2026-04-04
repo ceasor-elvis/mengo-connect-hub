@@ -11,6 +11,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { useHierarchy } from "@/hooks/useHierarchy";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import { FileText } from "lucide-react";
 
 export default function HierarchyPage() {
   const { profile, roles } = useAuth();
@@ -55,6 +58,47 @@ export default function HierarchyPage() {
     }
   };
 
+  const exportToPDF = async () => {
+    const element = document.getElementById("hierarchy-tree-capture");
+    if (!element) return;
+    
+    setUpdating(true);
+    toast.info("Generating PDF, please wait...");
+    
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff"
+      });
+      
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfW = pdf.internal.pageSize.getWidth();
+      const pdfH = pdf.internal.pageSize.getHeight();
+      
+      const imgW = pdfW - 20;
+      const imgH = (canvas.height * imgW) / canvas.width;
+      
+      let heightLeft = imgH;
+      let position = 10;
+      
+      pdf.setFont("helvetica", "bold");
+      pdf.text("MENGO SENIOR SCHOOL - COUNCIL HIERARCHY", pdfW / 2, 8, { align: "center" });
+      
+      pdf.addImage(imgData, "PNG", 10, position, imgW, imgH);
+      
+      pdf.save(`Council_Hierarchy_${Date.now()}.pdf`);
+      toast.success("Hierarchy exported successfully!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to export hierarchy");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -64,9 +108,14 @@ export default function HierarchyPage() {
           </h1>
           <p className="text-xs text-muted-foreground">Organizational structure and Cabinet management</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setRefreshKey(prev => prev + 1)}>
-          <RefreshCcw className="h-3.5 w-3.5 mr-2" /> Refresh View
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportToPDF} disabled={updating}>
+            <FileText className="h-3.5 w-3.5 mr-2" /> Export Structure
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setRefreshKey(prev => prev + 1)}>
+            <RefreshCcw className="h-3.5 w-3.5 mr-2" /> Refresh View
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="view" className="w-full">
@@ -140,7 +189,7 @@ export default function HierarchyPage() {
             <CardHeader className="pb-2 px-3 sm:px-6 border-b mb-4">
               <CardTitle className="text-sm font-semibold">Council Structure & Current Officers</CardTitle>
             </CardHeader>
-            <CardContent className="px-3 sm:px-6">
+            <CardContent className="px-3 sm:px-6" id="hierarchy-tree-capture">
               <HierarchyTree refreshKey={refreshKey} />
             </CardContent>
           </Card>

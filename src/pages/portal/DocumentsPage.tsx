@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Upload, Download, Search, Loader2, Check, ShieldAlert, Eye, CheckCircle2 } from "lucide-react";
+import { FileText, Upload, Download, Search, Loader2, Check, ShieldAlert, Eye, CheckCircle2, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
@@ -22,7 +22,7 @@ const catColor = (c: string) => {
 };
 
 export default function DocumentsPage() {
-  const { hasRole } = useAuth();
+  const { user, hasRole } = useAuth();
   const [docs, setDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -36,6 +36,7 @@ export default function DocumentsPage() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
   const [approving, setApproving] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,6 +85,20 @@ export default function DocumentsPage() {
      } finally {
        setApproving(null);
      }
+  };
+
+  const handleDelete = async (docId: string) => {
+    if (!confirm("Are you sure you want to delete this document?")) return;
+    setDeleting(docId);
+    try {
+      await api.delete(`/documents/${docId}/`);
+      toast.success("Document deleted.");
+      fetchDocs();
+    } catch (err) {
+      toast.error("Failed to delete document.");
+    } finally {
+      setDeleting(null);
+    }
   };
 
   const handleUpload = async () => {
@@ -283,6 +298,7 @@ export default function DocumentsPage() {
          filtered.map((doc) => {
            const isPending = doc.target_office === 'patron_pending_chairperson';
            const canApprove = isPending && hasRole('chairperson');
+           const canDelete = doc.uploaded_by === user?.username || hasRole('adminabsolute');
            const fileUrl = doc.file_url || doc.file || "#";
 
            return (
@@ -340,6 +356,19 @@ export default function DocumentsPage() {
                     >
                       <Download className="h-4 w-4" />
                     </Button>
+
+                    {canDelete && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive" 
+                        onClick={() => handleDelete(doc.id)}
+                        disabled={deleting === doc.id}
+                        title="Delete document"
+                      >
+                        {deleting === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>

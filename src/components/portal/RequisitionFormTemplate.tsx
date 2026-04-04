@@ -48,7 +48,7 @@ export default function RequisitionFormTemplate({ onSuccess }: { onSuccess: () =
   const OFFICES = [
     { id: "secretary_finance", label: "Secretary Finance" },
     { id: "chairperson", label: "Chairperson" },
-    { id: "patron", label: "Patron / Staff Office" }
+    { id: "patron_pending_chairperson", label: "Patron (Requires Chairperson Approval)" }
   ];
 
   const generatePDF = async () => {
@@ -160,6 +160,24 @@ export default function RequisitionFormTemplate({ onSuccess }: { onSuccess: () =
     return doc.output("blob");
   };
 
+  const handleDownloadPreview = async () => {
+    setLoading(true);
+    try {
+      const pdfBlob = await generatePDF();
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Voucher_Preview_${formData.department.replace(/\s+/g, "_")}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Voucher Preview downloaded!");
+    } catch (e) {
+      toast.error("Failed to generate preview");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     setLoading(true);
     try {
@@ -228,8 +246,17 @@ export default function RequisitionFormTemplate({ onSuccess }: { onSuccess: () =
         </CardContent>
       </Card>
 
-      <div className="flex gap-3 justify-end pt-4 pb-8">
+      <div className="flex flex-wrap gap-3 justify-end pt-4 pb-8">
         <Button variant="ghost" type="button" onClick={onSuccess}>Cancel</Button>
+        <Button 
+          variant="outline" 
+          type="button" 
+          onClick={handleDownloadPreview} 
+          disabled={loading || !formData.reason || !totalAmount}
+          className="border-primary text-primary hover:bg-primary/5"
+        >
+          <IndianRupee className="mr-2 h-4 w-4"/> Download PDF Voucher
+        </Button>
         <Dialog open={showOfficeSelect} onOpenChange={setShowOfficeSelect}>
           <DialogTrigger asChild>
             <Button type="button" size="lg" disabled={loading || !formData.reason || !totalAmount}>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,12 +9,16 @@ import {
 } from "@/components/ui/dialog";
 import {
   CheckCircle, Search, XCircle, ExternalLink, Clock,
-  User, Calendar, Pencil, Save, X, Trash2, Send, ShieldCheck
+  User, Calendar, Pencil, Save, X, Trash2, Send, ShieldCheck, FileText
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { analyzeVoice } from "@/lib/moderation";
+import jsPDF from "jspdf";
+import mengoBadge from "@/assets/mengo-badge.jpg";
+import { unsaLogoB64 } from "@/assets/unsaBase64";
+import { format } from "date-fns";
 
 interface Voice {
   id: string; title: string; category: string; description: string;
@@ -42,7 +46,6 @@ const statusIcon = (s: string) => {
   return <Clock className="h-3 w-3" />;
 };
 
-/** Returns days remaining before a rejected submission is auto-deleted. */
 function daysUntilDeletion(rejectedAt: string | null): number | null {
   if (!rejectedAt) return null;
   const d = new Date(rejectedAt);
@@ -62,13 +65,11 @@ export default function StudentVoicesPage() {
   const [comment, setComment] = useState("");
   const [evaluating, setEvaluating] = useState(false);
 
-  // Edit state
   const [editing, setEditing] = useState(false);
   const [editStatus, setEditStatus] = useState<"Pending" | "Approved" | "Rejected">("Pending");
   const [editComments, setEditComments] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Delete state
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -160,6 +161,75 @@ export default function StudentVoicesPage() {
     }
   };
 
+  const generatePDFReport = async () => {
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    let y = 15;
+
+    const addImageToDoc = (src: string, x: number, y: number, w: number, h: number, format: string) => {
+      return new Promise<void>((resolve) => {
+        const img = new Image();
+        img.src = src;
+        img.crossOrigin = "Anonymous";
+        img.onload = () => { doc.addImage(img, format, x, y, w, h); resolve(); };
+        img.onerror = () => resolve();
+      });
+    };
+
+    await Promise.all([
+      addImageToDoc(mengoBadge, 15, 10, 20, 20, "JPEG"),
+      addImageToDoc(unsaLogoB64, pageW - 35, 10, 20, 20, "PNG")
+    ]);
+
+    doc.setFont("helvetica", "bold"); doc.setFontSize(14);
+    doc.text("MENGO SENIOR SCHOOL", pageW / 2, y, { align: "center" });
+    y += 6; doc.setFontSize(11);
+    doc.text("VINE STUDENTS' COUNCIL BODY", pageW / 2, y, { align: "center" });
+    y += 10; doc.setFontSize(12);
+    doc.text("STUDENT VOICES & SUBMISSIONS REPORT", pageW / 2, y, { align: "center" });
+    y += 10;
+
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    doc.text(`Generated on: ${format(new Date(), 'PPP')}`, 15, y);
+    doc.text(`Total Submissions: ${filtered.length}`, pageW - 40, y);
+    y += 10;
+
+    doc.setFontSize(8); doc.setTextColor(100, 100, 100);
+    doc.text(`Applied Filters: Status(${statusFilter}), Tone(${toneFilter})`, 15, y);
+    doc.setTextColor(0, 0, 0);
+    y += 8;
+
+    filtered.forEach((v, idx) => {
+      if (y > 250) { doc.addPage(); y = 20; }
+      
+      doc.setFillColor(245, 245, 245); doc.rect(15, y, pageW - 30, 7, "F");
+      doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+      doc.text(`${idx + 1}. ${v.title.toUpperCase()}`, 17, y + 4.5);
+      y += 8;
+
+      doc.setFontSize(8); doc.setFont("helvetica", "normal");
+      const descLines = doc.splitTextToSize(v.description, pageW - 40);
+      doc.text(descLines, 20, y);
+      y += (descLines.length * 4) + 3;
+
+      doc.text(`Category: ${v.category} | Status: ${v.status} | From: ${v.submitted_by || "Anonymous"} (${v.submitted_class || "N/A"})`, 20, y);
+      y += 5;
+      if (v.comments) {
+        doc.setFont("helvetica", "italic");
+        doc.text(`Council Response: ${v.comments.substring(0, 80)}${v.comments.length > 80 ? '...' : ''}`, 20, y);
+        doc.setFont("helvetica", "normal");
+        y += 5;
+      }
+      y += 5;
+    });
+
+    doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
+
+    doc.save(`Student_Voices_Report_${Date.now()}.pdf`);
+    toast.success("Voices report exported!");
+  };
+
   const isChairperson = hasAnyRole(["chairperson"]);
 
   const handleRequestForward = async () => {
@@ -214,11 +284,9 @@ export default function StudentVoicesPage() {
   };
 
   const filtered = voices.filter(v => {
-    // Patron Access Restriction
     const isPatron = roles.includes("patron") && !roles.includes("adminabsolute");
     if (isPatron && !v.is_forwarded_to_patron) return false;
 
-    // Smart Tone Filter
     if (toneFilter !== "All") {
       const { status } = analyzeVoice(v.title, v.description);
       if (status !== toneFilter) return false;
@@ -234,12 +302,16 @@ export default function StudentVoicesPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="font-serif text-xl font-bold sm:text-2xl">Student Voices</h1>
-        <p className="text-sm text-muted-foreground">Review and evaluate submissions.</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="font-serif text-xl font-bold sm:text-2xl">Student Voices</h1>
+          <p className="text-sm text-muted-foreground">Review and evaluate submissions.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={generatePDFReport} disabled={filtered.length === 0}>
+          <FileText className="mr-2 h-4 w-4" /> Export Report
+        </Button>
       </div>
 
-      {/* Status filter tabs */}
       <div className="flex gap-1 flex-wrap">
         {STATUS_FILTERS.map(f => (
           <button
@@ -260,7 +332,6 @@ export default function StudentVoicesPage() {
         ))}
       </div>
 
-      {/* Secondary Tone Filter row — Hidden from Patron */}
       {!roles.includes("patron") || roles.includes("adminabsolute") ? (
         <div className="flex items-center gap-4 py-1.5 px-3 border border-dashed rounded-lg bg-muted/20">
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Smart Tone:</span>
@@ -279,7 +350,6 @@ export default function StudentVoicesPage() {
         </div>
       ) : null}
 
-      {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -290,7 +360,6 @@ export default function StudentVoicesPage() {
         />
       </div>
 
-      {/* List */}
       {loading ? (
         <p className="text-center py-8 text-muted-foreground animate-pulse">Loading...</p>
       ) : filtered.length === 0 ? (
@@ -310,7 +379,6 @@ export default function StudentVoicesPage() {
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                       <Badge variant="outline" className="text-[10px] shrink-0">{v.category}</Badge>
                       <span className="text-sm font-medium truncate">{v.title}</span>
-                      {/* Tone Indicator */}
                       {(() => {
                         const { status, reason } = analyzeVoice(v.title, v.description);
                         return (
@@ -321,7 +389,7 @@ export default function StudentVoicesPage() {
                       })()}
                     </div>
                     <div className="flex items-center gap-1">
-                      <Badge variant={statusVariant(v.status)} className="text-[10px] flex items-center gap-1 shrink-0">
+                      <Badge variant={statusVariant(v.status) as any} className="text-[10px] flex items-center gap-1 shrink-0">
                         {statusIcon(v.status)} {v.status}
                       </Badge>
                       {v.is_forwarded_to_patron && (
@@ -358,7 +426,6 @@ export default function StudentVoicesPage() {
         </div>
       )}
 
-      {/* Detail / Edit Modal */}
       <Dialog open={!!selected} onOpenChange={(open) => { if (!open) closeModal(); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           {selected && (
@@ -366,7 +433,7 @@ export default function StudentVoicesPage() {
               <DialogHeader>
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <Badge variant="outline" className="text-[10px]">{selected.category}</Badge>
-                  <Badge variant={statusVariant(selected.status)} className="text-[10px] flex items-center gap-1">
+                  <Badge variant={statusVariant(selected.status) as any} className="text-[10px] flex items-center gap-1">
                     {statusIcon(selected.status)} {selected.status}
                   </Badge>
                   {selected.is_forwarded_to_patron && (
@@ -379,7 +446,6 @@ export default function StudentVoicesPage() {
                       🗑 Auto-deletes in {daysUntilDeletion(selected.rejected_at)}d
                     </span>
                   )}
-                  {/* Modal Tone info */}
                   {(() => {
                     const { status, reason } = analyzeVoice(selected.title, selected.description);
                     return status === "Flagged" && (
@@ -401,7 +467,6 @@ export default function StudentVoicesPage() {
               </DialogHeader>
 
               {!editing ? (
-                /* ── View mode ── */
                 <div className="space-y-4 pt-1">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Description</p>
@@ -439,7 +504,6 @@ export default function StudentVoicesPage() {
                     </div>
                   )}
 
-                  {/* Actions row — Edit + Delete + Forward */}
                   <div className="flex flex-col gap-3 border-t pt-3">
                     <div className="flex items-center justify-between gap-2">
                       <Button variant="outline" size="sm" className="gap-1.5" onClick={startEdit}>
@@ -463,7 +527,6 @@ export default function StudentVoicesPage() {
                       </div>
                     </div>
 
-                    {/* Chairperson: can approve pending requests or directly forward, and revoke */}
                     {isChairperson && (
                       <>
                         {selected.pending_chairperson_approval && !selected.is_forwarded_to_patron && (
@@ -483,7 +546,6 @@ export default function StudentVoicesPage() {
                       </>
                     )}
 
-                    {/* Gen Sec / Asst Gen Sec: can only REQUEST forwarding */}
                     {hasAnyRole(["general_secretary", "assistant_general_secretary"]) && !isChairperson && (
                       <>
                         {selected.is_forwarded_to_patron ? (
@@ -503,7 +565,6 @@ export default function StudentVoicesPage() {
                     )}
                   </div>
 
-                  {/* Evaluate — only for Pending */}
                   {selected.status === "Pending" && (
                     <div className="space-y-2 border-t pt-3">
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Evaluate</p>
@@ -537,7 +598,6 @@ export default function StudentVoicesPage() {
                   )}
                 </div>
               ) : (
-                /* ── Edit mode: status + comment only ── */
                 <div className="space-y-3 pt-1">
                   <div className="space-y-1">
                     <label htmlFor="voice-status" className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Status</label>

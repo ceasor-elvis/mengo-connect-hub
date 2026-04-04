@@ -11,10 +11,9 @@ interface DocumentViewerProps {
 }
 
 export default function DocumentViewer({ isOpen, onClose, fileUrl, title }: DocumentViewerProps) {
-  if (!fileUrl) return null;
-
   const isImage = /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(fileUrl);
-  const isPDF = /\.pdf$/i.test(fileUrl) || fileUrl === "#"; // Mock simulation treats '#' as PDF for now
+  const isPDF = /\.pdf$/i.test(fileUrl);
+  const isOffice = /\.(docx|doc|xlsx|xls|pptx|ppt)$/i.test(fileUrl);
 
   const handleDownload = () => {
     const a = document.createElement("a");
@@ -24,6 +23,13 @@ export default function DocumentViewer({ isOpen, onClose, fileUrl, title }: Docu
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+  };
+
+  const getViewerUrl = () => {
+    if (isOffice) {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+    }
+    return fileUrl;
   };
 
   return (
@@ -46,10 +52,10 @@ export default function DocumentViewer({ isOpen, onClose, fileUrl, title }: Docu
         </DialogHeader>
 
         <div className="flex-1 bg-slate-100 flex items-center justify-center overflow-auto relative">
-          {isPDF ? (
+          {isPDF || isOffice ? (
             <iframe
-              src="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-              className="w-full h-full border-none"
+              src={getViewerUrl()}
+              className="w-full h-full border-none shadow-inner"
               title={title}
             />
           ) : isImage ? (

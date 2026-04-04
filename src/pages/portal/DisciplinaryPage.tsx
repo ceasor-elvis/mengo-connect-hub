@@ -11,6 +11,10 @@ import { Scale, Plus, AlertCircle, FileText, CheckCircle2, Clock, Send, ShieldCh
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import jsPDF from "jspdf";
+import mengoBadge from "@/assets/mengo-badge.jpg";
+import { unsaLogoB64 } from "@/assets/unsaBase64";
+import { format } from "date-fns";
 
 interface DCCase {
   id: string;
@@ -30,7 +34,6 @@ export default function DisciplinaryPage() {
   const [cases, setCases] = useState<DCCase[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Form state
   const [offender, setOffender] = useState("");
   const [category, setCategory] = useState("Insubordination");
   const [customCategory, setCustomCategory] = useState("");
@@ -112,6 +115,67 @@ export default function DisciplinaryPage() {
       fetchCases();
     } catch { toast.error("Action failed"); }
   };
+
+  const generatePDFReport = async () => {
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    let y = 15;
+
+    const addImageToDoc = (src: string, x: number, y: number, w: number, h: number, format: string) => {
+      return new Promise<void>((resolve) => {
+        const img = new Image();
+        img.src = src;
+        img.crossOrigin = "Anonymous";
+        img.onload = () => { doc.addImage(img, format, x, y, w, h); resolve(); };
+        img.onerror = () => resolve();
+      });
+    };
+
+    await Promise.all([
+      addImageToDoc(mengoBadge, 15, 10, 20, 20, "JPEG"),
+      addImageToDoc(unsaLogoB64, pageW - 35, 10, 20, 20, "PNG")
+    ]);
+
+    doc.setFont("helvetica", "bold"); doc.setFontSize(14);
+    doc.text("MENGO SENIOR SCHOOL", pageW / 2, y, { align: "center" });
+    y += 6; doc.setFontSize(11);
+    doc.text("VINE STUDENTS' COUNCIL BODY", pageW / 2, y, { align: "center" });
+    y += 10; doc.setFontSize(12);
+    doc.text("DISCIPLINARY COMMITTEE CASE REPORT", pageW / 2, y, { align: "center" });
+    y += 10;
+
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    doc.text(`Generated on: ${format(new Date(), 'PPP')}`, 15, y);
+    doc.text(`Active cases: ${cases.length}`, pageW - 40, y);
+    y += 15;
+
+    cases.forEach((c, idx) => {
+      if (y > 250) { doc.addPage(); y = 20; }
+      
+      doc.setFillColor(245, 245, 245); doc.rect(15, y, pageW - 30, 8, "F");
+      doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+      doc.text(`${idx + 1}. CASE: ${c.offender_name.toUpperCase()}`, 17, y + 5.5);
+      y += 10;
+
+      doc.setFontSize(9); doc.setFont("helvetica", "normal");
+      doc.text(`Category: ${c.category} | Status: ${c.status}`, 20, y);
+      y += 6;
+
+      const descLines = doc.splitTextToSize(`Incident: ${c.description}`, pageW - 40);
+      doc.text(descLines, 20, y);
+      y += (descLines.length * 4) + 4;
+
+      doc.text(`Reported on: ${format(new Date(c.created_at), 'PPP')}`, 20, y);
+      y += 10;
+    });
+
+    doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
+
+    doc.save(`DC_Cases_Report_${Date.now()}.pdf`);
+    toast.success("DC report exported!");
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'Pending': return <Clock className="h-4 w-4 text-yellow-500" />;
@@ -132,6 +196,9 @@ export default function DisciplinaryPage() {
           </h1>
           <p className="text-muted-foreground text-sm">Case management and disciplinary records.</p>
         </div>
+        <Button variant="outline" size="sm" onClick={generatePDFReport} disabled={cases.length === 0}>
+          <FileText className="mr-2 h-4 w-4" /> Export Case Report
+        </Button>
       </div>
 
       <Tabs defaultValue="active" className="w-full">
@@ -170,9 +237,7 @@ export default function DisciplinaryPage() {
                       <Button variant="ghost" size="sm" className="text-xs hover:text-green-600" onClick={() => updateStatus(c.id, 'Closed')}>Close Case</Button>
                     </div>
 
-                    {/* Forwarding section */}
                     <div className="pt-2 border-t mt-2">
-                      {/* Show forwarding status badges */}
                       {c.is_forwarded_to_patron && (
                         <div className="flex items-center gap-1 mb-2">
                           <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] flex items-center gap-1">
@@ -188,7 +253,6 @@ export default function DisciplinaryPage() {
                         </div>
                       )}
 
-                      {/* Chairperson actions */}
                       {isChairperson && (
                         <>
                           {c.pending_chairperson_approval && !c.is_forwarded_to_patron && (
@@ -208,7 +272,6 @@ export default function DisciplinaryPage() {
                         </>
                       )}
 
-                      {/* DC / Gen Sec: can only request */}
                       {hasAnyRole(["disciplinary_committee", "general_secretary", "vice_chairperson"]) && !isChairperson && (
                         <>
                           {c.is_forwarded_to_patron ? (

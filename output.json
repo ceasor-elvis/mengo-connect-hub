@@ -1,0 +1,74 @@
+[
+  {
+    "file": "\\src\\components\\portal\\MinutesFormTemplate.tsx",
+    "props": "type=\"button\" size=\"lg\" disabled={loading || !formData.agenda || !formData.deliberations}"
+  },
+  {
+    "file": "\\src\\components\\portal\\MonthlyReportForm.tsx",
+    "props": "type=\"button\" size=\"lg\" disabled={loading}"
+  },
+  {
+    "file": "\\src\\components\\portal\\NotificationsBell.tsx",
+    "props": "variant=\"ghost\" size=\"icon\" className=\"relative h-8 w-8\""
+  },
+  {
+    "file": "\\src\\components\\portal\\RequisitionFormTemplate.tsx",
+    "props": "type=\"button\" size=\"lg\" disabled={loading || !formData.reason || !totalAmount}"
+  },
+  {
+    "file": "\\src\\layouts\\PortalLayout.tsx",
+    "props": "variant=\"ghost\" size=\"icon\" className=\"h-8 w-8 relative group\" title=\"Request Meeting with Patron\""
+  },
+  {
+    "file": "\\src\\pages\\portal\\ActionPlanPage.tsx",
+    "props": "className=\"shadow-lg hover:shadow-primary/20 transition-all\""
+  },
+  {
+    "file": "\\src\\pages\\portal\\DisciplinaryPage.tsx",
+    "props": "size=\"sm\" variant=\"outline\""
+  },
+  {
+    "file": "\\src\\pages\\portal\\DocumentsPage.tsx",
+    "props": "variant=\"outline\" size=\"sm\" className=\"border-primary/20\""
+  },
+  {
+    "file": "\\src\\pages\\portal\\DocumentsPage.tsx",
+    "props": "size=\"sm\""
+  },
+  {
+    "file": "\\src\\pages\\portal\\ElectionsPage.tsx",
+    "props": "variant=\"outline\" size=\"sm\""
+  },
+  {
+    "file": "\\src\\pages\\portal\\ElectionsPage.tsx",
+    "props": "size=\"sm\""
+  },
+  {
+    "file": "\\src\\pages\\portal\\ElectionsPage.tsx",
+    "props": "size=\"sm\" variant=\"outline\""
+  },
+  {
+    "file": "\\src\\pages\\portal\\IssuesPage.tsx",
+    "props": "size=\"sm\""
+  },
+  {
+    "file": "\\src\\pages\\portal\\IssuesPage.tsx",
+    "props": "variant=\"ghost\" size=\"icon\" className=\"h-6 w-6\""
+  },
+  {
+    "file": "\\src\\pages\\portal\\ProgrammesPage.tsx",
+    "props": "size=\"sm\""
+  },
+  {
+    "file": "\\src\\pages\\portal\\RegisterMemberPage.tsx",
+    "props": "variant=\"link\" size=\"sm\" className=\"h-auto p-0\""
+  },
+  {
+    "file": "\\src\\pages\\portal\\RequisitionsPage.tsx",
+    "props": "size=\"sm\""
+  },
+  {
+    "file": "\\src\\pages\\portal\\RotaPage.tsx",
+    "props": "size=\"sm\" className=\"text-xs\""
+  }
+]

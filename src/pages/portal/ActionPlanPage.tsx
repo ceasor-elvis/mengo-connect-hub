@@ -8,26 +8,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Target, 
   Lightbulb, 
   CheckCircle2, 
   Clock, 
-  AlertCircle, 
   Plus, 
   Trash2, 
-  Edit3, 
   ChevronRight,
   TrendingUp,
   Briefcase,
   Users,
-  X
+  X,
+  FileText
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import jsPDF from "jspdf";
+import mengoBadge from "@/assets/mengo-badge.jpg";
+import { unsaLogoB64 } from "@/assets/unsaBase64";
 
 interface PlanStep {
   id: string;
@@ -161,6 +162,76 @@ export default function ActionPlanPage() {
     }
   };
 
+  const generatePDFReport = async () => {
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    let y = 15;
+
+    const addImageToDoc = (src: string, x: number, y: number, w: number, h: number, format: string) => {
+      return new Promise<void>((resolve) => {
+        const img = new Image();
+        img.src = src;
+        img.crossOrigin = "Anonymous";
+        img.onload = () => { doc.addImage(img, format, x, y, w, h); resolve(); };
+        img.onerror = () => resolve();
+      });
+    };
+
+    await Promise.all([
+      addImageToDoc(mengoBadge, 15, 10, 20, 20, "JPEG"),
+      addImageToDoc(unsaLogoB64, pageW - 35, 10, 20, 20, "PNG")
+    ]);
+
+    doc.setFont("helvetica", "bold"); doc.setFontSize(14);
+    doc.text("MENGO SENIOR SCHOOL", pageW / 2, y, { align: "center" });
+    y += 6; doc.setFontSize(11);
+    doc.text("VINE STUDENTS' COUNCIL BODY", pageW / 2, y, { align: "center" });
+    y += 10; doc.setFontSize(12);
+    doc.text("STRATEGIC ACTION PLAN REPORT", pageW / 2, y, { align: "center" });
+    y += 10;
+
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    doc.text(`Generated on: ${format(new Date(), 'PPP')}`, 15, y);
+    y += 10;
+
+    plans.forEach((plan, idx) => {
+      if (y > 250) { doc.addPage(); y = 20; }
+      
+      doc.setFillColor(245, 245, 245); doc.rect(15, y, pageW - 30, 8, "F");
+      doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+      doc.text(`${idx + 1}. ${plan.title.toUpperCase()}`, 17, y + 5.5);
+      y += 10;
+
+      doc.setFontSize(9); doc.setFont("helvetica", "normal");
+      const objLines = doc.splitTextToSize(`Objective: ${plan.objective}`, pageW - 40);
+      doc.text(objLines, 20, y);
+      y += (objLines.length * 4) + 4;
+
+      doc.text(`Category: ${plan.category} | Status: ${plan.status} | Progress: ${plan.progress}%`, 20, y);
+      y += 6;
+      doc.text(`Timeline: ${format(new Date(plan.start_date), 'MMM d')} - ${plan.target_date ? format(new Date(plan.target_date), 'MMM d, yyyy') : 'TBD'}`, 20, y);
+      y += 6;
+      doc.text(`Office in Charge: ${ROLE_LABELS[plan.responsible_role] || plan.responsible_role}`, 20, y);
+      y += 10;
+
+      doc.setFont("helvetica", "bold"); doc.text("Milestones:", 20, y); y += 5;
+      doc.setFont("helvetica", "normal");
+      plan.steps.forEach(step => {
+        const check = step.status === 'completed' ? "[X]" : "[ ]";
+        doc.text(`${check} ${step.text}`, 25, y);
+        y += 5;
+        if (y > 270) { doc.addPage(); y = 20; }
+      });
+      y += 10;
+    });
+
+    doc.setTextColor(150, 0, 0); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+    doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
+
+    doc.save(`Council_Strategic_Plan_${Date.now()}.pdf`);
+    toast.success("Strategic report exported!");
+  };
+
   return (
     <div className="space-y-6 pb-20">
       {/* Education Hero Section */}
@@ -199,102 +270,107 @@ export default function ActionPlanPage() {
         <h2 className="text-xl font-bold font-serif flex items-center gap-2">
           <Briefcase className="w-5 h-5 text-primary" /> Current Action Items
         </h2>
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger asChild>
-            <Button className="shadow-lg hover:shadow-primary/20 transition-all">
-              <Plus className="w-4 h-4 mr-2" /> New Strategy
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create Strategic Action Plan</DialogTitle>
-              <DialogDescription>Outline your next big move for the school.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-6 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="title">Goal Title</Label>
-                <Input 
-                  id="title" 
-                  placeholder="e.g. Modernize School Library" 
-                  value={newPlan.title}
-                  onChange={e => setNewPlan({...newPlan, title: e.target.value})}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="objective">Primary Objective</Label>
-                <Textarea 
-                  id="objective" 
-                  placeholder="What is the main goal we want to achieve?" 
-                  className="min-h-[100px]"
-                  value={newPlan.objective}
-                  onChange={e => setNewPlan({...newPlan, objective: e.target.value})}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={generatePDFReport} disabled={plans.length === 0} className="border-primary/20 text-primary">
+            <FileText className="w-4 h-4 mr-2" /> Export Report
+          </Button>
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger asChild>
+              <Button className="shadow-lg hover:shadow-primary/20 transition-all">
+                <Plus className="w-4 h-4 mr-2" /> New Strategy
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create Strategic Action Plan</DialogTitle>
+                <DialogDescription>Outline your next big move for the school.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-6 py-4">
                 <div className="grid gap-2">
-                  <Label>Category</Label>
-                  <Select value={newPlan.category} onValueChange={v => setNewPlan({...newPlan, category: v})}>
+                  <Label htmlFor="title">Goal Title</Label>
+                  <Input 
+                    id="title" 
+                    placeholder="e.g. Modernize School Library" 
+                    value={newPlan.title}
+                    onChange={e => setNewPlan({...newPlan, title: e.target.value})}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="objective">Primary Objective</Label>
+                  <Textarea 
+                    id="objective" 
+                    placeholder="What is the main goal we want to achieve?" 
+                    className="min-h-[100px]"
+                    value={newPlan.objective}
+                    onChange={e => setNewPlan({...newPlan, objective: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Category</Label>
+                    <Select value={newPlan.category} onValueChange={v => setNewPlan({...newPlan, category: v})}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Target Date</Label>
+                    <Input 
+                      type="date" 
+                      value={newPlan.target_date}
+                      onChange={e => setNewPlan({...newPlan, target_date: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Responsible Office</Label>
+                  <Select value={newPlan.responsible_role} onValueChange={v => setNewPlan({...newPlan, responsible_role: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      {Object.entries(ROLE_LABELS).map(([k,v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-2">
-                  <Label>Target Date</Label>
-                  <Input 
-                    type="date" 
-                    value={newPlan.target_date}
-                    onChange={e => setNewPlan({...newPlan, target_date: e.target.value})}
-                  />
+                <div className="grid gap-3">
+                  <Label className="flex items-center justify-between">
+                    Action Steps
+                    <Button type="button" variant="outline" size="sm" onClick={handleAddStep}>
+                      <Plus className="w-3 h-3 mr-1" /> Add Step
+                    </Button>
+                  </Label>
+                  {newPlan.steps.map((step, idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <Input 
+                        placeholder={`Step ${idx + 1}`} 
+                        value={step.text}
+                        onChange={e => {
+                          const s = [...newPlan.steps];
+                          s[idx].text = e.target.value;
+                          setNewPlan({...newPlan, steps: s});
+                        }}
+                      />
+                      {newPlan.steps.length > 1 && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => setNewPlan({...newPlan, steps: newPlan.steps.filter((_, i) => i !== idx)})}
+                        >
+                          <X className="w-4 h-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className="grid gap-2">
-                <Label>Responsible Office</Label>
-                <Select value={newPlan.responsible_role} onValueChange={v => setNewPlan({...newPlan, responsible_role: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(ROLE_LABELS).map(([k,v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-3">
-                <Label className="flex items-center justify-between">
-                  Action Steps
-                  <Button type="button" variant="outline" size="sm" onClick={handleAddStep}>
-                    <Plus className="w-3 h-3 mr-1" /> Add Step
-                  </Button>
-                </Label>
-                {newPlan.steps.map((step, idx) => (
-                  <div key={idx} className="flex gap-2">
-                    <Input 
-                      placeholder={`Step ${idx + 1}`} 
-                      value={step.text}
-                      onChange={e => {
-                        const s = [...newPlan.steps];
-                        s[idx].text = e.target.value;
-                        setNewPlan({...newPlan, steps: s});
-                      }}
-                    />
-                    {newPlan.steps.length > 1 && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => setNewPlan({...newPlan, steps: newPlan.steps.filter((_, i) => i !== idx)})}
-                      >
-                        <X className="w-4 h-4 text-destructive" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreatePlan}>Create Plan</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreatePlan}>Create Plan</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {loading ? (
