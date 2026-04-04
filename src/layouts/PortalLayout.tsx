@@ -96,6 +96,7 @@ export default function PortalLayout() {
       });
       await api.post("/notifications/", {
         user_id: "usr_patron",
+        sender_id: user?.id,
         title: "📋 Meeting Request",
         message: `${senderName} (${roleTitle}) is requesting a meeting on ${formattedDate}.${meetNote ? " Note: " + meetNote : ""}`,
         type: "meeting"

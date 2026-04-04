@@ -1,26 +1,37 @@
 import { useEffect, useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, MessageSquare, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
 
 interface Notification {
   id: string;
+  user_id?: string;
+  sender_id?: string;
   title: string;
   message: string;
   type: string;
   read: boolean;
   created_at: string;
+  feedback?: string | null;
 }
 
 export default function NotificationsBell() {
-  const { user } = useAuth();
+  const { user, roles } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [open, setOpen] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  
+  // Feedback state
+  const [selectedNotif, setSelectedNotif] = useState<Notification | null>(null);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -36,7 +47,6 @@ export default function NotificationsBell() {
 
   useEffect(() => {
     fetchNotifications();
-    // Using polling as a fallback for real-time until websockets are configured in Django
     const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
   }, [user]);
@@ -51,59 +61,153 @@ export default function NotificationsBell() {
     }
   };
 
+  const handleGiveFeedback = (notification: Notification) => {
+    setSelectedNotif(notification);
+    setFeedbackText(notification.feedback || "");
+    setPopoverOpen(false);
+  };
+
+  const submitFeedback = async () => {
+    if (!selectedNotif || !feedbackText.trim()) return;
+    setIsSubmitting(true);
+    try {
+      // 1. Update original notification
+      await api.patch(`/notifications/${selectedNotif.id}/`, {
+        feedback: feedbackText,
+        read: true
+      });
+
+      // 2. Send notification to requester if sender_id exists
+      if (selectedNotif.sender_id) {
+        await api.post("/notifications/", {
+          user_id: selectedNotif.sender_id,
+          title: "💬 Meeting Response",
+          message: `The Patron responded to your meeting request: "${feedbackText}"`,
+          type: "info"
+        });
+      }
+
+      toast.success("Feedback sent successfully");
+      setSelectedNotif(null);
+      setFeedbackText("");
+      fetchNotifications();
+    } catch (e) {
+      toast.error("Failed to submit feedback");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const typeColors: Record<string, string> = {
     info: "bg-primary/10 text-primary",
     warning: "bg-accent/20 text-accent-foreground",
     success: "bg-green-100 text-green-800",
     error: "bg-destructive/10 text-destructive",
+    meeting: "bg-amber-100 text-amber-800 border-amber-200",
   };
 
+  const isPatron = roles.includes("patron") || roles.includes("adminabsolute");
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-8 w-8">
-          <Bell className="h-4 w-4" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0">
-        <div className="flex items-center justify-between border-b px-3 py-2">
-          <p className="text-sm font-semibold">Notifications</p>
-          {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" className="text-[10px] h-6" onClick={markAllRead}>
-              Mark all read
-            </Button>
-          )}
-        </div>
-        <ScrollArea className="max-h-72">
-          {notifications.length === 0 ? (
-            <p className="p-4 text-center text-xs text-muted-foreground">No notifications yet</p>
-          ) : (
-            <div className="divide-y">
-              {notifications.map((n) => (
-                <div key={n.id} className={`px-3 py-2 ${!n.read ? "bg-primary/5" : ""}`}>
-                  <div className="flex items-start gap-2">
-                    <Badge variant="outline" className={`text-[9px] mt-0.5 shrink-0 ${typeColors[n.type] || ""}`}>
-                      {n.type}
-                    </Badge>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium">{n.title}</p>
-                      <p className="text-[10px] text-muted-foreground">{n.message}</p>
-                      <p className="text-[9px] text-muted-foreground mt-0.5">
-                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                      </p>
+    <>
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon" className="relative h-8 w-8">
+            <Bell className="h-4 w-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-80 p-0">
+          <div className="flex items-center justify-between border-b px-3 py-2">
+            <p className="text-sm font-semibold">Notifications</p>
+            {unreadCount > 0 && (
+              <Button variant="ghost" size="sm" className="text-[10px] h-6" onClick={markAllRead}>
+                Mark all read
+              </Button>
+            )}
+          </div>
+          <ScrollArea className="max-h-72">
+            {notifications.length === 0 ? (
+              <p className="p-4 text-center text-xs text-muted-foreground">No notifications yet</p>
+            ) : (
+              <div className="divide-y text-left">
+                {notifications.map((n) => (
+                  <div key={n.id} className={`px-3 py-2 ${!n.read ? "bg-primary/5" : ""}`}>
+                    <div className="flex items-start gap-2">
+                      <Badge variant="outline" className={`text-[9px] mt-0.5 shrink-0 ${typeColors[n.type] || ""}`}>
+                        {n.type}
+                      </Badge>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium">{n.title}</p>
+                        <p className="text-[10px] text-muted-foreground">{n.message}</p>
+                        {n.feedback && (
+                          <div className="mt-1 p-1.5 bg-muted rounded text-[9px] italic text-muted-foreground">
+                            <span className="font-bold border-r pr-1 mr-1">Feedback</span>
+                            {n.feedback}
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-[9px] text-muted-foreground">
+                            {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                          </p>
+                          {n.type === "meeting" && isPatron && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-5 py-0 px-1.5 text-[9px] text-primary"
+                              onClick={() => handleGiveFeedback(n)}
+                            >
+                              <MessageSquare className="h-2 w-2 mr-1" />
+                              {n.feedback ? "Edit Feedback" : "Give Feedback"}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </PopoverContent>
+      </Popover>
+
+      <Dialog open={!!selectedNotif} onOpenChange={(open) => !open && setSelectedNotif(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Meeting Feedback</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="p-2 bg-muted rounded-md text-[10px] text-muted-foreground">
+              <p className="font-bold mb-1">Request Detail:</p>
+              {selectedNotif?.message}
             </div>
-          )}
-        </ScrollArea>
-      </PopoverContent>
-    </Popover>
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Your Response</label>
+              <Textarea
+                placeholder="Submit your feedback or response to this meeting request..."
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                rows={3}
+                className="text-xs"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedNotif(null)} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={submitFeedback} disabled={isSubmitting || !feedbackText.trim()}>
+              {isSubmitting ? "Sending..." : "Submit Response"}
+              <Send className="ml-2 h-3 w-3" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

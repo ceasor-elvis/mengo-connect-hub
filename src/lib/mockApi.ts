@@ -113,7 +113,7 @@ let MOCK_APPLICANTS: any[] = [
 ];
 
 let MOCK_NOTIFICATIONS: any[] = [
-  { id: '1', title: 'Welcome!', message: 'Welcome to the new portal.', type: 'info', read: false, created_at: new Date().toISOString() }
+  { id: '1', title: 'Welcome!', message: 'Welcome to the new portal.', type: 'info', read: false, created_at: new Date().toISOString(), sender_id: 'usr_admin', feedback: null }
 ];
 
 let MOCK_ROTAS: any[] = [];
@@ -390,13 +390,41 @@ export function setupMockApi(api: AxiosInstance) {
   mock.onGet('/blogs/').reply(() => [200, { results: MOCK_BLOGS }]);
   mock.onGet('/streams/').reply(() => [200, { results: MOCK_STREAMS }]);
   
-  mock.onGet('/notifications/').reply(() => [200, MOCK_NOTIFICATIONS]);
+  mock.onGet('/notifications/').reply((config) => {
+    const token = config.headers?.Authorization;
+    const username = token?.split('-').pop();
+    const user = Object.values(USERS).find(u => u.user.username === username);
+    if (!user) return [200, MOCK_NOTIFICATIONS];
+    // filter for user_id if present in MOCK_NOTIFICATIONS, else return all for simplicity
+    const filtered = MOCK_NOTIFICATIONS.filter(n => !n.user_id || n.user_id === user.user.id);
+    return [200, filtered];
+  });
   mock.onPost('/notifications/mark-all-read/').reply(() => {
     MOCK_NOTIFICATIONS.forEach(n => n.read = true);
     return [200, {}];
   });
   
-  mock.onPost('/notifications/').reply(201, {});
+  mock.onPost('/notifications/').reply((config) => {
+    const data = JSON.parse(config.data || '{}');
+    const newNotif = {
+      id: Math.random().toString(36).substr(2, 9),
+      ...data,
+      read: false,
+      created_at: new Date().toISOString()
+    };
+    MOCK_NOTIFICATIONS.push(newNotif);
+    return [201, newNotif];
+  });
+  mock.onPatch(/\/notifications\/[\w-]+\//).reply((config) => {
+    const id = config.url?.split('/').slice(-2, -1)[0];
+    const data = JSON.parse(config.data || '{}');
+    const idx = MOCK_NOTIFICATIONS.findIndex(n => n.id === id);
+    if (idx !== -1) {
+      MOCK_NOTIFICATIONS[idx] = { ...MOCK_NOTIFICATIONS[idx], ...data };
+      return [200, MOCK_NOTIFICATIONS[idx]];
+    }
+    return [404, {}];
+  });
   mock.onPost('/notifications/all/').reply(201, {});
   mock.onPost('/activity-logs/').reply(201, {});
   mock.onGet('/activity-logs/').reply(() => [200, { results: [] }]);
