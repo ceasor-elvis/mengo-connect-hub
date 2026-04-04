@@ -23,10 +23,10 @@ function NodeCard({ node, roleMap, profileMap }: { node: RoleNode; roleMap: Role
             whileTap={{ scale: 0.98 }}
             className={`flex flex-col items-center gap-1 sm:gap-1.5 rounded-lg p-1.5 sm:p-2 text-xs font-medium shadow-sm border cursor-pointer hover:border-black/20 dark:hover:border-white/20 transition-all ${node.color} min-w-[70px] sm:min-w-[90px] max-w-[100px]`}
           >
-            <div className="shrink-0">
-               {profile ? (
+             <div className="shrink-0">
+               {profile && (profile.profile_pic_url || (profile as any).profile_pic) ? (
                  <Avatar className="h-6 w-6 sm:h-7 sm:w-7 border-2 border-primary-foreground/20 shadow-md">
-                   <AvatarImage src={profile.profile_pic_url || ""} />
+                   <AvatarImage src={profile.profile_pic_url || (profile as any).profile_pic || ""} alt={profile.full_name} />
                    <AvatarFallback className="bg-primary-foreground/10 text-primary-foreground text-[9px]">
                      {profile.full_name.slice(0, 2).toUpperCase()}
                    </AvatarFallback>
@@ -34,7 +34,7 @@ function NodeCard({ node, roleMap, profileMap }: { node: RoleNode; roleMap: Role
                ) : (
                  <Icon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 mx-auto" />
                )}
-            </div>
+             </div>
             
             <div className="text-center leading-tight w-full">
               <p className="font-bold text-[8.5px] sm:text-[9px] break-words uppercase tracking-tight leading-none mb-0.5">{node.label}</p>
@@ -58,7 +58,7 @@ function NodeCard({ node, roleMap, profileMap }: { node: RoleNode; roleMap: Role
               <div className="relative group">
                 <div className="absolute inset-0 bg-gold blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
                 <Avatar className="h-64 w-64 border-8 border-background shadow-2xl relative z-10 transition-transform hover:scale-105">
-                  <AvatarImage src={profile.profile_pic_url || ""} />
+                  <AvatarImage src={profile.profile_pic_url || (profile as any).profile_pic || ""} alt={profile.full_name} />
                   <AvatarFallback className="bg-muted text-4xl">
                     {profile.full_name.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
@@ -135,7 +135,12 @@ export default function HierarchyTree({ refreshKey }: { refreshKey?: number }) {
       if (profilesRes.data) {
         const pm: ProfileMap = {};
         const profiles = Array.isArray(profilesRes.data) ? profilesRes.data : profilesRes.data.results || [];
-        profiles.forEach((p: any) => { pm[p.user_id] = { full_name: p.full_name, profile_pic_url: p.profile_pic_url || p.profile_pic }; });
+        profiles.forEach((p: any) => { 
+          pm[p.user_id] = { 
+            full_name: p.full_name, 
+            profile_pic_url: p.profile_pic_url || p.profile_pic || null
+          }; 
+        });
         setProfileMap(pm);
       }
     } catch (e) {
