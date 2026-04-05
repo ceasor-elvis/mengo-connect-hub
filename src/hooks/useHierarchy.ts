@@ -50,11 +50,11 @@ export function useHierarchy(refreshKey?: number) {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    api.get("/hierarchy-tree/")
+    api.get("/users/hierarchy-tree/")
       .then((res) => {
-        if (mounted && res.data && Array.isArray(res.data.results)) {
+        if (mounted && res.data && Array.isArray(res.data.results) && res.data.results.length > 0) {
           setTree(res.data.results);
-        } else if (mounted && res.data && Array.isArray(res.data)) {
+        } else if (mounted && res.data && Array.isArray(res.data) && res.data.length > 0) {
            setTree(res.data);
         }
       })

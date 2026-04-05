@@ -14,6 +14,15 @@ interface DocumentViewerProps {
 export default function DocumentViewer({ isOpen, onClose, fileUrl, title, type = 'auto' }: DocumentViewerProps) {
   if (!fileUrl) return null;
 
+  const getAbsoluteUrl = (url: string) => {
+    if (url.startsWith('http') || url.startsWith('blob:')) return url;
+    // Default fallback pointing to localhost:8000 if no env match, assuming API is hosted there locally
+    const base = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:8000';
+    return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
+  const absoluteFileUrl = getAbsoluteUrl(fileUrl);
+
   const getExt = (url: string) => {
     try {
       const path = url.split('?')[0].split('#')[0];
@@ -21,8 +30,8 @@ export default function DocumentViewer({ isOpen, onClose, fileUrl, title, type =
     } catch { return ""; }
   };
 
-  const ext = getExt(fileUrl);
-  const isBlob = fileUrl.startsWith('blob:');
+  const ext = getExt(absoluteFileUrl);
+  const isBlob = absoluteFileUrl.startsWith('blob:');
   
   const isImage = type === 'image' || (type === 'auto' && /^(jpg|jpeg|png|webp|gif|svg)$/i.test(ext));
   const isPDF = type === 'pdf' || isBlob || (type === 'auto' && ext === 'pdf');
@@ -30,7 +39,7 @@ export default function DocumentViewer({ isOpen, onClose, fileUrl, title, type =
 
   const handleDownload = () => {
     const a = document.createElement("a");
-    a.href = fileUrl;
+    a.href = absoluteFileUrl;
     a.download = title.endsWith(ext) ? title : `${title}.${ext || 'pdf'}`;
     a.target = "_blank";
     document.body.appendChild(a);
@@ -40,9 +49,9 @@ export default function DocumentViewer({ isOpen, onClose, fileUrl, title, type =
 
   const getViewerUrl = () => {
     if (isOffice && !isBlob) {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(absoluteFileUrl)}&embedded=true`;
     }
-    return fileUrl;
+    return absoluteFileUrl;
   };
 
   return (
@@ -73,7 +82,7 @@ export default function DocumentViewer({ isOpen, onClose, fileUrl, title, type =
             />
           ) : isImage ? (
             <img
-              src={fileUrl}
+              src={absoluteFileUrl}
               alt={title}
               className="max-w-full max-h-full object-contain shadow-lg rounded-sm"
             />

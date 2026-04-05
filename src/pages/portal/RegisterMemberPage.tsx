@@ -32,7 +32,7 @@ const APP_ROLES = Object.keys(ROLE_LABELS);
 
 export default function RegisterMemberPage() {
   const { hasAnyRole } = useAuth();
-  const canManageStreams = hasAnyRole(["chairperson", "adminabsolute", "general_secretary"]);
+  const canManageStreams = hasAnyRole(["chairperson", "adminabsolute", "general_secretary", "patron", "vice_chairperson"]);
 
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
@@ -61,7 +61,7 @@ export default function RegisterMemberPage() {
   const [reseting, setReseting] = useState(false);
 
   const fetchProfiles = () => api.get("/users/all-profiles/").then(res => setProfiles(Array.isArray(res.data) ? res.data : (res.data.results || []))).catch(() => {});
-  const fetchStreams = () => api.get("/streams/").then(res => setStreams(res.data.results || [])).catch(() => {});
+  const fetchStreams = () => api.get("/streams/").then(res => setStreams(Array.isArray(res.data) ? res.data : (res.data.results || []))).catch(() => {});
   const [notifications, setNotifications] = useState<any[]>([]);
   const fetchNotifications = () => api.get("/notifications/").then(res => setNotifications(res.data)).catch(() => {});
 
@@ -80,8 +80,8 @@ export default function RegisterMemberPage() {
       setNewStreamName("");
       setAddStreamOpen(false);
       fetchStreams();
-    } catch (e) {
-      toast.error("Failed to add stream");
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Failed to add stream");
     } finally {
       setAddingStream(false);
     }
@@ -163,7 +163,7 @@ export default function RegisterMemberPage() {
         username,
         full_name: fullName,
         student_class: studentClass,
-        stream: studentStream || null,
+        stream: (studentStream && studentStream !== "none") ? studentStream : null,
         gender: gender || null,
         role: selectedRole,
       });

@@ -13,16 +13,17 @@ import { useActivityLog } from "@/hooks/useActivityLog";
 import { notifyAllCouncillors } from "@/hooks/useNotify";
 
 interface Requisition {
-  id: string; item: string; amount: number; requested_by: string;
+  id: string; purpose: string; amount: number; requester: string;
   status: string; approved_by: string | null; created_at: string;
+  requester_name?: string; approved_by_name?: string;
 }
 
 const statusIcon = (s: string) => {
-  if (s === "approved") return <CheckCircle className="mr-1 h-3 w-3" />;
-  if (s === "rejected") return <XCircle className="mr-1 h-3 w-3" />;
+  if (s === "Approved") return <CheckCircle className="mr-1 h-3 w-3" />;
+  if (s === "Rejected") return <XCircle className="mr-1 h-3 w-3" />;
   return <Clock className="mr-1 h-3 w-3" />;
 };
-const statusVariant = (s: string) => s === "approved" ? "default" : s === "rejected" ? "destructive" : "secondary";
+const statusVariant = (s: string) => s === "Approved" ? "default" : s === "Rejected" ? "destructive" : "secondary";
 
 export default function RequisitionsPage() {
   const { user, hasAnyRole } = useAuth();
@@ -30,7 +31,7 @@ export default function RequisitionsPage() {
   const [reqs, setReqs] = useState<Requisition[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [item, setItem] = useState("");
+  const [purpose, setPurpose] = useState("");
   const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -53,19 +54,18 @@ export default function RequisitionsPage() {
   }, []);
 
   const handleAdd = async () => {
-    if (!item.trim() || !amount) { toast.error("Item & amount required"); return; }
+    if (!purpose.trim() || !amount) { toast.error("Purpose & amount required"); return; }
     if (!user) { toast.error("Login required"); return; }
     setSubmitting(true);
     try {
       await api.post("/requisitions/", {
-        item: item.trim(),
-        amount: Number(amount),
-        requested_by: user.id
+        purpose: purpose.trim(),
+        amount: Number(amount)
       });
       toast.success("Request submitted");
-      log("submitted a requisition", "requisitions", item);
-      notifyAllCouncillors("New Requisition", `Requisition for "${item}" submitted`, "info");
-      setItem(""); setAmount(""); setOpen(false);
+      log("submitted a requisition", "requisitions", purpose);
+      notifyAllCouncillors("New Requisition", `Requisition for "${purpose}" submitted`, "info");
+      setPurpose(""); setAmount(""); setOpen(false);
       fetchReqs();
     } catch (e: any) {
       toast.error(e.response?.data?.detail || "Error submitting request");
@@ -74,7 +74,7 @@ export default function RequisitionsPage() {
     }
   };
 
-  const handleApprove = async (id: string, status: "approved" | "rejected") => {
+  const handleApprove = async (id: string, status: "Approved" | "Rejected") => {
     if (!user) return;
     try {
       await api.patch(`/requisitions/${id}/`, { status, approved_by: user.id });
@@ -100,7 +100,7 @@ export default function RequisitionsPage() {
           <DialogContent className="max-w-md">
             <DialogHeader><DialogTitle>New Requisition</DialogTitle></DialogHeader>
             <div className="space-y-3">
-              <div><Label>Item *</Label><Input value={item} onChange={e => setItem(e.target.value)} placeholder="e.g. Sports Equipment" /></div>
+              <div><Label>Purpose *</Label><Input value={purpose} onChange={e => setPurpose(e.target.value)} placeholder="e.g. Sports Equipment" /></div>
               <div><Label>Amount (UGX) *</Label><Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="e.g. 250000" /></div>
               <Button onClick={handleAdd} disabled={submitting} className="w-full">{submitting ? "Saving..." : "Submit Request"}</Button>
             </div>
@@ -122,17 +122,18 @@ export default function RequisitionsPage() {
                     <DollarSign className="h-4 w-4 text-gold" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-medium truncate">{req.item}</p>
+                    <p className="text-xs sm:text-sm font-medium truncate">{req.purpose}</p>
                     <p className="text-[10px] text-muted-foreground">
                       UGX {req.amount.toLocaleString()} • {new Date(req.created_at).toLocaleDateString("en-UG", { day: "numeric", month: "short" })}
+                      {req.requester_name && ` • Spent by ${req.requester_name}`}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {canApprove && req.status === "pending" ? (
+                  {canApprove && req.status === "Pending" ? (
                      <div className="flex gap-1">
-                       <Button size="sm" className="h-6 text-[10px] px-2" onClick={() => handleApprove(req.id, "approved")}>Approve</Button>
-                       <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => handleApprove(req.id, "rejected")}>Reject</Button>
+                       <Button size="sm" className="h-6 text-[10px] px-2" onClick={() => handleApprove(req.id, "Approved")}>Approve</Button>
+                       <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => handleApprove(req.id, "Rejected")}>Reject</Button>
                      </div>
                   ) : (
                     <Badge variant={statusVariant(req.status) as any} className="text-[10px]">

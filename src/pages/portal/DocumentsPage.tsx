@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Upload, Download, Search, Loader2, Check, ShieldAlert, Eye, CheckCircle2, Trash2 } from "lucide-react";
+import { FileText, Upload, Download, Search, Loader2, Check, ShieldAlert, Eye, Trash2, LayoutGrid, List } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
@@ -26,6 +26,7 @@ export default function DocumentsPage() {
   const [docs, setDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState<string>("All");
   const [uploading, setUploading] = useState(false);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -37,6 +38,7 @@ export default function DocumentsPage() {
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
   const [approving, setApproving] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -136,7 +138,11 @@ export default function DocumentsPage() {
     const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.download = title; a.click();
   };
 
-  const filtered = docs.filter(d => d.title.toLowerCase().includes(search.toLowerCase()));
+  const filtered = docs.filter(d => {
+    const matchesSearch = d.title.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = filterCategory === "All" || d.category === filterCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="space-y-4">
@@ -294,12 +300,33 @@ export default function DocumentsPage() {
         </div>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input placeholder="Search documents..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="flex flex-col sm:flex-row justify-between gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input placeholder="Search documents..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <SelectTrigger className="w-full sm:w-40 bg-card">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Categories</SelectItem>
+              {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <div className="flex bg-muted/60 p-1 rounded-lg shrink-0">
+            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className="h-8 px-2.5">
+              <List className="w-4 h-4" />
+            </Button>
+            <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('grid')} className="h-8 px-2.5">
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-2">
+      <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "space-y-2"}>
         {loading ? <p className="text-center py-8 text-muted-foreground">Loading...</p> :
          filtered.length === 0 ? <p className="text-center py-8 text-muted-foreground">No documents found.</p> :
          filtered.map((doc) => {
@@ -309,75 +336,79 @@ export default function DocumentsPage() {
             const fileUrl = doc.file_url || doc.file || "#";
 
             return (
-             <Card key={doc.id} className={isPending ? "border-amber-500/50 bg-amber-500/5 shadow-none" : "hover:shadow-sm transition-shadow shadow-none border-stone-200"}>
-               <CardContent className="flex items-center justify-between p-3 gap-2">
-                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                   <div className={`flex h-8 w-8 items-center justify-center rounded-lg shrink-0 ${isPending ? 'bg-amber-500/20 text-amber-600' : 'bg-primary/10 text-primary'}`}>
-                     {isPending ? <ShieldAlert className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-                   </div>
-                   <div className="min-w-0">
-                     <p className="text-xs sm:text-sm font-medium truncate">{doc.title}</p>
-                     <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
-                       {doc.uploaded_by} • {new Date(doc.created_at).toLocaleDateString()}
-                       {doc.access_level === 'private' && <span className="bg-stone-100 text-stone-600 px-1 rounded">Private</span>}
-                       {doc.access_level === 'shared' && (
-                         <span className={isPending ? "text-amber-600 font-medium" : "text-primary/70"}>
-                           {` (Shared with ${ROLE_LABELS[doc.target_office] || doc.target_office})`}
-                         </span>
+             <Card key={doc.id} className={isPending ? "border-amber-500/50 bg-amber-500/5 shadow-none overflow-hidden" : "hover:shadow-sm transition-shadow shadow-none border-stone-200 overflow-hidden"}>
+               <CardContent className={viewMode === "grid" ? "flex flex-col p-0" : "flex items-center justify-between p-3 gap-2"}>
+                 {viewMode === "grid" ? (
+                   <>
+                     <div className="p-4 flex-1">
+                       <div className="flex justify-between items-start mb-3">
+                         <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${isPending ? 'bg-amber-500/20 text-amber-600' : 'bg-primary/10 text-primary'}`}>
+                           {isPending ? <ShieldAlert className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+                         </div>
+                         <Badge variant={catColor(doc.category)} className="text-[10px] uppercase font-bold tracking-wider">{doc.category}</Badge>
+                       </div>
+                       <h3 className="font-semibold text-base line-clamp-2 leading-tight mb-2">{doc.title}</h3>
+                       <div className="text-xs text-muted-foreground space-y-1 mt-auto">
+                         <p>👤 {doc.uploaded_by}</p>
+                         <p>📅 {new Date(doc.created_at).toLocaleDateString()}</p>
+                         {doc.access_level === 'private' && <span className="bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded font-medium mt-1 inline-block">Private</span>}
+                         {doc.access_level === 'shared' && (
+                           <span className={isPending ? "text-amber-600 font-medium block mt-1" : "text-primary/70 block mt-1"}>
+                             Shared: {ROLE_LABELS[doc.target_office] || doc.target_office}
+                           </span>
+                         )}
+                       </div>
+                     </div>
+                     <div className="bg-muted/30 p-2 border-t flex items-center justify-between">
+                        {canApprove ? (
+                         <Button size="sm" variant="default" className="h-8 px-2 text-[10px] w-full bg-green-600 hover:bg-green-700" onClick={() => handleApprove(doc.id)} disabled={approving === doc.id}>
+                           {approving === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3 mr-1" />} Approve
+                         </Button>
+                        ) : (
+                         <div className="flex items-center justify-end gap-1 w-full">
+                           <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => setViewerDoc({ url: fileUrl, title: doc.title })} title="Preview Document"><Eye className="h-4 w-4" /></Button>
+                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/5" onClick={() => handleDownload(fileUrl, doc.title)} title="Download"><Download className="h-4 w-4" /></Button>
+                           {canDelete && <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(doc.id)} disabled={deleting === doc.id}><Trash2 className="h-4 w-4" /></Button>}
+                         </div>
+                        )}
+                     </div>
+                   </>
+                 ) : (
+                   <>
+                     <div className="flex items-center gap-2 min-w-0 flex-1">
+                       <div className={`flex h-8 w-8 items-center justify-center rounded-lg shrink-0 ${isPending ? 'bg-amber-500/20 text-amber-600' : 'bg-primary/10 text-primary'}`}>
+                         {isPending ? <ShieldAlert className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                       </div>
+                       <div className="min-w-0">
+                         <p className="text-xs sm:text-sm font-medium truncate">{doc.title}</p>
+                         <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                           <span>{doc.uploaded_by}</span> • <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                           {doc.access_level === 'private' && <span className="bg-stone-100 text-stone-600 px-1 rounded">Private</span>}
+                           {doc.access_level === 'shared' && (
+                             <span className={isPending ? "text-amber-600 font-medium" : "text-primary/70"}>
+                               {` (Shared with ${ROLE_LABELS[doc.target_office] || doc.target_office})`}
+                             </span>
+                           )}
+                         </p>
+                       </div>
+                     </div>
+                     <div className="flex items-center gap-1 shrink-0">
+                       <Badge variant={catColor(doc.category)} className="text-[10px] hidden sm:inline-flex">{doc.category}</Badge>
+                       {canApprove && (
+                         <Button size="sm" variant="default" className="h-7 px-2 text-[10px] bg-green-600 hover:bg-green-700 shadow-md" onClick={() => handleApprove(doc.id)} disabled={approving === doc.id}>
+                           {approving === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3 mr-1" />} Approve & Forward
+                         </Button>
                        )}
-                     </p>
-                   </div>
-                 </div>
-                 <div className="flex items-center gap-1 shrink-0">
-                   <Badge variant={catColor(doc.category)} className="text-[10px] hidden sm:inline-flex">{doc.category}</Badge>
-                   
-                   {canApprove && (
-                     <Button 
-                       size="sm" 
-                       variant="default" 
-                       className="h-7 px-2 text-[10px] bg-green-600 hover:bg-green-700 shadow-md"
-                       onClick={() => handleApprove(doc.id)}
-                       disabled={approving === doc.id}
-                     >
-                       {approving === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3 mr-1" />}
-                       Approve & Forward
-                     </Button>
-                   )}
-
-                   <div className="flex items-center gap-0.5">
-                     <Button 
-                       variant="ghost" 
-                       size="icon" 
-                       className="h-8 w-8 text-primary hover:bg-primary/5" 
-                       onClick={() => setViewerDoc({ url: fileUrl, title: doc.title })}
-                       title="View Inbuilt"
-                     >
-                       <Eye className="h-4 w-4" />
-                     </Button>
-                     <Button 
-                       variant="ghost" 
-                       size="icon" 
-                       className="h-8 w-8 text-muted-foreground hover:text-primary" 
-                       onClick={() => handleDownload(fileUrl, doc.title)}
-                       title="Download locally"
-                     >
-                       <Download className="h-4 w-4" />
-                     </Button>
-
-                     {canDelete && (
-                       <Button 
-                         variant="ghost" 
-                         size="icon" 
-                         className="h-8 w-8 text-muted-foreground hover:text-destructive" 
-                         onClick={() => handleDelete(doc.id)}
-                         disabled={deleting === doc.id}
-                         title="Delete document"
-                       >
-                         {deleting === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                       </Button>
-                     )}
-                   </div>
-                 </div>
+                       <div className="flex items-center gap-0.5">
+                         <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/5" onClick={() => setViewerDoc({ url: fileUrl, title: doc.title })} title="View Inbuilt"><Eye className="h-4 w-4" /></Button>
+                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => handleDownload(fileUrl, doc.title)} title="Download locally"><Download className="h-4 w-4" /></Button>
+                         {canDelete && <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(doc.id)} disabled={deleting === doc.id} title="Delete document">
+                             {deleting === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                         </Button>}
+                       </div>
+                     </div>
+                   </>
+                 )}
                </CardContent>
              </Card>
             );

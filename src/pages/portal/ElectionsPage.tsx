@@ -29,9 +29,9 @@ const generateAutoComment = (smart: number, conf: number, qapp: number, total: n
 interface Applicant {
   id: string;
   applicant_name: string;
-  class: string;
+  applicant_class: string;
   stream?: string;
-  average_score: number; // Serves as the Total / 30
+  average_score: number;
   smart_score?: number;
   conf_score?: number;
   qapp_score?: number;
@@ -98,7 +98,7 @@ export default function ElectionsPage() {
   const [activeLocks, setActiveLocks] = useState<any[]>([]);
 
   // Predefined streams
-  const canManageStreams = hasAnyRole(["chairperson", "adminabsolute", "general_secretary"]);
+  const canManageStreams = hasAnyRole(["chairperson", "adminabsolute", "general_secretary", "patron", "vice_chairperson"]);
   const [streams, setStreams] = useState<any[]>([]);
   const [addStreamOpen, setAddStreamOpen] = useState(false);
   const [newStreamName, setNewStreamName] = useState("");
@@ -140,7 +140,7 @@ export default function ElectionsPage() {
   const fetchStreams = async () => {
     try {
       const { data } = await api.get("/streams/");
-      setStreams(data.results || []);
+      setStreams(Array.isArray(data) ? data : (data.results || []));
     } catch(e) { console.error(e); }
   };
 
@@ -160,14 +160,14 @@ export default function ElectionsPage() {
   const filteredApplicants = applicants.filter((a) => {
     let match = true;
     if (filterSearch && !a.applicant_name.toLowerCase().includes(filterSearch.toLowerCase())) match = false;
-    if (filterClass !== "all" && a.class?.toLowerCase() !== filterClass.toLowerCase()) match = false;
-    if (filterStream !== "all" && (a as any).stream?.toLowerCase() !== filterStream.toLowerCase()) match = false;
+    if (filterClass !== "all" && a.applicant_class?.toLowerCase() !== filterClass.toLowerCase()) match = false;
+    if (filterStream !== "all" && a.stream?.toLowerCase() !== filterStream.toLowerCase()) match = false;
     if (filterGender !== "all" && a.gender?.toLowerCase() !== filterGender) match = false;
     return match;
   });
 
-  const uniqueClasses = Array.from(new Set(applicants.map(a => a.class).filter(Boolean)));
-  const uniqueStreams = Array.from(new Set(applicants.map(a => (a as any).stream).filter(Boolean)));
+  const uniqueClasses = Array.from(new Set(applicants.map(a => a.applicant_class).filter(Boolean)));
+  const uniqueStreams = Array.from(new Set(applicants.map(a => a.stream).filter(Boolean)));
 
   const qualified = filteredApplicants.filter((a) => a.status === "qualified").length;
   const disqualified = filteredApplicants.filter((a) => a.status === "disqualified").length;
@@ -188,8 +188,8 @@ export default function ElectionsPage() {
       setNewStreamName("");
       setAddStreamOpen(false);
       fetchStreams();
-    } catch (e) {
-      toast.error("Failed to add stream");
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Failed to add stream");
     } finally {
       setAddingStream(false);
     }
@@ -222,7 +222,7 @@ export default function ElectionsPage() {
       await api.post("/applications/", {
         applicant_name: newName,
         applicant_class: newClass,
-        stream: newStream === "none" ? null : newStream,
+        stream: (newStream && newStream !== "none") ? newStream : null,
         gender: newGender,
         smart_score: Number(newSmart),
         conf_score: Number(newConf),
@@ -320,7 +320,7 @@ export default function ElectionsPage() {
   const openEditModal = (a: any) => {
     setEditingId(a.id);
     setEditName(a.applicant_name);
-    setEditClass(a.class || "");
+    setEditClass(a.applicant_class || "");
     setEditStream(a.stream || "");
     setEditGender(a.gender || "male");
     setEditSmart(a.smart_score?.toString() || "");
@@ -339,8 +339,8 @@ export default function ElectionsPage() {
     try {
       await api.patch(`/applications/${editingId}/`, {
         applicant_name: editName,
-        class: editClass,
-        stream: editStream === "none" ? null : editStream,
+        applicant_class: editClass,
+        stream: (editStream && editStream !== "none") ? editStream : null,
         gender: editGender,
         smart_score: smart,
         conf_score: conf,
@@ -491,8 +491,8 @@ export default function ElectionsPage() {
     if (!qual.length) { toast.error("No qualified applicants in current filter"); return; }
     
     const sorted = [...qual].sort((a, b) => {
-      if (a.class !== b.class) return (a.class || "").localeCompare(b.class || "");
-      if (a.stream !== b.stream) return ((a as any).stream || "").localeCompare((b as any).stream || "");
+      if (a.applicant_class !== b.applicant_class) return (a.applicant_class || "").localeCompare(b.applicant_class || "");
+      if (a.stream !== b.stream) return (a.stream || "").localeCompare(b.stream || "");
       return a.applicant_name.localeCompare(b.applicant_name);
     });
 
@@ -536,7 +536,7 @@ export default function ElectionsPage() {
       
       doc.text(`${idx + 1}`, m + 3, y + 5);
       doc.text(c.applicant_name, m + 20, y + 5);
-      doc.text(c.class || '', m + 90, y + 5);
+      doc.text(c.applicant_class || '', m + 90, y + 5);
       doc.text(c.stream || '', m + 130, y + 5);
       doc.text(c.gender.charAt(0).toUpperCase() + c.gender.slice(1), m + 170, y + 5);
       
@@ -709,7 +709,7 @@ export default function ElectionsPage() {
       
       doc.text(`${idx + 1}`, m + 3, y + 5);
       doc.text(c.applicant_name, m + 15, y + 5);
-      doc.text(`${c.class} ${c.stream || ''}`, m + 60, y + 5);
+      doc.text(`${c.applicant_class} ${c.stream || ''}`, m + 60, y + 5);
       doc.text(`${c.smart_score || '-'}`, m + 103, y + 5);
       doc.text(`${c.conf_score || '-'}`, m + 123, y + 5);
       doc.text(`${c.qapp_score || '-'}`, m + 143, y + 5);

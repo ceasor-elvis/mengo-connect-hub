@@ -7,6 +7,24 @@ import { MasonryGallery } from "@/components/gallery/MasonryGallery";
 import { DomeGallery } from "@/components/gallery/DomeGallery";
 import { Button } from "@/components/ui/button";
 import { Grid, Globe } from "lucide-react";
+import { BlockNoteRenderer } from "@/components/blog/BlockNoteRenderer";
+
+/** Extract plain text from BlockNote JSON for list previews */
+function extractExcerpt(content: string | any[] | null, maxChars = 160): string {
+  try {
+    const blocks: any[] = typeof content === 'string' ? JSON.parse(content) : (Array.isArray(content) ? content : []);
+    const text = blocks
+      .map((b: any) => {
+        const inline = Array.isArray(b.content) ? b.content.map((c: any) => c.text || '').join('') : '';
+        return inline;
+      })
+      .filter(Boolean)
+      .join(' ');
+    return text.length > maxChars ? text.slice(0, maxChars).trimEnd() + '…' : text;
+  } catch {
+    return '';
+  }
+}
 
 export default function PublicBlogPage() {
   const [blogs, setBlogs] = useState<any[]>([]);
@@ -20,20 +38,20 @@ export default function PublicBlogPage() {
 
   useEffect(() => {
     api.get("/blogs/")
-      .then(({ data }) => setBlogs(data.results || []))
+      .then(({ data }) => setBlogs(Array.isArray(data) ? data : data.results || []))
       .catch(() => {})
       .finally(() => setLoadingBlogs(false));
       
     api.get("/programmes/")
       .then(({ data }) => {
-         const fetched = data.results || [];
+         const fetched = Array.isArray(data) ? data : data.results || [];
          setProgrammes(fetched.filter((p: any) => p.visibility === 'public'));
       })
       .catch(() => {})
       .finally(() => setLoadingProgs(false));
 
     api.get("/gallery/")
-      .then(({ data }) => setGallery(data.results || []))
+      .then(({ data }) => setGallery(Array.isArray(data) ? data : data.results || []))
       .catch(() => {})
       .finally(() => setLoadingGallery(false));
   }, []);
@@ -90,7 +108,7 @@ export default function PublicBlogPage() {
                     )}
 
                     <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none mt-6">
-                      <p className="text-card-foreground text-lg leading-relaxed whitespace-pre-wrap">{selectedBlog.content}</p>
+                      <BlockNoteRenderer data={selectedBlog.content} />
                     </div>
                   </div>
                 </div>
@@ -99,37 +117,50 @@ export default function PublicBlogPage() {
                   {blogs.map(b => (
                     <div 
                       key={b.id} 
-                      className="flex justify-between items-center sm:items-start p-4 sm:p-6 cursor-pointer hover:bg-muted/30 transition-colors group"
+                      className="flex justify-between items-start p-4 sm:p-6 cursor-pointer hover:bg-muted/30 transition-colors group"
                       onClick={() => setSelectedBlog(b)}
                     >
-                      <div className="flex-1 pr-6 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                             <div className="w-5 h-5 rounded-sm bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold">
-                                {b.author ? b.author.charAt(0).toUpperCase() : 'A'}
-                             </div>
-                             In Council Updates by <span className="text-foreground">{b.author}</span>
+                      <div className="flex-1 pr-4 sm:pr-6 min-w-0">
+                        {/* Author */}
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <div className="w-5 h-5 rounded-sm bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold shrink-0">
+                            {b.author ? b.author.charAt(0).toUpperCase() : 'A'}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            In <span className="text-foreground font-medium">Council Updates</span> by {b.author}
                           </span>
                         </div>
-                        <h3 className="font-bold text-lg sm:text-xl mb-2 line-clamp-2 leading-tight group-hover:text-primary transition-colors">{b.title}</h3>
-                        <p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed mb-4 hidden sm:block">
-                          {b.content}
-                        </p>
+
+                        {/* Title */}
+                        <h2 className="font-bold text-base sm:text-lg leading-snug mb-1 group-hover:text-primary transition-colors">
+                          {b.title}
+                        </h2>
+
+                        {/* Content excerpt — plain text so line-clamp works correctly */}
+                        {extractExcerpt(b.content) && (
+                          <p className="text-muted-foreground text-sm leading-relaxed mb-3 hidden sm:block line-clamp-2">
+                            {extractExcerpt(b.content)}
+                          </p>
+                        )}
+
+                        {/* Meta + Read more */}
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                           <span>✦ {new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                           <span className="flex items-center gap-1">⏱ {Math.max(1, Math.ceil((b.content?.length || 0) / 1000))} min read</span>
+                          <span>✦ {new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          <span>⏱ {Math.max(1, Math.ceil((b.content?.length || 0) / 1000))} min read</span>
+                          <span className="ml-auto text-primary font-medium hidden sm:inline">Read more →</span>
                         </div>
                       </div>
-                      {b.media_url && b.media_type === "image" && (
-                        <div className="w-24 h-24 sm:w-36 sm:h-36 shrink-0 rounded-md overflow-hidden bg-muted border">
-                          <img src={b.media_url} alt="" className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" />
+
+                      {/* Thumbnail */}
+                      {b.media_url && b.media_type === "image" ? (
+                        <div className="w-20 h-20 sm:w-32 sm:h-28 shrink-0 rounded-md overflow-hidden bg-muted border ml-2">
+                          <img src={b.media_url} alt={b.title} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" />
                         </div>
-                      )}
-                      {b.media_url && b.media_type === "video" && (
-                        <div className="w-24 h-24 sm:w-36 sm:h-36 shrink-0 rounded-md bg-zinc-900 border flex items-center justify-center">
-                          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                             <div className="w-0 h-0 border-t-[6px] border-t-transparent border-l-[10px] border-l-white border-b-[6px] border-b-transparent ml-1"></div>
-                          </div>
+                      ) : (
+                        <div className="w-20 h-20 sm:w-32 sm:h-28 shrink-0 rounded-md bg-primary/5 border flex items-center justify-center ml-2">
+                          <span className="text-2xl sm:text-3xl font-bold text-primary/20">
+                            {b.title.charAt(0).toUpperCase()}
+                          </span>
                         </div>
                       )}
                     </div>

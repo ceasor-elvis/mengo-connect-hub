@@ -71,6 +71,7 @@ export default function ProgrammesPage() {
       await api.post("/programmes/", {
         title: title.trim(),
         description: description.trim() || null,
+        date: eventDate || null,
         event_date: eventDate || null,
         visibility: visibility,
         is_big_event: isBigEvent,

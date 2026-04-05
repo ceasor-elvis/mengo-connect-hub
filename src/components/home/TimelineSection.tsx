@@ -21,7 +21,8 @@ export function TimelineSection() {
     const fetchTimeline = async () => {
       try {
         const { data } = await api.get("/programmes/");
-        const majorEvents = (data.results || []).filter((p: any) => p.visibility === "public" && p.is_big_event);
+        const programmesData = Array.isArray(data) ? data : data.results || [];
+        const majorEvents = programmesData.filter((p: any) => p.visibility === "public" && p.is_big_event);
         
         const mappedEvents = majorEvents.map((p: any) => {
           const eventDate = new Date(p.event_date || p.created_at);

@@ -13,6 +13,8 @@ export function useActivityLog() {
           action,
           module,
           details,
+          entity_type: module,
+          entity_id: details || 'none',
         });
       } catch (error) {
         console.error("Failed to log activity:", error);

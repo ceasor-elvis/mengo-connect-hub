@@ -64,7 +64,8 @@ const ROLE_LABELS: Record<string, string> = {
 function councillorLabel(c: Councillor) {
   const role = c.roles?.[0];
   const roleStr = role && ROLE_LABELS[role] ? ` (${ROLE_LABELS[role]})` : "";
-  return `${c.full_name}${roleStr}`;
+  const name = c.full_name || `User ${c.user_id}`;
+  return `${name}${roleStr}`;
 }
 
 function addDutyRow(list: Duty[], setter: (d: Duty[]) => void) {
@@ -105,7 +106,7 @@ function DutyEditor({ duties, setDuties, councillors }: { duties: Duty[]; setDut
                 </SelectTrigger>
                 <SelectContent className="max-h-60">
                   {councillors.map((c) => (
-                    <SelectItem key={c.user_id} value={c.full_name}>
+                    <SelectItem key={c.user_id || Math.random().toString()} value={c.full_name || `User ${c.user_id}`}>
                       <span className="flex items-center gap-1.5">
                         <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${c.gender === 'female' ? 'bg-pink-500' : 'bg-blue-500'}`} />
                         {councillorLabel(c)}
@@ -124,7 +125,7 @@ function DutyEditor({ duties, setDuties, councillors }: { duties: Duty[]; setDut
                 </SelectTrigger>
                 <SelectContent className="max-h-60">
                   {councillors.map((c) => (
-                    <SelectItem key={c.user_id} value={c.full_name}>
+                    <SelectItem key={`sup-${c.user_id || Math.random().toString()}`} value={c.full_name || `User ${c.user_id}`}>
                       <span className="flex items-center gap-1.5">
                         <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${c.gender === 'female' ? 'bg-pink-500' : 'bg-blue-500'}`} />
                         {councillorLabel(c)}
@@ -226,7 +227,7 @@ export default function RotaPage() {
 
   // Helper: look up gender for a councillor name
   const getGender = (name: string): string => {
-    const c = councillors.find(c => c.full_name === name);
+    const c = councillors.find(c => (c.full_name || `User ${c.user_id}`) === name);
     return c?.gender || "unknown";
   };
 

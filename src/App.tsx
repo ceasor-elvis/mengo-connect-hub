@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
+import { MantineProvider } from "@mantine/core";
+import "@mantine/core/styles.css";
 import PublicLayout from "@/layouts/PublicLayout";
 import PortalLayout from "@/layouts/PortalLayout";
 import RoleGuard from "@/components/portal/RoleGuard";
@@ -33,79 +35,81 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            {/* Public routes */}
-            <Route element={<PublicLayout />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/blog" element={<PublicBlogPage />} />
-              <Route path="/student-voice" element={<StudentVoicePage />} />
-              <Route path="/login" element={<LoginPage />} />
-            </Route>
-
-            {/* Portal routes (protected by PortalLayout) */}
-            <Route path="/portal" element={<PortalLayout />}>
-              {/* Open to all logged-in users */}
-              <Route index element={<DashboardPage />} />
-              <Route path="settings" element={<SettingsPage />} />
-              <Route path="issues" element={<IssuesPage />} />
-              <Route path="programmes" element={<ProgrammesPage />} />
-              <Route path="rota" element={<RotaPage />} />
-              <Route path="documents" element={<DocumentsPage />} />
-              <Route path="hierarchy" element={<HierarchyPage />} />
-
-              {/* Student Voices – secretariat & leadership */}
-              <Route element={<RoleGuard allowedRoles={["patron", "chairperson", "general_secretary", "assistant_general_secretary"]} />}>
-                <Route path="student-voices" element={<StudentVoicesPage />} />
+    <MantineProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              {/* Public routes */}
+              <Route element={<PublicLayout />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/blog" element={<PublicBlogPage />} />
+                <Route path="/student-voice" element={<StudentVoicePage />} />
+                <Route path="/login" element={<LoginPage />} />
               </Route>
 
-              {/* Requisitions & Finance Summary – finance chain */}
-              <Route element={<RoleGuard allowedRoles={["patron", "chairperson", "secretary_finance", "adminabsolute"]} />}>
-                <Route path="requisitions" element={<RequisitionsPage />} />
-                <Route path="financial-summary" element={<FinancialSummaryPage />} />
+              {/* Portal routes (protected by PortalLayout) */}
+              <Route path="/portal" element={<PortalLayout />}>
+                {/* ... rest of routes ... */}
+                <Route index element={<DashboardPage />} />
+                <Route path="settings" element={<SettingsPage />} />
+                <Route path="issues" element={<IssuesPage />} />
+                <Route path="programmes" element={<ProgrammesPage />} />
+                <Route path="rota" element={<RotaPage />} />
+                <Route path="documents" element={<DocumentsPage />} />
+                <Route path="hierarchy" element={<HierarchyPage />} />
+
+                {/* Student Voices – secretariat & leadership */}
+                <Route element={<RoleGuard allowedRoles={["patron", "chairperson", "general_secretary", "assistant_general_secretary"]} />}>
+                  <Route path="student-voices" element={<StudentVoicesPage />} />
+                </Route>
+
+                {/* Requisitions & Finance Summary – finance chain */}
+                <Route element={<RoleGuard allowedRoles={["patron", "chairperson", "secretary_finance", "adminabsolute"]} />}>
+                  <Route path="requisitions" element={<RequisitionsPage />} />
+                  <Route path="financial-summary" element={<FinancialSummaryPage />} />
+                </Route>
+
+                {/* Blog Manager – Publicity & leadership */}
+                <Route element={<RoleGuard allowedRoles={["chairperson", "general_secretary", "secretary_publicity", "adminabsolute"]} />}>
+                  <Route path="blog" element={<BlogManagerPage />} />
+                </Route>
+                
+                {/* Disciplinary - DC & leadership */}
+                <Route element={<RoleGuard allowedRoles={["disciplinary_committee", "chairperson", "vice_chairperson", "general_secretary"]} />}>
+                  <Route path="disciplinary" element={<DisciplinaryPage />} />
+                </Route>
+
+                {/* Elections – leadership & EC */}
+                <Route element={<RoleGuard allowedRoles={["patron", "chairperson", "speaker", "electoral_commission"]} />}>
+                  <Route path="elections" element={<ElectionsPage />} />
+                </Route>
+
+                {/* Activity Logs – leadership & EC */}
+                <Route element={<RoleGuard allowedRoles={["patron", "chairperson", "speaker", "electoral_commission"]} />}>
+                  <Route path="logs" element={<ActivityLogsPage />} />
+                </Route>
+
+                {/* Register Member & Patron – top leadership only */}
+                <Route element={<RoleGuard allowedRoles={["patron", "chairperson"]} />}>
+                  <Route path="register-member" element={<RegisterMemberPage />} />
+                  <Route path="register-patron" element={<RegisterPatronPage />} />
+                </Route>
+
+                {/* Action Plan – leadership only */}
+                <Route element={<RoleGuard allowedRoles={["adminabsolute", "patron", "chairperson", "vice_chairperson", "general_secretary", "assistant_general_secretary"]} />}>
+                  <Route path="action-plan" element={<ActionPlanPage />} />
+                </Route>
               </Route>
 
-              {/* Blog Manager – Publicity & leadership */}
-              <Route element={<RoleGuard allowedRoles={["chairperson", "general_secretary", "secretary_publicity", "adminabsolute"]} />}>
-                <Route path="blog" element={<BlogManagerPage />} />
-              </Route>
-              
-              {/* Disciplinary - DC & leadership */}
-              <Route element={<RoleGuard allowedRoles={["disciplinary_committee", "chairperson", "vice_chairperson", "general_secretary"]} />}>
-                <Route path="disciplinary" element={<DisciplinaryPage />} />
-              </Route>
-
-              {/* Elections – leadership & EC */}
-              <Route element={<RoleGuard allowedRoles={["patron", "chairperson", "speaker", "electoral_commission"]} />}>
-                <Route path="elections" element={<ElectionsPage />} />
-              </Route>
-
-              {/* Activity Logs – leadership & EC */}
-              <Route element={<RoleGuard allowedRoles={["patron", "chairperson", "speaker", "electoral_commission"]} />}>
-                <Route path="logs" element={<ActivityLogsPage />} />
-              </Route>
-
-              {/* Register Member & Patron – top leadership only */}
-              <Route element={<RoleGuard allowedRoles={["patron", "chairperson"]} />}>
-                <Route path="register-member" element={<RegisterMemberPage />} />
-                <Route path="register-patron" element={<RegisterPatronPage />} />
-              </Route>
-
-              {/* Action Plan – leadership only */}
-              <Route element={<RoleGuard allowedRoles={["adminabsolute", "patron", "chairperson", "vice_chairperson", "general_secretary", "assistant_general_secretary"]} />}>
-                <Route path="action-plan" element={<ActionPlanPage />} />
-              </Route>
-            </Route>
-
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </MantineProvider>
   </QueryClientProvider>
 );
 

@@ -23,18 +23,29 @@ interface DCCase {
   offender_name: string;
   category: string;
   description: string;
-  status: 'Pending' | 'Under Investigation' | 'Summoned' | 'Closed';
+  status: 'Pending' | 'Under Investigation' | 'Summoned' | 'Closed' | 'Resolved' | 'Dismissed';
   reported_by: string;
   created_at: string;
   is_forwarded_to_patron?: boolean;
   pending_chairperson_approval?: boolean;
 }
 
+interface DCDocument {
+  id: string;
+  title: string;
+  category: string;
+  file: string;
+  uploaded_by_name: string;
+  created_at: string;
+}
+
 export default function DisciplinaryPage() {
   const { user, hasAnyRole } = useAuth();
   const isChairperson = hasAnyRole(["chairperson"]);
   const [cases, setCases] = useState<DCCase[]>([]);
+  const [documents, setDocuments] = useState<DCDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  const [docsLoading, setDocsLoading] = useState(true);
   
   const [offender, setOffender] = useState("");
   const [category, setCategory] = useState("Insubordination");
@@ -42,13 +53,17 @@ export default function DisciplinaryPage() {
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [newDocTitle, setNewDocTitle] = useState("");
+  const [docFile, setDocFile] = useState<File | null>(null);
   const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const fetchCases = async () => {
     try {
       const { data } = await api.get("/dc-cases/");
-      setCases(data.results || []);
+      setCases(data.results || data);
     } catch (error) {
       toast.error("Failed to load cases");
     } finally {
@@ -56,8 +71,20 @@ export default function DisciplinaryPage() {
     }
   };
 
+  const fetchDocuments = async () => {
+    try {
+      const { data } = await api.get("/documents/", { params: { category: "Disciplinary" } });
+      setDocuments((data.results || data).filter((d: any) => d.category === 'Disciplinary'));
+    } catch (error) {
+      toast.error("Failed to load documents");
+    } finally {
+      setDocsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchCases();
+    fetchDocuments();
   }, []);
 
   const handleReport = async (e: React.FormEvent) => {
@@ -84,6 +111,36 @@ export default function DisciplinaryPage() {
       toast.error("Failed to report case");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleUploadDocument = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDocTitle || !docFile) {
+      toast.error("Please provide a title and select a file");
+      return;
+    }
+    setUploadLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("title", newDocTitle);
+      formData.append("file", docFile);
+      formData.append("category", "Disciplinary");
+      formData.append("access_level", "public"); // or based on user role
+      
+      await api.post("/documents/", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      
+      toast.success("Document uploaded successfully");
+      setIsUploadOpen(false);
+      setNewDocTitle("");
+      setDocFile(null);
+      fetchDocuments();
+    } catch (error) {
+      toast.error("Failed to upload document");
+    } finally {
+      setUploadLoading(false);
     }
   };
 
@@ -375,30 +432,55 @@ export default function DisciplinaryPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Case Documentation</CardTitle>
-              <Button size="sm" variant="outline"><Plus className="h-4 w-4 mr-1" /> Add Document</Button>
+              <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline"><Plus className="h-4 w-4 mr-1" /> Add Document</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Upload Disciplinary Document</DialogTitle>
+                    <DialogDescription>These documents will be accessible to authorized council members.</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleUploadDocument} className="space-y-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="docTitle">Document Title</Label>
+                      <Input id="docTitle" value={newDocTitle} onChange={e => setNewDocTitle(e.target.value)} placeholder="e.g. DC Procedures 2026" required />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="docFile">File</Label>
+                      <Input id="docFile" type="file" onChange={e => setDocFile(e.target.files?.[0] || null)} required />
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit" disabled={uploadLoading}>
+                        {uploadLoading ? "Uploading..." : "Upload Document"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-sm font-medium">Disciplinary_Procedures_2026.pdf</p>
-                      <p className="text-[10px] text-muted-foreground">Official Guidelines</p>
+                {docsLoading ? (
+                  <p className="text-center py-4 animate-pulse">Loading documents...</p>
+                ) : documents.length === 0 ? (
+                  <p className="text-center py-4 text-muted-foreground text-sm">No disciplinary documents uploaded yet.</p>
+                ) : (
+                  documents.map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-sm font-medium">{doc.title}</p>
+                          <p className="text-[10px] text-muted-foreground">Uploaded by {doc.uploaded_by_name} on {new Date(doc.created_at).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <a href={doc.file} target="_blank" rel="noopener noreferrer">
+                        <Badge variant="outline" className="cursor-pointer hover:bg-primary hover:text-white">View / Download</Badge>
+                      </a>
                     </div>
-                  </div>
-                  <Badge variant="outline">View</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-sm font-medium">Summon_Template_Official.docx</p>
-                      <p className="text-[10px] text-muted-foreground">Template</p>
-                    </div>
-                  </div>
-                  <Badge variant="outline">Download</Badge>
-                </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>

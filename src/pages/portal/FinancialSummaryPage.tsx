@@ -8,32 +8,33 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 
-interface UserProfile {
-  user_id: string;
-  full_name: string;
-  student_class: string | null;
+interface Requisition {
+  id: string;
+  purpose: string;
+  amount: number;
+  requester_name?: string;
+  status: string;
+  created_at: string;
 }
 
 export default function FinancialSummaryPage() {
   const [finance, setFinance] = useState<any[]>([]);
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [subscriptions, setSubscriptions] = useState<Record<string, boolean>>({});
+  const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [updating, setUpdating] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
-      const [statsRes, profilesRes, subsRes] = await Promise.all([
+      const [statsRes, reqsRes] = await Promise.all([
         api.get('/dashboard/stats/'),
-        api.get('/users/all-profiles/'),
-        api.get('/subscriptions/')
+        api.get('/requisitions/')
       ]);
       
       setFinance(statsRes.data.finance);
-      setUsers(profilesRes.data);
-      const subs = Array.isArray(subsRes.data) ? subsRes.data : subsRes.data.results || {};
-      setSubscriptions(subs);
+      
+      const reqs = Array.isArray(reqsRes.data) ? reqsRes.data : reqsRes.data.results || [];
+      // Filter for history (Approved or Rejected)
+      setRequisitions(reqs.filter((r: any) => r.status === "Approved" || r.status === "Rejected"));
     } catch (error) {
       console.error("Failed to fetch financial data", error);
       toast.error("Failed to load financial records");
@@ -46,23 +47,13 @@ export default function FinancialSummaryPage() {
     fetchData();
   }, []);
 
-  const handleToggleSubscription = async (userId: string, currentStatus: boolean) => {
-    setUpdating(userId);
-    try {
-      const newStatus = !currentStatus;
-      await api.post('/subscriptions/toggle/', { user_id: userId, paid: newStatus });
-      setSubscriptions(prev => ({ ...prev, [userId]: newStatus }));
-      toast.success(newStatus ? "Marked as paid" : "Marked as unpaid");
-    } catch (error) {
-      toast.error("Failed to update subscription");
-    } finally {
-      setUpdating(null);
-    }
-  };
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const filteredUsers = users.filter(u => 
-    u.full_name.toLowerCase().includes(search.toLowerCase()) || 
-    (u.student_class && u.student_class.toLowerCase().includes(search.toLowerCase()))
+  const filteredRequisitions = requisitions.filter(r => 
+    r.purpose.toLowerCase().includes(search.toLowerCase()) || 
+    (r.requester_name && r.requester_name.toLowerCase().includes(search.toLowerCase()))
   );
 
   if (loading) {
@@ -102,18 +93,18 @@ export default function FinancialSummaryPage() {
         ))}
       </div>
 
-      {/* Subscriptions Section */}
+      {/* Requisition History Section */}
       <Card className="border-stone-200 overflow-hidden">
         <CardHeader className="pb-3 border-b bg-stone-50/50">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle className="flex items-center gap-2 text-lg font-serif">
-              <Users className="h-5 w-5 text-primary" />
-              Member Subscriptions
+               <BarChart3 className="h-5 w-5 text-primary" />
+               Payment & Requisition History
             </CardTitle>
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input 
-                placeholder="Search candidates..." 
+                placeholder="Search history..." 
                 className="pl-9 h-9 bg-white" 
                 value={search} 
                 onChange={e => setSearch(e.target.value)} 
@@ -122,71 +113,42 @@ export default function FinancialSummaryPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto min-h-[300px]">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="bg-stone-50 border-b">
-                  <th className="px-6 py-4 font-bold text-stone-600 uppercase tracking-tight text-xs">Member Name</th>
-                  <th className="px-6 py-4 font-bold text-stone-600 uppercase tracking-tight text-xs">Class</th>
-                  <th className="px-6 py-4 font-bold text-stone-600 uppercase tracking-tight text-xs text-center">Paid Status</th>
-                  <th className="px-6 py-4 font-bold text-stone-600 uppercase tracking-tight text-xs text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100">
-                {filteredUsers.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground italic">No members found matching your search.</td>
-                  </tr>
-                ) : (
-                  filteredUsers.map((u) => {
-                    const isPaid = subscriptions[u.user_id] || false;
-                    return (
-                      <tr key={u.user_id} className="hover:bg-primary/5 transition-colors group">
-                        <td className="px-6 py-4">
-                          <p className="font-bold text-stone-800">{u.full_name}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase font-medium">Council Member</p>
-                        </td>
-                        <td className="px-6 py-4 text-muted-foreground font-medium">{u.student_class || "NOT ASSIGNED"}</td>
-                        <td className="px-6 py-4 text-center">
-                          <Badge 
-                            variant="outline" 
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border-2 transition-all ${
-                              isPaid 
-                                ? "bg-green-50 text-green-700 border-green-200" 
-                                : "bg-stone-50 text-stone-400 border-stone-200"
-                            }`}
-                          >
-                            {isPaid ? <Check className="h-3 w-3 mr-1 inline" /> : <X className="h-3 w-3 mr-1 inline" />}
-                            {isPaid ? "PAID" : "UNPAID"}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex justify-end items-center gap-3">
-                            <span className="text-[10px] font-bold text-muted-foreground group-hover:text-primary transition-colors uppercase tracking-widest">
-                              {isPaid ? "UNDO" : "SET PAID"}
-                            </span>
-                            <div className="relative flex items-center">
-                              <Checkbox 
-                                id={`sub-${u.user_id}`}
-                                checked={isPaid}
-                                onCheckedChange={() => handleToggleSubscription(u.user_id, isPaid)}
-                                disabled={updating === u.user_id}
-                                className="border-2 border-stone-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary transition-all scale-110"
-                              />
-                              {updating === u.user_id && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded">
-                                  <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+          <div className="overflow-x-auto min-h-[200px]">
+             <table className="w-full text-sm text-left">
+               <thead>
+                 <tr className="bg-stone-50 border-b">
+                   <th className="px-6 py-4 font-bold text-stone-600 uppercase tracking-tight text-xs">Purpose</th>
+                   <th className="px-6 py-4 font-bold text-stone-600 uppercase tracking-tight text-xs">Requester</th>
+                   <th className="px-6 py-4 font-bold text-stone-600 uppercase tracking-tight text-xs">Amount</th>
+                   <th className="px-6 py-4 font-bold text-stone-600 uppercase tracking-tight text-xs text-center">Status</th>
+                   <th className="px-6 py-4 font-bold text-stone-600 uppercase tracking-tight text-xs text-right">Date</th>
+                 </tr>
+               </thead>
+               <tbody className="divide-y divide-stone-100">
+                 {filteredRequisitions.length === 0 ? (
+                   <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground italic">No requisition history found.</td></tr>
+                 ) : (
+                   filteredRequisitions.map((req) => (
+                     <tr key={req.id} className="hover:bg-primary/5 transition-colors">
+                       <td className="px-6 py-4 font-medium text-stone-800">{req.purpose}</td>
+                       <td className="px-6 py-4 text-muted-foreground">{req.requester_name || "Unknown"}</td>
+                       <td className="px-6 py-4 font-bold">UGX {req.amount.toLocaleString()}</td>
+                       <td className="px-6 py-4 text-center">
+                         <Badge 
+                           variant={req.status === "Approved" ? "default" : "destructive"} 
+                           className="text-[10px] font-bold"
+                         >
+                           {req.status}
+                         </Badge>
+                       </td>
+                       <td className="px-6 py-4 text-right text-muted-foreground">
+                         {new Date(req.created_at).toLocaleDateString("en-UG", { day: "numeric", month: "short" })}
+                       </td>
+                     </tr>
+                   ))
+                 )}
+               </tbody>
+             </table>
           </div>
         </CardContent>
       </Card>

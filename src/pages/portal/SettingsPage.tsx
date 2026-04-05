@@ -13,7 +13,7 @@ export default function SettingsPage() {
   const { user, profile } = useAuth();
 
   const [username, setUsername] = useState(user?.username || "");
-  const [profileDesc, setProfileDesc] = useState((profile as any)?.description || "");
+  const [profileBio, setProfileBio] = useState((profile as any)?.bio || "");
   const [profilePic, setProfilePic] = useState((profile as any)?.profile_pic || "");
   const [savingProfile, setSavingProfile] = useState(false);
 
@@ -39,7 +39,7 @@ export default function SettingsPage() {
     try {
       await api.patch('/users/me/profile/', {
         username,
-        description: profileDesc,
+        bio: profileBio,
         profile_pic: profilePic,
       });
       toast.success("Profile updated! (Refresh to see header update)");
@@ -218,8 +218,8 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <Label>Introduction / Bio</Label>
             <Textarea
-              value={profileDesc}
-              onChange={e => setProfileDesc(e.target.value)}
+              value={profileBio}
+              onChange={e => setProfileBio(e.target.value)}
               rows={4}
               placeholder="Tell the school about yourself..."
             />
