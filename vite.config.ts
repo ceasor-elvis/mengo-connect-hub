@@ -6,7 +6,6 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  envDir: path.resolve(__dirname, "../"),
   server: {
     host: "::",
     port: 8080,
@@ -53,33 +52,40 @@ export default defineConfig(({ mode }) => ({
     })
   ].filter(Boolean),
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
-              return 'vendor-react';
-            }
-            if (id.includes('@blocknote') || id.includes('@mantine')) {
-              return 'vendor-editor';
-            }
-            if (id.includes('recharts') || id.includes('d3')) {
-               return 'vendor-charts';
-            }
-            if (id.includes('lucide-react')) {
-              return 'vendor-icons';
-            }
-            if (id.includes('xlsx') || id.includes('docx') || id.includes('jspdf') || id.includes('html2canvas')) {
-              return 'vendor-docs';
-            }
-            if (id.includes('framer-motion') || id.includes('@react-spring')) {
-              return 'vendor-animation';
-            }
-            return 'vendor';
-          }
-        },
-      },
-    },
+    // rollupOptions: {
+    //   output: {
+    //     manualChunks(id) {
+    //       if (id.includes('node_modules')) {
+    //         // Group core React libraries together to avoid circularities between them
+    //         if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom') || id.includes('@remix-run')) {
+    //           return 'vendor-react';
+    //         }
+    //         // Group heavy editor libraries
+    //         if (id.includes('@blocknote') || id.includes('@mantine') || id.includes('@emotion')) {
+    //           return 'vendor-editor';
+    //         }
+    //         // Group visualization libraries
+    //         if (id.includes('recharts') || id.includes('d3')) {
+    //            return 'vendor-charts';
+    //         }
+    //         // Group UI/Icon libraries
+    //         if (id.includes('lucide-react') || id.includes('@radix-ui')) {
+    //           return 'vendor-ui';
+    //         }
+    //         // Group document processing libraries
+    //         if (id.includes('xlsx') || id.includes('docx') || id.includes('jspdf') || id.includes('html2canvas')) {
+    //           return 'vendor-docs';
+    //         }
+    //         // Group animation libraries
+    //         if (id.includes('framer-motion') || id.includes('@react-spring') || id.includes('@use-gesture')) {
+    //           return 'vendor-animation';
+    //         }
+    //         // Everything else in node_modules goes to vendor
+    //         return 'vendor';
+    //       }
+    //     },
+    //   },
+    // },
   },
   resolve: {
     alias: {
