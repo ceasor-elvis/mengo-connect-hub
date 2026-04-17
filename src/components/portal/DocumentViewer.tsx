@@ -16,8 +16,8 @@ export default function DocumentViewer({ isOpen, onClose, fileUrl, title, type =
 
   const getAbsoluteUrl = (url: string) => {
     if (url.startsWith('http') || url.startsWith('blob:')) return url;
-    // Default fallback pointing to localhost:8000 if no env match, assuming API is hosted there locally
-    const base = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:8000';
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+    const base = apiUrl.endsWith('/api') ? apiUrl.replace(/\/api$/, '') : apiUrl;
     return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
   };
 
