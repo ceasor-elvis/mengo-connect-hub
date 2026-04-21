@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserPlus, ArrowUpCircle, Plus, Loader2, Search, Edit2, ShieldAlert, Key } from "lucide-react";
+import { UserPlus, ArrowUpCircle, Plus, Loader2, Search, Edit2, ShieldAlert, Key, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
@@ -31,8 +31,9 @@ const APP_ROLES = Object.keys(ROLE_LABELS);
 
 
 export default function RegisterMemberPage() {
-  const { hasAnyRole } = useAuth();
+  const { hasAnyRole, roles } = useAuth();
   const canManageStreams = hasAnyRole(["chairperson", "adminabsolute", "general_secretary", "patron", "vice_chairperson"]);
+  const isAdminAbsolute = roles.includes("adminabsolute");
 
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
@@ -106,6 +107,23 @@ export default function RegisterMemberPage() {
       toast.error(e.response?.data?.detail || "Update failed");
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteMember = async (member: any) => {
+    if (!window.confirm(`Are you sure you want to securely remove ${member.full_name}? This will securely wipe their system information and permanently hide their account.`)) return;
+    
+    try {
+      await api.patch(`/users/${member.user_id}/profile/admin/`, {
+        full_name: "Removed Member",
+        student_class: "N/A",
+        gender: "N/A",
+        role: "councillor"
+      });
+      toast.success("Member securely anonymized and removed from directory.");
+      fetchProfiles();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Failed to remove member.");
     }
   };
 
@@ -360,8 +378,9 @@ export default function RegisterMemberPage() {
         <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
           <div className="divide-y">
             {profiles.filter(p => 
-              p.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-              p.username?.toLowerCase().includes(searchTerm.toLowerCase())
+              (!p.full_name?.startsWith("Removed Council") && !p.full_name?.startsWith("Removed Member")) &&
+              (p.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+              p.username?.toLowerCase().includes(searchTerm.toLowerCase()))
             ).map((p) => {
               const isAdminEdit = hasAnyRole(["adminabsolute", "chairperson"]);
               return (
@@ -371,13 +390,25 @@ export default function RegisterMemberPage() {
                     <p className="text-xs text-muted-foreground">@{p.username} • {p.student_class || "Staff"} • {p.role ? ROLE_LABELS[p.role] : "Councillor"}</p>
                   </div>
                   {isAdminEdit && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setEditingMember(p)}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setEditingMember(p)}
+                      >
+                        <Edit2 className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                      </Button>
+                      {isAdminAbsolute && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleDeleteMember(p)}
+                          className="hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
               );

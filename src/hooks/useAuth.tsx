@@ -44,8 +44,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   hasRole: () => false,
   hasAnyRole: () => false,
-  signOut: async () => {},
-  setAuthData: () => {},
+  signOut: async () => { },
+  setAuthData: () => { },
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         api.get("/users/me/profile/").catch(() => ({ data: null })),
         api.get("/users/me/roles/").catch(() => ({ data: [] }))
       ]);
-      
+
       if (profileRes.data) setProfile(profileRes.data);
       if (rolesRes.data) {
         const r = Array.isArray(rolesRes.data) ? rolesRes.data : rolesRes.data.roles || [];
@@ -111,9 +111,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-       const refresh = localStorage.getItem("refresh_token");
-       if (refresh) await api.post("/users/logout/", { refresh });
-    } catch (e) {}
+      const refresh = localStorage.getItem("refresh_token");
+      if (refresh) await api.post("/users/logout/", { refresh });
+    } catch (e) { }
 
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
@@ -132,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.error("Logged out for security reasons due to tab inactivity.");
       }
     };
-    
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [user]);

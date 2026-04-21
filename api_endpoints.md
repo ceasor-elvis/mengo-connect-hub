@@ -12,10 +12,10 @@
 - `GET /api/users/all-roles/` : Returns an array of all assigned user roles (used in Hierarchy Tree).
 - `GET /api/users/all-profiles/` : Returns basic profile info mapped by user ID for looking up names.
 - `POST /api/users/upgrade-role/` : Updates a user's cabinet position. Payload: `{ user_id, new_role }`.
-- `POST /api/users/change-password/` : Allows a user to update their password. Payload: `{ current_password, new_password }`.
-- `POST /api/users/forgot-password/` : Requests a password reset. Payload: `{ username }`.
+- `POST /api/users/change-password/` : Allows a logged-in user to independently reset, fully fetch and update their password in the backend. Payload: `{ current_password, new_password }`.
+- `POST /api/users/forgot-password/` : Requests a password reset for locked-out accounts. Payload: `{ username }`.
 - `POST /api/users/admin-reset-password/` : Administrative password override. Payload: `{ user_id, new_password }`.
-- `PATCH /api/users/<id>/profile/admin/` : Administrative profile editing (Name, Role, Class, etc.).
+- `PATCH /api/users/<id>/profile/admin/` : Administrative profile editing (Name, Role, Class, etc.). Used forcefully to anonymize and remove patrons.
 
 > [!IMPORTANT]
 > **Password Management Protocol**:

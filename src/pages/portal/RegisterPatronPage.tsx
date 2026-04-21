@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +10,9 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 
 export default function RegisterPatronPage() {
+  const { roles } = useAuth();
+  const isAdminAbsolute = roles.includes("adminabsolute");
+
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [existingPatron, setExistingPatron] = useState<any>(null);
@@ -113,12 +117,18 @@ export default function RegisterPatronPage() {
 
   const handleDelete = async () => {
     if (!existingPatron) return;
-    if (!window.confirm(`Are you sure you want to remove ${existingPatron.full_name}? This will delete their system account.`)) return;
+    if (!window.confirm(`Are you sure you want to remove ${existingPatron.full_name}? This will securely wipe their system information and demote their role permanently.`)) return;
 
     setLoading(true);
     try {
-      await api.delete(`/users/${existingPatron.user_id}/profile/admin/`);
-      toast.success("Patron removed successfully.");
+      await api.patch(`/users/${existingPatron.user_id}/profile/admin/`, {
+        full_name: "Removed Council Patron",
+        staff_id: "REMOVED",
+        department: "N/A",
+        office_location: "N/A",
+        role: "councillor"
+      });
+      toast.success("Patron securely anonymized and removed from office.");
       setExistingPatron(null);
       setFormData({
         title: "",
@@ -130,7 +140,7 @@ export default function RegisterPatronPage() {
         password: "",
       });
     } catch (e: any) {
-      toast.error(e.response?.data?.detail || "Failed to remove patron.");
+      toast.error(e.response?.data?.detail || "Failed to remove patron completely.");
     } finally {
       setLoading(false);
     }
@@ -175,9 +185,11 @@ export default function RegisterPatronPage() {
                 <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                   <Edit2 className="h-4 w-4 mr-2" /> Edit Details
                 </Button>
-                <Button variant="destructive" size="sm" onClick={handleDelete}>
-                  <Trash2 className="h-4 w-4 mr-2" /> Remove
-                </Button>
+                {isAdminAbsolute && (
+                  <Button variant="destructive" size="sm" onClick={handleDelete}>
+                    <Trash2 className="h-4 w-4 mr-2" /> Remove
+                  </Button>
+                )}
               </div>
             </div>
           </div>
