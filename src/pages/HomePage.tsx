@@ -69,21 +69,44 @@ const itemVariants = {
 
 export default function HomePage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [activeSlides, setActiveSlides] = useState<string[]>(slideshowImages);
 
   useEffect(() => {
+    const fetchCustomSlides = async () => {
+      try {
+        const { data } = await api.get("/documents/");
+        const entries = Array.isArray(data) ? data : data.results || [];
+        const customSlides = entries
+          .filter((d: any) => d.title === "slideshow_img")
+          .map((d: any) => d.file_url || d.file)
+          .filter(Boolean);
+        
+        if (customSlides.length > 0) {
+          setActiveSlides(customSlides);
+          setCurrentImageIndex(0);
+        }
+      } catch (err) {
+        console.error("Failed to load custom slides", err);
+      }
+    };
+    fetchCustomSlides();
+  }, []);
+
+  useEffect(() => {
+    if (activeSlides.length === 0) return;
     const interval = setInterval(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % slideshowImages.length);
+      setCurrentImageIndex((prev) => (prev + 1) % activeSlides.length);
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeSlides]);
 
   return (
     <>
       <section className="relative overflow-hidden bg-primary/90">
         {/* Background Slideshow */}
-        {slideshowImages.map((img, index) => (
+        {activeSlides.map((img, index) => (
           <div
-            key={img}
+            key={`${img}-${index}`}
             className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-[2000ms] ease-in-out ${
               index === currentImageIndex ? "opacity-100 scale-105" : "opacity-0 scale-100"
             }`}
