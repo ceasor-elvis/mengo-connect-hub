@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 type AppRole = string;
 
@@ -122,6 +123,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
     setRoles([]);
   };
+
+  // Auto-logout on tab change for security
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && user) {
+        signOut();
+        toast.error("Logged out for security reasons due to tab inactivity.");
+      }
+    };
+    
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, session, profile, roles, loading, hasRole, hasAnyRole, signOut, setAuthData }}>
