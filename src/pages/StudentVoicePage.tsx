@@ -1,4 +1,5 @@
 import { useState } from "react";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,7 +41,7 @@ export default function StudentVoicePage() {
         formData.append("file", file);
       }
 
-      await api.post("/student-voices/", formData, {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/student-voices/`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
