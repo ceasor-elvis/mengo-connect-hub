@@ -13,15 +13,15 @@ function QuoteOfTheDaySection() {
       <div className="container mx-auto px-4">
         <div className="mb-6 text-center">
           <h2 className="font-serif text-2xl font-bold sm:text-3xl">Quote of the Day</h2>
-          <p className="text-sm text-muted-foreground mt-2">from the CP, Gen Sec, & Publicity</p>
+          <p className="text-sm text-muted-foreground mt-2">.</p>
         </div>
         <div className="mx-auto max-w-3xl">
           <div className="rounded-xl border bg-card p-8 sm:p-12 shadow-sm text-center relative overflow-hidden">
             <span className="text-8xl text-primary/10 absolute -top-4 -left-2 font-serif select-none">"</span>
-             {/* Dynamic quote space intended for future backend connect */}
-             <p className="text-lg md:text-2xl font-medium italic text-card-foreground my-4 relative z-10">
-               Leadership is not about a title or a designation. It's about impact, influence, and inspiration.
-             </p>
+            {/* Dynamic quote space intended for future backend connect */}
+            <p className="text-lg md:text-2xl font-medium italic text-card-foreground my-4 relative z-10">
+              Leadership is not about a title or a designation. It's about impact, influence, and inspiration.
+            </p>
           </div>
         </div>
       </div>
