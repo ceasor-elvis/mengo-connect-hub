@@ -30,6 +30,7 @@ import DisciplinaryPage from "@/pages/portal/DisciplinaryPage";
 import ActionPlanPage from "@/pages/portal/ActionPlanPage";
 import SettingsPage from "@/pages/portal/SettingsPage";
 import FinancialSummaryPage from "@/pages/portal/FinancialSummaryPage";
+import HomeLayoutPage from "@/pages/portal/HomeLayoutPage";
 import NotFound from "./pages/NotFound.tsx";
 const queryClient = new QueryClient();
 
@@ -101,6 +102,11 @@ const App = () => (
                 {/* Action Plan – leadership only */}
                 <Route element={<RoleGuard allowedRoles={["adminabsolute", "patron", "chairperson", "vice_chairperson", "general_secretary", "assistant_general_secretary"]} />}>
                   <Route path="action-plan" element={<ActionPlanPage />} />
+                </Route>
+
+                {/* Home Layout – admin only */}
+                <Route element={<RoleGuard allowedRoles={["adminabsolute"]} />}>
+                  <Route path="home-layout" element={<HomeLayoutPage />} />
                 </Route>
               </Route>
 

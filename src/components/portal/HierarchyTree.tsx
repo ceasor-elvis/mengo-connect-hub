@@ -1,5 +1,5 @@
 import { useEffect, useState, useLayoutEffect, useRef } from "react";
-import { api } from "@/lib/api";
+import axios from "axios";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
@@ -13,18 +13,16 @@ function NodeCard({ node, roleMap, profileMap }: { node: RoleNode; roleMap: Role
   const userId = roleMap[node.role];
   const profile = userId ? profileMap[userId] : null;
   const Icon = ICON_MAP[node.iconName] || ICON_MAP.User;
+  const isMultipleRole = node.role === "class_coordinators" || node.role === "councillors";
 
-  return (
-    <div className="flex flex-col items-center">
-      <Dialog>
-        <DialogTrigger asChild>
+  const content = (
           <motion.div 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={`flex flex-col items-center gap-1 sm:gap-1.5 rounded-lg p-1.5 sm:p-2 text-xs font-medium shadow-sm border cursor-pointer hover:border-black/20 dark:hover:border-white/20 transition-all ${node.color} min-w-[70px] sm:min-w-[90px] max-w-[100px]`}
+            whileHover={isMultipleRole ? {} : { scale: 1.02 }}
+            whileTap={isMultipleRole ? {} : { scale: 0.98 }}
+            className={`flex flex-col items-center gap-1 sm:gap-1.5 rounded-lg p-1.5 sm:p-2 text-xs font-medium shadow-sm border ${!isMultipleRole ? 'cursor-pointer hover:border-black/20 dark:hover:border-white/20 transition-all' : 'opacity-80'} ${node.color} min-w-[70px] sm:min-w-[90px] max-w-[100px]`}
           >
              <div className="shrink-0">
-               {profile && (profile.profile_pic_url || (profile as any).profile_pic) ? (
+               {!isMultipleRole && profile && (profile.profile_pic_url || (profile as any).profile_pic) ? (
                  <Avatar className="h-6 w-6 sm:h-7 sm:w-7 border-2 border-primary-foreground/20 shadow-md">
                    <AvatarImage src={profile.profile_pic_url || (profile as any).profile_pic || ""} alt={profile.full_name} />
                    <AvatarFallback className="bg-primary-foreground/10 text-primary-foreground text-[9px]">
@@ -38,13 +36,26 @@ function NodeCard({ node, roleMap, profileMap }: { node: RoleNode; roleMap: Role
             
             <div className="text-center leading-tight w-full">
               <p className="font-bold text-[8.5px] sm:text-[9px] break-words uppercase tracking-tight leading-none mb-0.5">{node.label}</p>
-              {profile ? (
+              {isMultipleRole ? (
+                <p className="text-[8.5px] opacity-90 font-medium truncate w-full italic">Multiple</p>
+              ) : profile ? (
                 <p className="text-[8.5px] opacity-90 font-medium truncate w-full">{profile.full_name}</p>
               ) : (
                 <p className="text-[8px] opacity-60 italic">Vacant</p>
               )}
             </div>
           </motion.div>
+  );
+
+  if (isMultipleRole) {
+    return <div className="flex flex-col items-center">{content}</div>;
+  }
+
+  return (
+    <div className="flex flex-col items-center">
+      <Dialog>
+        <DialogTrigger asChild>
+          {content}
         </DialogTrigger>
         
         {profile && (
@@ -123,8 +134,8 @@ export default function HierarchyTree({ refreshKey }: { refreshKey?: number }) {
   const fetchData = async () => {
     try {
       const [rolesRes, profilesRes] = await Promise.all([
-        api.get("/users/all-roles/"),
-        api.get("/users/all-profiles/"),
+        axios.get(`${import.meta.env.VITE_API_URL}/users/all-roles/`),
+        axios.get(`${import.meta.env.VITE_API_URL}/users/all-profiles/`),
       ]);
       
       if (rolesRes.data) {

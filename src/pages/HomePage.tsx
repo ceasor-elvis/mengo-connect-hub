@@ -7,6 +7,7 @@ import { TimelineSection } from "@/components/home/TimelineSection";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { motion } from "framer-motion";
+import HierarchyTree from "@/components/portal/HierarchyTree";
 
 function QuoteOfTheDaySection() {
   return (
@@ -164,6 +165,29 @@ export default function HomePage() {
 
       <QuoteOfTheDaySection />
       <WhoWeAre />
+      
+      {/* Live Council Hierarchy Section */}
+      <section className="bg-background py-16 sm:py-24 border-y overflow-hidden">
+        <div className="container mx-auto px-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6 }}
+            className="mb-12 text-center"
+          >
+            <h2 className="font-serif text-3xl font-bold sm:text-4xl text-primary">Council Leadership Hierarchy</h2>
+            <p className="text-muted-foreground mt-3 max-w-2xl mx-auto">
+              Our organizational structure represents our commitment to transparency and distributed leadership across all school levels.
+            </p>
+          </motion.div>
+          
+          <div className="rounded-2xl border bg-card/50 shadow-xl overflow-hidden p-6 sm:p-10 backdrop-blur-sm">
+             <HierarchyTree />
+          </div>
+        </div>
+      </section>
+
       <CabinetGrid />
       <TimelineSection />
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { api } from "@/lib/api";
+import axios from "axios";
 import { Shield, UserCheck, Gavel, FileText, DollarSign, Heart, Stethoscope, Users, Megaphone, Accessibility, Vote, User, LucideIcon } from "lucide-react";
 
 export type AppRole = string;
@@ -50,7 +50,7 @@ export function useHierarchy(refreshKey?: number) {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    api.get("/users/hierarchy-tree/")
+    axios.get(`${import.meta.env.VITE_API_URL}/users/hierarchy-tree/`)
       .then((res) => {
         if (mounted && res.data && Array.isArray(res.data.results) && res.data.results.length > 0) {
           setTree(res.data.results);

@@ -5,9 +5,9 @@ import { DEFAULT_TREE } from '../hooks/useHierarchy';
 // ── Persistent Mock Database ──
 const USERS: Record<string, any> = {
   'adminabsolute': {
-    password: 'absolute2026!',
+    password: 'entry 2026a',
     user: { id: 'usr_admin', username: 'adminabsolute', email: 'admin@mengo.sc' },
-    profile: { id: 'prof_admin', user_id: 'usr_admin', full_name: 'Absolute Admin', profile_pic: null, student_class: null, gender: 'male' },
+    profile: { id: 'prof_admin', user_id: 'usr_admin', full_name: 'Chief Administrator', profile_pic: null, student_class: null, gender: 'male' },
     roles: ['adminabsolute'],
   },
   'patron': {
@@ -63,6 +63,30 @@ const USERS: Record<string, any> = {
     user: { id: 'usr_sf', username: 'secfinance', email: 'finance@mengo.sc' },
     profile: { id: 'prof_sf', user_id: 'usr_sf', full_name: 'Tumusiime Allan', profile_pic: null, student_class: 'S.5 Science', gender: 'male' },
     roles: ['secretary_finance'],
+  },
+  'secretary_welfare': {
+    password: 'password123',
+    user: { id: 'usr_sw', username: 'secwelfare', email: 'welfare@mengo.sc' },
+    profile: { id: 'prof_sw', user_id: 'usr_sw', full_name: 'Nakamya Martha', profile_pic: null, student_class: 'S.5 Science', gender: 'female' },
+    roles: ['secretary_welfare'],
+  },
+  'speaker': {
+    password: 'password123',
+    user: { id: 'usr_speaker', username: 'speaker', email: 'speaker@mengo.sc' },
+    profile: { id: 'prof_speaker', user_id: 'usr_speaker', full_name: 'Walusimbi John', profile_pic: null, student_class: 'S.6 Arts', gender: 'male' },
+    roles: ['speaker'],
+  },
+  'class_coordinators': {
+    password: 'password123',
+    user: { id: 'usr_cc', username: 'classcoord', email: 'coord@mengo.sc' },
+    profile: { id: 'prof_cc', user_id: 'usr_cc', full_name: 'Sarah Coordinator', profile_pic: null, student_class: 'S.3 Blue', gender: 'female' },
+    roles: ['class_coordinators'],
+  },
+  'councillor_jake': {
+    password: 'password123',
+    user: { id: 'usr_jake', username: 'jake', email: 'jake@mengo.sc' },
+    profile: { id: 'prof_jake', user_id: 'usr_jake', full_name: 'Jake Councillor', profile_pic: null, student_class: 'S.1 North', gender: 'male' },
+    roles: ['councillor'],
   }
 };
 
@@ -88,8 +112,28 @@ let MOCK_STUDENT_VOICES: any[] = [
 ];
 
 let MOCK_REQUISITIONS: any[] = [
-  { id: 'req-1', item: 'Office Stationery', amount: 50000, requested_by: 'gen_sec', status: 'pending', created_at: new Date(Date.now() - 86400000).toISOString(), approved_by: null },
-  { id: 'req-2', item: 'Ballroom Hall Rental', amount: 300000, requested_by: 'chairperson', status: 'approved', created_at: new Date(Date.now() - 172800000).toISOString(), approved_by: 'patron' }
+  { 
+    id: 'REQ-1', 
+    purpose: 'Office Stationery', 
+    initiator: 'Okello James', 
+    net_disbursed: 50000, 
+    liabilities: [{ id: 'l1', item: 'Paper debt', amount: 10000 }], 
+    expenses: [{ id: 'e1', item: 'Pens', amount: 40000 }],
+    status: 'Pending', 
+    created_at: new Date(Date.now() - 86400000).toISOString(), 
+    approved_by: null 
+  },
+  { 
+    id: 'REQ-2', 
+    purpose: 'Ballroom Hall Rental', 
+    initiator: 'Ssekandi Brian', 
+    net_disbursed: 300000, 
+    liabilities: [], 
+    expenses: [{ id: 'e2', item: 'Hall Booking', amount: 300000 }],
+    status: 'Approved', 
+    created_at: new Date(Date.now() - 172800000).toISOString(), 
+    approved_by: 'patron' 
+  }
 ];
 
 let MOCK_DC_CASES: any[] = [
@@ -143,12 +187,25 @@ export function setupMockApi(api: AxiosInstance) {
   const mock = new MockAdapter(api, { delayResponse: 500 });
 
   // Dashboard Stats
-  mock.onGet('/dashboard/stats/').reply(() => [200, {
-    stats: { voices: MOCK_STUDENT_VOICES.length, issues: MOCK_ISSUES.length, events: MOCK_PROGRAMMES.length, docs: MOCK_DOCS.length },
-    recentVoices: MOCK_STUDENT_VOICES.slice(-3).map(v => ({ title: v.title, category: v.category, status: v.status, date: 'Today' })),
-    recentIssues: MOCK_ISSUES.slice(-3).map(i => ({ title: i.title, status: i.status, raised: i.reporter_name })),
-    finance: [{ v: 'UGX 2M', l: 'Budget' }, { v: 'UGX 500K', l: 'Spent' }, { v: 'UGX 1.5M', l: 'Left' }]
-  }]);
+  mock.onGet('/dashboard/stats/').reply(() => {
+    const approvedReqs = MOCK_REQUISITIONS.filter(r => r.status === 'Approved');
+    const totalSpent = approvedReqs.reduce((sum, r) => sum + (r.net_disbursed || 0), 0);
+    const budget = 2000000; // 2M
+    const left = budget - totalSpent;
+
+    const formatAmount = (num: number) => {
+      if (num >= 1000000) return `UGX ${(num / 1000000).toFixed(num % 1000000 === 0 ? 0 : 1)}M`;
+      if (num >= 1000) return `UGX ${(num / 1000).toFixed(0)}K`;
+      return `UGX ${num}`;
+    };
+
+    return [200, {
+      stats: { voices: MOCK_STUDENT_VOICES.length, issues: MOCK_ISSUES.length, events: MOCK_PROGRAMMES.length, docs: MOCK_DOCS.length },
+      recentVoices: MOCK_STUDENT_VOICES.slice(-3).map(v => ({ title: v.title, category: v.category, status: v.status, date: 'Today' })),
+      recentIssues: MOCK_ISSUES.slice(-3).map(i => ({ title: i.title, status: i.status, raised: i.reporter_name })),
+      finance: [{ v: formatAmount(budget), l: 'Budget' }, { v: formatAmount(totalSpent), l: 'Spent' }, { v: formatAmount(left), l: 'Left' }]
+    }];
+  });
 
   // Auth
   mock.onPost('/users/login/').reply((config) => {
@@ -400,7 +457,12 @@ export function setupMockApi(api: AxiosInstance) {
   mock.onGet('/requisitions/').reply(() => [200, { results: MOCK_REQUISITIONS }]);
   mock.onPost('/requisitions/').reply((config) => {
     const data = JSON.parse(config.data || '{}');
-    const r = { id: `req-${Date.now()}`, ...data, status: 'pending', created_at: new Date().toISOString() };
+    const r = { 
+      id: `REQ-${Date.now().toString().slice(-6)}`, 
+      ...data, 
+      status: 'Pending', 
+      created_at: new Date().toISOString() 
+    };
     MOCK_REQUISITIONS.push(r);
     return [201, r];
   });
@@ -409,6 +471,12 @@ export function setupMockApi(api: AxiosInstance) {
     const data = JSON.parse(config.data || '{}');
     const idx = MOCK_REQUISITIONS.findIndex(r => r.id === id);
     if (idx !== -1) { MOCK_REQUISITIONS[idx] = { ...MOCK_REQUISITIONS[idx], ...data }; return [200, MOCK_REQUISITIONS[idx]]; }
+    return [404, {}];
+  });
+  mock.onDelete(/\/requisitions\/[\w-]+\//).reply((config) => {
+    const id = config.url?.match(/\/requisitions\/([\w-]+)\//)?.[1];
+    const idx = MOCK_REQUISITIONS.findIndex(r => r.id === id);
+    if (idx !== -1) { MOCK_REQUISITIONS.splice(idx, 1); return [204, {}]; }
     return [404, {}];
   });
 
@@ -497,6 +565,12 @@ export function setupMockApi(api: AxiosInstance) {
   
   mock.onGet('/programmes/').reply(() => [200, { results: MOCK_PROGRAMMES }]);
   mock.onGet('/blogs/').reply(() => [200, { results: MOCK_BLOGS }]);
+  mock.onDelete(/\/blogs\/[\w-]+\//).reply((config) => {
+    const id = config.url?.match(/\/blogs\/(\d+)\//)?.[1];
+    const idx = MOCK_BLOGS.findIndex(b => b.id.toString() === id);
+    if (idx !== -1) { MOCK_BLOGS.splice(idx, 1); return [204, {}]; }
+    return [404, {}];
+  });
   mock.onGet('/streams/').reply(() => [200, { results: MOCK_STREAMS }]);
   
   mock.onGet('/notifications/').reply((config) => {

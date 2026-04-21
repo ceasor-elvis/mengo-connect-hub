@@ -98,6 +98,17 @@ export default function BlogManagerPage() {
     }
   };
 
+  const handleDeleteBlog = async (id: number) => {
+    if (!window.confirm("Are you sure you want to permanently delete this blog post?")) return;
+    try {
+      await api.delete(`/blogs/${id}/`);
+      toast.success("Blog deleted successfully");
+      fetchBlogs();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Failed to delete blog");
+    }
+  };
+
   const handleGalleryUpload = async () => {
     if (!galleryFile) {
       toast.error("Please select an image to upload");
@@ -298,8 +309,9 @@ export default function BlogManagerPage() {
                           <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
                         </div>
                         
-                        <div className="pt-4">
+                        <div className="pt-4 flex items-center justify-between">
                           <Button variant="outline" size="sm" onClick={() => toast.info("Full view coming soon!")}>Read Full Post</Button>
+                          <Button variant="destructive" size="sm" onClick={() => handleDeleteBlog(b.id)}>Delete Blog</Button>
                         </div>
                       </div>
                     </CardContent>

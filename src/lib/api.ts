@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { setupMockApi } from './mockApi';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 export const api = axios.create({
@@ -7,6 +9,12 @@ export const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Conditionally setup mock API for local development
+if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+  console.log("Initializing Mock API for Local Environment");
+  setupMockApi(api);
+}
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token');

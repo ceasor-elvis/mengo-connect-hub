@@ -54,6 +54,8 @@ const sidebarLinks: NavItem[] = [
     roles: ["disciplinary_committee", "chairperson", "vice_chairperson", "general_secretary"] },
   { label: "Strategic Action Plan", path: "/portal/action-plan", icon: Target,
     roles: ["chairperson", "vice_chairperson", "general_secretary", "assistant_general_secretary", "adminabsolute", "patron"] },
+  { label: "Home Layout", path: "/portal/home-layout", icon: Settings,
+    roles: ["adminabsolute"] },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
