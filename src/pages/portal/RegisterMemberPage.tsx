@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserPlus, ArrowUpCircle, Plus, Loader2, Search, Edit2, ShieldAlert, Key, Trash2 } from "lucide-react";
+import { UserPlus, ArrowUpCircle, Plus, Loader2, Search, Edit2, ShieldAlert, Key, Trash2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
@@ -57,6 +57,7 @@ export default function RegisterMemberPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingMember, setEditingMember] = useState<any | null>(null);
   const [resetingUser, setResetingUser] = useState<any | null>(null);
+  const [completedResets, setCompletedResets] = useState<string[]>([]);
   const [newTempPassword, setNewTempPassword] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [reseting, setReseting] = useState(false);
@@ -136,10 +137,15 @@ export default function RegisterMemberPage() {
         user_id: resetingUser.id,
         new_password: newTempPassword,
       });
+
+      if (resetingUser.notificationId) {
+        await api.patch(`/notifications/${resetingUser.notificationId}/`, { read: true }).catch(() => {});
+        setCompletedResets(prev => [...prev, resetingUser.notificationId]);
+      }
+      
       toast.success("Password reset successfully!");
       setResetingUser(null);
       setNewTempPassword("");
-      fetchNotifications();
     } catch (e: any) {
       toast.error(e.response?.data?.detail || "Reset failed");
     } finally {
@@ -425,7 +431,7 @@ export default function RegisterMemberPage() {
         </div>
 
         <div className="space-y-3">
-          {notifications.filter(n => n.title === "Password Reset Request" && !n.read).map((n) => (
+          {notifications.filter(n => n.title === "Password Reset Request" && (!n.read || completedResets.includes(n.id))).map((n) => (
             <div key={n.id} className="flex items-center justify-between p-4 rounded-xl border bg-card shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center">
@@ -436,10 +442,16 @@ export default function RegisterMemberPage() {
                   <p className="text-xs text-muted-foreground">Sent {new Date(n.created_at || n.timestamp).toLocaleTimeString()}</p>
                 </div>
               </div>
-              <Button size="sm" variant="outline" onClick={() => setResetingUser({ id: n.target_user_id || n.user_id, fullName: n.message.split('(')[0].replace('User ', '') })}>Reset</Button>
+              {completedResets.includes(n.id) ? (
+                <Button size="sm" variant="outline" disabled className="bg-green-50 text-green-700 border-green-200">
+                  <Check className="h-4 w-2 mr-2" /> Reset Complete
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" onClick={() => setResetingUser({ id: n.target_user_id || n.user_id, fullName: n.message.split('(')[0].replace('User ', ''), notificationId: n.id })}>Reset</Button>
+              )}
             </div>
           ))}
-          {notifications.filter(n => n.title === "Password Reset Request" && !n.read).length === 0 && (
+          {notifications.filter(n => n.title === "Password Reset Request" && (!n.read || completedResets.includes(n.id))).length === 0 && (
             <p className="text-center text-sm text-muted-foreground py-10">No pending requests.</p>
           )}
         </div>
