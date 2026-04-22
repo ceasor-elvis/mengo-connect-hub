@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -92,6 +92,19 @@ export default function ProgrammesPage() {
     }
   };
 
+  const handleDelete = async (id: string, progTitle: string) => {
+    if (!confirm(`Delete programme "${progTitle}"?`)) return;
+    try {
+      await api.delete(`/programmes/${id}/`);
+      toast.success("Programme deleted");
+      log("deleted a programme", "programmes", progTitle);
+      fetchProgrammes();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Failed to delete programme");
+    }
+  };
+
+
   const formatDate = (d: string | null) => {
     if (!d) return "TBD";
     return new Date(d).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" });
@@ -177,15 +190,22 @@ export default function ProgrammesPage() {
                      <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-background bg-primary text-primary-foreground shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
                        <Clock className="w-4 h-4" />
                      </div>
-                     <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border bg-card shadow-sm hover:shadow-md transition">
-                       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 sm:mb-1 gap-1">
-                         <h3 className="font-bold text-lg leading-tight">{p.title}</h3>
-                         <span className="text-[10px] sm:text-xs font-semibold px-2.5 py-0.5 bg-primary/10 text-primary rounded-full shrink-0 w-fit">
-                           {formatDate(p.event_date)}
-                         </span>
-                       </div>
-                       {p.description && <p className="text-muted-foreground text-sm">{p.description}</p>}
-                     </div>
+                      <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border bg-card shadow-sm hover:shadow-md transition">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 sm:mb-1 gap-1">
+                          <h3 className="font-bold text-lg leading-tight">{p.title}</h3>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] sm:text-xs font-semibold px-2.5 py-0.5 bg-primary/10 text-primary rounded-full shrink-0 w-fit">
+                              {formatDate(p.event_date)}
+                            </span>
+                            {canAdd && (
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(p.id, p.title)}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        {p.description && <p className="text-muted-foreground text-sm">{p.description}</p>}
+                      </div>
                    </div>
                  ))}
                  {programmes.filter(p => p.is_big_event).length === 0 && (
