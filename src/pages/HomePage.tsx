@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 
 function ScrollIndicator() {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 2, duration: 1, repeat: Infinity, repeatType: "reverse" }}
@@ -32,7 +32,7 @@ function QuoteOfTheDaySection() {
         <Quote className="w-32 h-32 -ml-6 -mt-6 text-primary rotate-12" />
       </div>
       <div className="container mx-auto px-4 relative z-10">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -51,7 +51,7 @@ function QuoteOfTheDaySection() {
               </h2>
               <div className="flex items-center justify-center gap-2">
                 <div className="h-[1px] w-6 bg-primary/20" />
-                <span className="text-[9px] font-semibold tracking-widest uppercase text-muted-foreground">The Council Motto</span>
+                <span className="text-[9px] font-semibold tracking-widest uppercase text-muted-foreground">The Council Quote</span>
                 <div className="h-[1px] w-6 bg-primary/20" />
               </div>
             </div>
@@ -140,8 +140,8 @@ function BlogsPreviewSection() {
               className="group cursor-pointer"
             >
               <div className="relative overflow-hidden rounded-xl aspect-[16/9] mb-3">
-                <img 
-                  src={post.image_url || post.image || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2671&auto=format&fit=crop"} 
+                <img
+                  src={post.image_url || post.image || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2671&auto=format&fit=crop"}
                   alt={post.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
@@ -176,9 +176,9 @@ const slideshowImages = [
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: { 
-    opacity: 1, 
-    transition: { staggerChildren: 0.15, delayChildren: 0.2 } 
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.15, delayChildren: 0.2 }
   }
 };
 
@@ -200,7 +200,7 @@ export default function HomePage() {
           .filter((d: any) => d.title === "slideshow_img")
           .map((d: any) => d.file_url || d.file)
           .filter(Boolean);
-        
+
         if (customSlides.length > 0) {
           setActiveSlides(customSlides);
           setCurrentImageIndex(0);
@@ -233,20 +233,19 @@ export default function HomePage() {
             <motion.div
               key={`${img}-${index}`}
               style={{ backgroundImage: `url('${img}')`, y: index === currentImageIndex ? y1 : 0 }}
-              className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-[2000ms] ease-in-out ${
-                index === currentImageIndex ? "opacity-100 scale-105" : "opacity-0 scale-100"
-              }`}
+              className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-[2000ms] ease-in-out ${index === currentImageIndex ? "opacity-100 scale-105" : "opacity-0 scale-100"
+                }`}
             />
           ))}
         </div>
 
         {/* Dynamic Gradient Overlay */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/30 via-primary/70 to-maroon-dark/90 backdrop-blur-[1px]" />
-        
+
         {/* Pattern Overlay */}
         <div className="absolute inset-0 opacity-15 bg-pattern mix-blend-overlay" />
 
-        <motion.div 
+        <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
@@ -255,16 +254,16 @@ export default function HomePage() {
         >
           <motion.div variants={itemVariants} className="mb-4 md:mb-6">
             <div className="relative inline-block">
-              <motion.div 
+              <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                 className="absolute inset-0 -m-2 border-2 border-dashed border-gold/30 rounded-full"
               />
-              <motion.img 
+              <motion.img
                 whileHover={{ scale: 1.1, rotate: 5 }}
-                src={mengoBadge} 
-                alt="Mengo Badge" 
-                className="relative h-20 w-20 rounded-full border-4 border-gold object-cover shadow-[0_0_20px_rgba(212,175,55,0.2)] transition-all sm:h-24 sm:w-24" 
+                src={mengoBadge}
+                alt="Mengo Badge"
+                className="relative h-20 w-20 rounded-full border-4 border-gold object-cover shadow-[0_0_20px_rgba(212,175,55,0.2)] transition-all sm:h-24 sm:w-24"
               />
             </div>
           </motion.div>
@@ -274,7 +273,7 @@ export default function HomePage() {
               Mengo Senior School
               <span className="mt-1 block text-gold-light text-xl sm:text-3xl md:text-4xl tracking-tight">Student Council</span>
             </h1>
-            
+
             <div className="flex items-center justify-center gap-3 mt-4">
               <div className="h-[1px] w-6 sm:w-10 bg-gold/50" />
               <motion.p className="text-[9px] sm:text-[10px] font-bold text-gold-light/90 italic tracking-[0.3em] uppercase">
@@ -293,7 +292,7 @@ export default function HomePage() {
               <Button className="w-full sm:w-auto px-6 py-5 text-sm shadow-2xl bg-gold text-gold-foreground hover:bg-gold-light transition-all rounded-lg overflow-hidden group relative" asChild>
                 <Link to="/student-voice">
                   <span className="absolute inset-0 w-full h-full -ml-16 bg-white/30 transform -skew-x-12 animate-shine"></span>
-                  <MessageSquare className="mr-2 h-4 w-4 relative z-10" /> 
+                  <MessageSquare className="mr-2 h-4 w-4 relative z-10" />
                   <span className="relative z-10 font-bold uppercase tracking-wider">Student Voice</span>
                 </Link>
               </Button>
@@ -314,11 +313,11 @@ export default function HomePage() {
       <ImpactStatsSection />
       <QuoteOfTheDaySection />
       <WhoWeAre />
-      
+
       {/* Live Council Hierarchy Section */}
       <section className="bg-background py-12 md:py-16 overflow-hidden">
         <div className="container mx-auto px-4">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
@@ -330,14 +329,14 @@ export default function HomePage() {
               Our organizational structure represents our commitment to transparency.
             </p>
           </motion.div>
-          
-          <motion.div 
+
+          <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             className="rounded-2xl border bg-card/20 shadow-lg overflow-hidden p-4 sm:p-6 backdrop-blur-xl"
           >
-             <HierarchyTree />
+            <HierarchyTree />
           </motion.div>
         </div>
       </section>
@@ -350,7 +349,7 @@ export default function HomePage() {
       <section className="bg-primary py-12 md:py-16 overflow-hidden relative">
         <div className="absolute inset-0 bg-hero-gradient opacity-90" />
         <div className="absolute inset-0 bg-pattern opacity-10" />
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
