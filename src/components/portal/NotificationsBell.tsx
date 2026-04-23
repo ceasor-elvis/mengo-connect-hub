@@ -131,7 +131,7 @@ export default function NotificationsBell() {
               </Button>
             )}
           </div>
-          <ScrollArea className="max-h-72">
+          <ScrollArea className="h-72 w-full">
             {!Array.isArray(notifications) || notifications.length === 0 ? (
               <p className="p-4 text-center text-xs text-muted-foreground">No notifications yet</p>
             ) : (
