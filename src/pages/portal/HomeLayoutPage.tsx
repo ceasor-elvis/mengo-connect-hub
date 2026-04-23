@@ -149,7 +149,7 @@ export default function HomeLayoutPage() {
                   </div>
                 </div>
                 <CardContent className="p-3 bg-card border-t flex justify-between items-center">
-                  <span className="text-[10px] font-mono text-muted-foreground uppercase">{img.id.split('-')[0]}</span>
+                  <span className="text-[10px] font-mono text-muted-foreground uppercase">{String(img.id).split('-')[0]}</span>
                   <p className="text-xs font-bold text-primary">Active in Slideshow</p>
                 </CardContent>
               </Card>

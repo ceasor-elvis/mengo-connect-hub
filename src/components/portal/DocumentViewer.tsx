@@ -15,7 +15,7 @@ export default function DocumentViewer({ isOpen, onClose, fileUrl, title, type =
   if (!fileUrl) return null;
 
   const getAbsoluteUrl = (url: string) => {
-    if (url.startsWith('http') || url.startsWith('blob:')) return url;
+    if (url.startsWith('http') || url.startsWith('blob:') || url.includes('://')) return url;
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
     const base = apiUrl.endsWith('/api') ? apiUrl.replace(/\/api$/, '') : apiUrl;
     return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
@@ -25,22 +25,24 @@ export default function DocumentViewer({ isOpen, onClose, fileUrl, title, type =
 
   const getExt = (url: string) => {
     try {
-      const path = url.split('?')[0].split('#')[0];
-      return path.split('.').pop()?.toLowerCase() || "";
+      const baseUrl = url.split(/[?#]/)[0];
+      const filename = baseUrl.split('/').pop() || "";
+      return filename.includes('.') ? filename.split('.').pop()?.toLowerCase() || "" : "";
     } catch { return ""; }
   };
 
   const ext = getExt(absoluteFileUrl);
   const isBlob = absoluteFileUrl.startsWith('blob:');
   
-  const isImage = type === 'image' || (type === 'auto' && /^(jpg|jpeg|png|webp|gif|svg)$/i.test(ext));
+  const isImage = type === 'image' || (type === 'auto' && /^(jpg|jpeg|png|webp|gif|svg|bmp)$/i.test(ext));
   const isPDF = type === 'pdf' || isBlob || (type === 'auto' && ext === 'pdf');
   const isOffice = type === 'office' || (type === 'auto' && /^(docx|doc|xlsx|xls|pptx|ppt)$/i.test(ext));
 
   const handleDownload = () => {
     const a = document.createElement("a");
     a.href = absoluteFileUrl;
-    a.download = title.endsWith(ext) ? title : `${title}.${ext || 'pdf'}`;
+    const downloadName = title.includes('.') ? title : `${title}.${ext || 'pdf'}`;
+    a.download = downloadName;
     a.target = "_blank";
     document.body.appendChild(a);
     a.click();
@@ -49,6 +51,7 @@ export default function DocumentViewer({ isOpen, onClose, fileUrl, title, type =
 
   const getViewerUrl = () => {
     if (isOffice && !isBlob) {
+      // Use Google Docs viewer for office files
       return `https://docs.google.com/viewer?url=${encodeURIComponent(absoluteFileUrl)}&embedded=true`;
     }
     return absoluteFileUrl;
@@ -67,6 +70,9 @@ export default function DocumentViewer({ isOpen, onClose, fileUrl, title, type =
             </DialogTitle>
           </div>
           <div className="flex items-center gap-2 pr-8">
+             <Button variant="ghost" size="sm" className="h-8 text-xs gap-1.5" onClick={() => window.open(absoluteFileUrl, '_blank')}>
+               <ExternalLink className="h-3.5 w-3.5" /> Open in New Tab
+             </Button>
              <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5" onClick={handleDownload}>
                <Download className="h-3.5 w-3.5" /> Download
              </Button>
@@ -74,7 +80,26 @@ export default function DocumentViewer({ isOpen, onClose, fileUrl, title, type =
         </DialogHeader>
 
         <div className="flex-1 bg-slate-100 flex items-center justify-center overflow-auto relative">
-          {isPDF || isOffice ? (
+          {isPDF ? (
+            <object
+              data={absoluteFileUrl}
+              type="application/pdf"
+              className="w-full h-full border-none shadow-inner"
+            >
+              <div className="text-center p-12 bg-white rounded-2xl shadow-sm border border-slate-200">
+                <FileText className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                <p className="text-slate-600 font-medium">Your browser doesn't support direct PDF preview.</p>
+                <div className="flex flex-col gap-3 mt-6">
+                  <Button variant="default" onClick={() => window.open(absoluteFileUrl, '_blank')}>
+                    <ExternalLink className="h-4 w-4 mr-2" /> Open PDF in New Tab
+                  </Button>
+                  <Button variant="outline" onClick={handleDownload}>
+                    <Download className="h-4 w-4 mr-2" /> Download to View Locally
+                  </Button>
+                </div>
+              </div>
+            </object>
+          ) : isOffice ? (
             <iframe
               src={getViewerUrl()}
               className="w-full h-full border-none shadow-inner"

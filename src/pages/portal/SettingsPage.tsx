@@ -23,65 +23,7 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
 
-  // Slideshow Management State
-  const [slideshowImages, setSlideshowImages] = useState<any[]>([]);
-  const [loadingSlideshow, setLoadingSlideshow] = useState(false);
-  const [uploadingSlide, setUploadingSlide] = useState(false);
-
   const isAdmin = useAuth().hasAnyRole(["adminabsolute", "chairperson"]);
-
-  const fetchSlides = async () => {
-    if (!isAdmin) return;
-    setLoadingSlideshow(true);
-    try {
-      const { data } = await api.get("/documents/");
-      const entries = Array.isArray(data) ? data : data.results || [];
-      const slides = entries.filter((d: any) => d.title === "slideshow_img");
-      setSlideshowImages(slides);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoadingSlideshow(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSlides();
-  }, [isAdmin]);
-
-  const handleUploadSlide = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingSlide(true);
-    try {
-      const formData = new FormData();
-      formData.append("title", "slideshow_img");
-      formData.append("category", "Other");
-      formData.append("access_level", "public");
-      formData.append("file", file);
-
-      await api.post("/documents/", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
-      toast.success("Slideshow image uploaded!");
-      fetchSlides();
-    } catch (err) {
-      toast.error("Failed to upload slide.");
-    } finally {
-      setUploadingSlide(false);
-    }
-  };
-
-  const handleDeleteSlide = async (id: string) => {
-    if (!confirm("Remove this image from the slideshow?")) return;
-    try {
-      await api.delete(`/documents/${id}/`);
-      toast.success("Image removed.");
-      fetchSlides();
-    } catch (err) {
-      toast.error("Failed to delete image.");
-    }
-  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -289,64 +231,6 @@ export default function SettingsPage() {
           </Button>
         </CardContent>
       </Card>
-
-      {/* Admin Slideshow Management */}
-      {isAdmin && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader>
-            <CardTitle>Hero Slideshow Management</CardTitle>
-            <CardDescription>Upload or remove images displayed on the homepage background slideshow.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-4 items-center">
-              <div>
-                <Label htmlFor="slide_upload" className="cursor-pointer">
-                  <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2">
-                    {uploadingSlide ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ImagePlus className="mr-2 h-4 w-4" />}
-                    Upload New Image
-                  </div>
-                </Label>
-                <Input
-                  id="slide_upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleUploadSlide}
-                  className="hidden"
-                  disabled={uploadingSlide}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">Images should ideally be 1920x1080 (16:9) format.</p>
-            </div>
-
-            <div className="pt-4">
-              <Label className="mb-2 block">Current Custom Images ({slideshowImages.length})</Label>
-              {loadingSlideshow ? (
-                <div className="flex items-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading slides...</div>
-              ) : slideshowImages.length === 0 ? (
-                <div className="p-4 rounded-xl border border-dashed border-primary/20 text-center opacity-70">
-                  <p className="text-xs font-medium italic">No custom images uploaded yet. Homepage is using defaults.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {slideshowImages.map((doc: any) => {
-                    const fileUrl = doc.file_url || doc.file || "#";
-                    return (
-                      <div key={doc.id} className="relative group rounded-lg overflow-hidden border bg-background aspect-video shadow-sm">
-                        <img src={fileUrl} alt="Slide" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteSlide(doc.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
