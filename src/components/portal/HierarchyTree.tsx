@@ -182,10 +182,9 @@ export default function HierarchyTree({ refreshKey }: { refreshKey?: number }) {
 
   const fetchData = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
       const [rolesRes, profilesRes] = await Promise.all([
-        axios.get(`${apiUrl}/users/all-roles/`).catch(() => ({ data: [] })),
-        axios.get(`${apiUrl}/users/all-profiles/`).catch(() => ({ data: [] })),
+        api.get("/users/all-roles/").catch(() => ({ data: [] })),
+        api.get("/users/all-profiles/").catch(() => ({ data: [] })),
       ]);
       const rolesData = rolesRes.data;
       const profilesData = profilesRes.data;
