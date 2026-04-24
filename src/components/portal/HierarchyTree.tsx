@@ -64,14 +64,14 @@ function NodeCard({
       </div>
 
       <div className="text-center leading-tight w-full space-y-0.5 sm:space-y-1">
-        <p className={`font-bold text-[9px] sm:text-[11px] break-words uppercase tracking-widest leading-[1.1] ${!profile && !isMultipleRole ? 'text-current/60' : ''}`}>{node.label}</p>
+        <p className={`font-bold text-[8px] sm:text-[11px] break-words uppercase tracking-wider sm:tracking-widest leading-[1.1] ${!profile && !isMultipleRole ? 'text-current/60' : ''}`}>{node.label}</p>
         <div className="h-[1px] w-4 sm:w-6 mx-auto bg-current/20 rounded-full" />
         {isMultipleRole ? (
-          <p className="text-[8px] sm:text-[9px] opacity-70 font-semibold italic tracking-tight">Multiple Members</p>
+          <p className="text-[7.5px] sm:text-[9px] opacity-70 font-semibold italic tracking-tight">Multiple Members</p>
         ) : profile ? (
-          <p className="text-[8px] sm:text-[9px] opacity-90 font-bold truncate w-full px-1">{profile.full_name}</p>
+          <p className="text-[7.5px] sm:text-[9px] opacity-90 font-bold truncate w-full px-1">{profile.full_name}</p>
         ) : (
-          <p className="text-[7px] sm:text-[8px] opacity-40 italic uppercase tracking-widest font-light">Vacant</p>
+          <p className="text-[7px] sm:text-[8px] opacity-40 italic uppercase tracking-wider sm:tracking-widest font-light">Vacant</p>
         )}
       </div>
 
