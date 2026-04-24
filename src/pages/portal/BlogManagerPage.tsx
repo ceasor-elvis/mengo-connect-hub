@@ -12,6 +12,16 @@ import { BlockNoteView } from "@blocknote/mantine";
 import { useCreateBlockNote } from "@blocknote/react";
 import "@blocknote/mantine/style.css";
 import "@blocknote/core/fonts/inter.css";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { BlockNoteRenderer } from "@/components/blog/BlockNoteRenderer";
 
 export default function BlogManagerPage() {
@@ -21,6 +31,8 @@ export default function BlogManagerPage() {
   const [posting, setPosting] = useState(false);
   
   const [title, setTitle] = useState("");
+  const [editingBlogId, setEditingBlogId] = useState<number | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [coverImage, setCoverImage] = useState<string | null>(null); // base64 or URL
   const [coverMode, setCoverMode] = useState<"upload" | "url">("upload");
   const [coverUrlInput, setCoverUrlInput] = useState("");
@@ -75,37 +87,85 @@ export default function BlogManagerPage() {
 
       setPosting(true);
       const finalCover = coverMode === "url" ? coverUrlInput.trim() : coverImage;
-      await api.post("/blogs/", {
+      const payload: any = {
         title,
         content: JSON.stringify(blocks),
-        media_url: finalCover || null,
         media_type: finalCover ? "image" : "none",
         author: profile?.full_name || "Publicity Office",
-      });
+      };
+
+      if (!editingBlogId) {
+        payload.media_url = finalCover || null;
+      } else {
+        if (finalCover && finalCover.startsWith("data:image/")) {
+          payload.media_url = finalCover;
+        } else if (!finalCover) {
+          payload.media_url = null;
+        }
+      }
+
+      if (editingBlogId) {
+        await api.patch(`/blogs/${editingBlogId}/`, payload);
+        toast.success("Blog Updated!");
+      } else {
+        await api.post("/blogs/", payload);
+        toast.success("Blog Posted!");
+      }
       
-      toast.success("Blog Posted!");
-      setTitle("");
-      setCoverImage(null);
-      setCoverUrlInput("");
-      setCoverMode("upload");
-      editor.replaceBlocks(editor.document, [{ type: "paragraph", content: "" }]); 
+      handleCancelEdit();
       fetchBlogs();
     } catch (e: any) {
-      toast.error("Failed to post blog");
+      toast.error(`Failed to ${editingBlogId ? 'update' : 'post'} blog`);
       console.error(e);
     } finally {
       setPosting(false);
     }
   };
 
-  const handleDeleteBlog = async (id: number) => {
-    if (!window.confirm("Are you sure you want to permanently delete this blog post?")) return;
+  const handleEditBlog = (blog: any) => {
+    setEditingBlogId(blog.id);
+    setTitle(blog.title);
+    
+    if (blog.media_url) {
+      setCoverImage(blog.media_url);
+      setCoverMode("upload"); // Default to upload UI with existing preview
+    } else {
+      setCoverImage(null);
+      setCoverUrlInput("");
+      setCoverMode("upload");
+    }
+
     try {
-      await api.delete(`/blogs/${id}/`);
+      const parsedBlocks = typeof blog.content === "string" ? JSON.parse(blog.content) : blog.content;
+      if (Array.isArray(parsedBlocks)) {
+        editor?.replaceBlocks(editor.document, parsedBlocks);
+      }
+    } catch {
+      editor?.replaceBlocks(editor.document, [{ type: "paragraph", content: blog.content || "" }]);
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingBlogId(null);
+    setTitle("");
+    setCoverImage(null);
+    setCoverUrlInput("");
+    setCoverMode("upload");
+    editor?.replaceBlocks(editor.document, [{ type: "paragraph", content: "" }]);
+  };
+
+  const executeDelete = async () => {
+    if (!deleteConfirmId) return;
+    try {
+      await api.delete(`/blogs/${deleteConfirmId}/`);
       toast.success("Blog deleted successfully");
       fetchBlogs();
     } catch (e: any) {
       toast.error(e.response?.data?.detail || "Failed to delete blog");
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -184,7 +244,10 @@ export default function BlogManagerPage() {
         <TabsContent value="blog" className="space-y-6 mt-6">
           <Card>
             <CardContent className="p-6 space-y-4">
-              <h2 className="text-lg font-semibold flex items-center gap-2"><Plus className="h-4 w-4 text-primary" /> Create New Post</h2>
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Plus className="h-4 w-4 text-primary" /> 
+                {editingBlogId ? "Edit Post" : "Create New Post"}
+              </h2>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="title" className="mb-1 block">Blog Title</Label>
@@ -265,10 +328,17 @@ export default function BlogManagerPage() {
                   )}
                 </div>
 
-                <Button onClick={handlePost} disabled={posting || !title} className="mt-2 min-w-[150px]">
-                  {posting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileText className="h-4 w-4 mr-2" />} 
-                  Post Announcement
-                </Button>
+                <div className="flex gap-3 mt-2">
+                  <Button onClick={handlePost} disabled={posting || !title} className="min-w-[150px]">
+                    {posting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileText className="h-4 w-4 mr-2" />} 
+                    {editingBlogId ? "Update Announcement" : "Post Announcement"}
+                  </Button>
+                  {editingBlogId && (
+                    <Button variant="outline" onClick={handleCancelEdit} disabled={posting} className="min-w-[100px]">
+                      Cancel Edit
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -310,8 +380,11 @@ export default function BlogManagerPage() {
                         </div>
                         
                         <div className="pt-4 flex items-center justify-between">
-                          <Button variant="outline" size="sm" onClick={() => toast.info("Full view coming soon!")}>Read Full Post</Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleDeleteBlog(b.id)}>Delete Blog</Button>
+                          <Button variant="outline" size="sm" onClick={() => window.open(`/blog?blogId=${b.id}`, "_blank")}>Read Full Post</Button>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white" onClick={() => handleEditBlog(b)}>Edit</Button>
+                            <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmId(b.id)}>Delete</Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -396,6 +469,24 @@ export default function BlogManagerPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(isOpen) => !isOpen && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the blog post from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={executeDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

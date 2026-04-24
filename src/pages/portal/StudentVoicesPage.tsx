@@ -20,6 +20,7 @@ import mengoBadge from "@/assets/mengo-badge.jpg";
 import { unsaLogoB64 } from "@/assets/unsaBase64";
 import { format } from "date-fns";
 import DocumentViewer from "@/components/portal/DocumentViewer";
+import { notifyRole, notifyUser } from "@/hooks/useNotify";
 
 interface Voice {
   id: string; title: string; category: string; description: string;
@@ -246,6 +247,7 @@ export default function StudentVoicesPage() {
         pending_chairperson_approval: true
       });
       toast.success("Forwarding request sent to Chairperson for approval");
+      notifyRole("chairperson", "Voice Forwarding Request", `A request to forward "${selected.title}" to the Patron requires your approval.`, "warning");
       setSelected({ ...selected, pending_chairperson_approval: true });
       fetchVoices();
     } catch (e) {
@@ -261,6 +263,7 @@ export default function StudentVoicesPage() {
         pending_chairperson_approval: false
       });
       toast.success("Approved & forwarded to Patron");
+      notifyRole("patron", "New Student Voice Forwarded", `The Chairperson has forwarded a student voice: "${selected.title}" for your review.`, "info");
       setSelected({ ...selected, is_forwarded_to_patron: true, pending_chairperson_approval: false });
       fetchVoices();
     } catch (e) {
