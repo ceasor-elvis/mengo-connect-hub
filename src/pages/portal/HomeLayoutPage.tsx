@@ -12,7 +12,7 @@ import {
 import { useActivityLog } from "@/hooks/useActivityLog";
 
 interface BackgroundImage { id: string; title: string; file_url: string; }
-interface StatItem { id?: string; title: string; description: string; }
+interface StatItem { id?: number; title: string; value: string; }
 
 const STAT_DEFINITIONS = [
   { key: "Students Represented", icon: Users,        placeholder: "e.g. 2,500+", color: "from-blue-500/10 to-blue-600/5",    accent: "text-blue-600",    border: "border-blue-200"   },
@@ -33,18 +33,18 @@ export default function HomeLayoutPage() {
   const fetchStats = async () => {
     try {
       setStatsLoading(true);
-      const { data } = await api.get("/documents/?category=home_stats");
+      const { data } = await api.get("/home-stats/");
       const items: any[] = Array.isArray(data) ? data : data.results || [];
       setStats(STAT_DEFINITIONS.map(def => {
         const found = items.find(i => i.title === def.key);
-        return found ? { id: found.id, title: def.key, description: found.description ?? "" } : { title: def.key, description: "" };
+        return found ? { id: found.id, title: def.key, value: found.value ?? "" } : { title: def.key, value: "" };
       }));
     } catch { /* keep defaults */ }
     finally { setStatsLoading(false); }
   };
 
   const handleStatChange = (i: number, val: string) => {
-    const next = [...stats]; next[i] = { ...next[i], description: val }; setStats(next);
+    const next = [...stats]; next[i] = { ...next[i], value: val }; setStats(next);
   };
 
   const handleSaveStats = async () => {
@@ -52,12 +52,9 @@ export default function HomeLayoutPage() {
     try {
       for (const stat of stats) {
         if (!stat.id) {
-          const fd = new FormData();
-          fd.append("title", stat.title); fd.append("description", stat.description); fd.append("category", "home_stats");
-          fd.append("file", new Blob(["stat"], { type: "text/plain" }), "stat.txt");
-          await api.post("/documents/", fd, { headers: { "Content-Type": "multipart/form-data" } });
+          await api.post("/home-stats/", { title: stat.title, value: stat.value });
         } else {
-          await api.patch(`/documents/${stat.id}/`, { description: stat.description });
+          await api.patch(`/home-stats/${stat.id}/`, { value: stat.value });
         }
       }
       toast.success("Statistics saved! The home page will update immediately.");
@@ -138,13 +135,13 @@ export default function HomeLayoutPage() {
                       <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{def.key}</span>
                     </div>
                     <div className={`text-3xl font-serif font-bold mb-3 ${def.accent}`}>
-                      {stat?.description || <span className="text-muted-foreground/40 italic text-base font-normal">Not set</span>}
+                      {stat?.value || <span className="text-muted-foreground/40 italic text-base font-normal">Not set</span>}
                     </div>
                     <div className="relative">
                       <Pencil className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/50" />
                       <Input
                         id={`stat-input-${i}`}
-                        value={stat?.description ?? ""}
+                        value={stat?.value ?? ""}
                         onChange={(e) => handleStatChange(i, e.target.value)}
                         placeholder={def.placeholder}
                         className="pl-8 h-9 text-sm bg-white/60 border-white/80 focus-visible:ring-primary/30"

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FileText, Upload, Download, Search, Loader2, Check, ShieldAlert, Eye, Trash2, LayoutGrid, List } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { notifyRole } from "@/hooks/useNotify";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
@@ -80,6 +81,8 @@ export default function DocumentsPage() {
      setApproving(docId);
      try {
        await api.patch(`/documents/${docId}/`, { target_office: "patron" });
+       const doc = docs.find(d => d.id === docId);
+       notifyRole("patron", "Document Forwarded", `The Chairperson has approved and forwarded a document ("${doc?.title || 'System Document'}") to your office for review.`, "info");
        toast.success("Document approved and forwarded to Patron.");
        fetchDocs();
      } catch (err) {
@@ -119,6 +122,15 @@ export default function DocumentsPage() {
         headers: { "Content-Type": "multipart/form-data" }
       });
       
+      if (accessLevel === "shared" && targetOffice) {
+        notifyRole(
+          targetOffice, 
+          "New Document Shared", 
+          `A new document "${title}" has been securely shared with your office.`, 
+          "info"
+        );
+      }
+
       toast.success("Uploaded!");
       setOpen(false); 
       setTitle(""); 
@@ -256,47 +268,49 @@ export default function DocumentsPage() {
           </Dialog>
 
           {/* Simple Upload flow */}
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm"><Upload className="mr-1 h-4 w-4" /> Upload</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-sm">
-              <DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
-              <div className="space-y-3 pt-2">
-                <div><Label>Title</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Term 1 Minutes" /></div>
-                <div><Label>Category</Label>
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div><Label>Access Level</Label>
-                  <Select value={accessLevel} onValueChange={setAccessLevel}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="public">Public (All members)</SelectItem>
-                      <SelectItem value="private">Private (My Office Only)</SelectItem>
-                      <SelectItem value="shared">Share with Specific Office</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {accessLevel === "shared" && (
-                  <div><Label>Target Office</Label>
-                    <Select value={targetOffice} onValueChange={setTargetOffice}>
-                      <SelectTrigger><SelectValue placeholder="Select Office" /></SelectTrigger>
+          {hasPermission("manage_documents") && (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Upload className="mr-1 h-4 w-4" /> Upload</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-sm">
+                <DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
+                <div className="space-y-3 pt-2">
+                  <div><Label>Title</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Term 1 Minutes" /></div>
+                  <div><Label>Category</Label>
+                    <Select value={category} onValueChange={setCategory}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Access Level</Label>
+                    <Select value={accessLevel} onValueChange={setAccessLevel}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {OFFICES.map(o => <SelectItem key={o} value={o}>{ROLE_LABELS[o]}</SelectItem>)}
+                        <SelectItem value="public">Public (All members)</SelectItem>
+                        <SelectItem value="private">Private (My Office Only)</SelectItem>
+                        <SelectItem value="shared">Share with Specific Office</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                )}
-                <div><Label>File</Label><Input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={e => setFile(e.target.files?.[0] || null)} /></div>
-                <Button onClick={handleUpload} disabled={uploading || !file || !title || (accessLevel === 'shared' && !targetOffice)} className="w-full">
-                  {uploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> : "Upload"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+                  {accessLevel === "shared" && (
+                    <div><Label>Target Office</Label>
+                      <Select value={targetOffice} onValueChange={setTargetOffice}>
+                        <SelectTrigger><SelectValue placeholder="Select Office" /></SelectTrigger>
+                        <SelectContent>
+                          {OFFICES.map(o => <SelectItem key={o} value={o}>{ROLE_LABELS[o]}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div><Label>File</Label><Input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={e => setFile(e.target.files?.[0] || null)} /></div>
+                  <Button onClick={handleUpload} disabled={uploading || !file || !title || (accessLevel === 'shared' && !targetOffice)} className="w-full">
+                    {uploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> : "Upload"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
 

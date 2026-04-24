@@ -17,46 +17,15 @@ import { FileText } from "lucide-react";
 
 export default function HierarchyPage() {
   const { profile, roles } = useAuth();
-  const [councillors, setCouncillors] = useState<any[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-
-  const [selectedUser, setSelectedUser] = useState("");
-  const [selectedRole, setSelectedRole] = useState("");
 
   const isAdminOrCP = roles?.some(r => ["adminabsolute", "chairperson"].includes(r));
   const isAbsoluteAdmin = roles?.includes("adminabsolute");
 
   const { tree, loading: loadingTree } = useHierarchy(refreshKey);
 
-  useEffect(() => {
-    if (isAdminOrCP) {
-      api.get("/users/councillors/")
-        .then(({ data }) => setCouncillors(Array.isArray(data) ? data : data.results || []))
-        .catch(() => toast.error("Failed to load members"))
-        .finally(() => setLoadingUsers(false));
-    }
-  }, [isAdminOrCP]);
 
-  const handleAssign = async () => {
-    if (!selectedUser || !selectedRole) return;
-    setUpdating(true);
-    try {
-      await api.post("/users/upgrade-role/", {
-        user_id: selectedUser,
-        new_role: selectedRole,
-      });
-      toast.success("Cabinet position updated!");
-      setRefreshKey(prev => prev + 1);
-      setSelectedRole("");
-      setSelectedUser("");
-    } catch (e) {
-      toast.error("Failed to update position");
-    } finally {
-      setUpdating(false);
-    }
-  };
 
   const exportToPDF = async () => {
     const element = document.getElementById("hierarchy-tree-capture");
@@ -131,60 +100,6 @@ export default function HierarchyPage() {
         </TabsList>
 
         <TabsContent value="view" className="space-y-6">
-          {isAdminOrCP && (
-            <Card className="border-primary/20 bg-primary/5">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider">
-                  <UserPlus className="h-4 w-4" /> Manage Cabinet Positions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                  <div className="space-y-2">
-                    <Label className="text-[11px] uppercase font-bold text-muted-foreground">1. Select Member</Label>
-                    <Select value={selectedUser} onValueChange={setSelectedUser}>
-                      <SelectTrigger className="bg-background">
-                        <SelectValue placeholder="Select a councillor..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {councillors.map(c => (
-                          <SelectItem key={c.user_id} value={c.user_id}>{c.full_name} ({c.student_class})</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-[11px] uppercase font-bold text-muted-foreground">2. Assign Position</Label>
-                    <Select value={selectedRole} onValueChange={setSelectedRole} disabled={loadingTree}>
-                      <SelectTrigger className="bg-background">
-                        <SelectValue placeholder={loadingTree ? "Loading roles..." : "Select position..."} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {tree.map(node => (
-                          <SelectItem key={node.role} value={node.role}>{node.label}</SelectItem>
-                        ))}
-                        <SelectItem value="councillor">Strip to Mere Councillor</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Button 
-                    onClick={handleAssign} 
-                    disabled={updating || !selectedUser || !selectedRole}
-                    className="w-full"
-                  >
-                    {updating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />} 
-                    Confirm Assignment
-                  </Button>
-                </div>
-                <p className="text-[10px] text-muted-foreground mt-3 italic">
-                  Note: Assigning a leadership position will automatically update their permissions and the public hierarchy tree.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
           <Card>
             <CardHeader className="pb-2 px-3 sm:px-6 border-b mb-4">
               <CardTitle className="text-sm font-semibold">Council Structure & Current Officers</CardTitle>

@@ -113,9 +113,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth();
   }, []);
 
-  const hasRole = (role: AppRole) => roles.includes('adminabsolute') || roles.includes(role);
-  const hasAnyRole = (r: AppRole[]) => roles.includes('adminabsolute') || r.some((role) => roles.includes(role));
-  const hasPermission = (p: string) => roles.includes('adminabsolute') || permissions.includes(p);
+  const hasRole = (role: AppRole) => roles.includes(role);
+  const hasAnyRole = (r: AppRole[]) => r.some((role) => roles.includes(role));
+  const hasPermission = (p: string) => permissions.includes(p);
 
   const setAuthData = (access: string, refresh: string, u: User, p?: Profile, r?: string[]) => {
     localStorage.setItem("access_token", access);

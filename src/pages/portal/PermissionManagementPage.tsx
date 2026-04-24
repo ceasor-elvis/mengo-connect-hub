@@ -9,7 +9,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Settings2,
-  User as UserIcon,
+  CircleDashed,
+  Check,
+  X,
   Fingerprint
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -39,6 +41,8 @@ import {
 } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 interface Permission {
   name: string;
@@ -56,8 +60,10 @@ interface UserProfile {
   user_id: number;
   full_name: string;
   username: string;
-  role: string;
+  is_active: boolean;
   permissions: string[];
+  granted_permissions: string[];
+  denied_permissions: string[];
 }
 
 export default function PermissionManagementPage() {
@@ -95,17 +101,29 @@ export default function PermissionManagementPage() {
     fetchData();
   }, []);
 
-  const handleTogglePermission = (code: string, type: 'role' | 'user') => {
+  const handleTogglePermission = (code: string, type: 'role' | 'user', action: 'allow' | 'deny' | 'inherit' = 'inherit') => {
     if (type === 'role' && selectedRole) {
       const newPerms = selectedRole.permissions.includes(code)
         ? selectedRole.permissions.filter(p => p !== code)
         : [...selectedRole.permissions, code];
       setSelectedRole({ ...selectedRole, permissions: newPerms });
     } else if (type === 'user' && selectedUser) {
-      const newPerms = selectedUser.permissions.includes(code)
-        ? selectedUser.permissions.filter(p => p !== code)
-        : [...selectedUser.permissions, code];
-      setSelectedUser({ ...selectedUser, permissions: newPerms });
+      let newGrants = [...(selectedUser.granted_permissions || [])];
+      let newDenies = [...selectedUser.denied_permissions];
+
+      if (action === 'allow') {
+        if (!newGrants.includes(code)) newGrants.push(code);
+        newDenies = newDenies.filter(p => p !== code);
+      } else if (action === 'deny') {
+        newGrants = newGrants.filter(p => p !== code);
+        if (!newDenies.includes(code)) newDenies.push(code);
+      } else {
+        // Inherit / Reset
+        newGrants = newGrants.filter(p => p !== code);
+        newDenies = newDenies.filter(p => p !== code);
+      }
+
+      setSelectedUser({ ...selectedUser, granted_permissions: newGrants, denied_permissions: newDenies });
     }
   };
 
@@ -118,13 +136,17 @@ export default function PermissionManagementPage() {
         permissions: selectedRole.permissions
       });
       toast.success(`Permissions updated for ${selectedRole.role}`);
-      // Refresh local roles list
       setRoles(roles.map(r => r.role === selectedRole.role ? selectedRole : r));
-    } catch (error) {
-      toast.error("Failed to save permissions");
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to save permissions");
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleResetOverrides = () => {
+    if (!selectedUser) return;
+    setSelectedUser({ ...selectedUser, granted_permissions: [], denied_permissions: [] });
   };
 
   const saveUserPermissions = async () => {
@@ -133,13 +155,13 @@ export default function PermissionManagementPage() {
     try {
       await api.post("/users/users/update-permissions/", {
         user_id: selectedUser.user_id,
-        permissions: selectedUser.permissions
+        permissions: selectedUser.granted_permissions,
+        denied_permissions: selectedUser.denied_permissions
       });
-      toast.success(`Direct permissions updated for ${selectedUser.username}`);
-      // Refresh local profiles list
+      toast.success(`Overrides updated for ${selectedUser.username}`);
       setProfiles(profiles.map(p => p.user_id === selectedUser.user_id ? selectedUser : p));
-    } catch (error) {
-      toast.error("Failed to save permissions");
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to save permissions");
     } finally {
       setSaving(false);
     }
@@ -329,7 +351,7 @@ export default function PermissionManagementPage() {
                           }`}
                         >
                           <div className={`h-10 w-10 rounded-full flex items-center justify-center ${selectedUser?.user_id === p.user_id ? "bg-white/20" : "bg-primary/10"}`}>
-                            <UserIcon className="h-5 w-5" />
+                            <Fingerprint className="h-5 w-5" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold truncate">{p.full_name}</p>
@@ -357,20 +379,30 @@ export default function PermissionManagementPage() {
                   </CardDescription>
                 </div>
                 {selectedUser && (
-                  <Button 
-                    onClick={saveUserPermissions} 
-                    disabled={saving}
-                    className="gap-2 shadow-sm"
-                  >
-                    {saving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Save className="h-4 w-4" />}
-                    Save Overrides
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline"
+                      onClick={handleResetOverrides}
+                      className="gap-2"
+                    >
+                      <CircleDashed className="h-4 w-4" />
+                      Reset to Default
+                    </Button>
+                    <Button 
+                      onClick={saveUserPermissions} 
+                      disabled={saving}
+                      className="gap-2 shadow-sm"
+                    >
+                      {saving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Save className="h-4 w-4" />}
+                      Save Overrides
+                    </Button>
+                  </div>
                 )}
               </CardHeader>
               <CardContent>
                 {!selectedUser ? (
                   <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground p-8 text-center bg-muted/10 rounded-xl border border-dashed border-border/50">
-                    <UserIcon className="h-12 w-12 mb-4 opacity-20" />
+                    <Fingerprint className="h-12 w-12 mb-4 opacity-20" />
                     <p className="font-medium">No user selected</p>
                     <p className="text-sm">Search and pick a user to manage their specific access levels.</p>
                   </div>
@@ -402,22 +434,51 @@ export default function PermissionManagementPage() {
                           </AccordionTrigger>
                           <AccordionContent className="pb-6">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2">
-                              {categoryPerms.map((perm) => (
-                                <div 
-                                  key={perm.code} 
-                                  className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-card hover:border-primary/30 transition-all group"
-                                >
-                                  <div className="space-y-1">
-                                    <p className="text-sm font-semibold group-hover:text-primary transition-colors">{perm.name}</p>
-                                    <code className="text-[10px] text-muted-foreground bg-muted p-1 px-1.5 rounded uppercase tracking-wider">{perm.code}</code>
-                                  </div>
-                                  <Switch
-                                    checked={selectedUser.permissions.includes(perm.code)}
-                                    onCheckedChange={() => handleTogglePermission(perm.code, 'user')}
-                                    className="data-[state=checked]:bg-primary shadow-sm"
-                                  />
-                                </div>
-                              ))}
+                              {categoryPerms.map((perm) => {
+                                  const roleObj = roles.find(r => r.role === selectedUser.role);
+                                  const inRole = roleObj?.permissions.includes(perm.code) || false;
+                                  
+                                  // Determine current override state (ONLY use raw lists for radio value)
+                                  const isExplicitlyAllowed = selectedUser.granted_permissions?.includes(perm.code);
+                                  const isExplicitlyDenied = selectedUser.denied_permissions?.includes(perm.code);
+                                  const value = isExplicitlyAllowed ? "allow" : (isExplicitlyDenied ? "deny" : "inherit");
+                                  
+                                  return (
+                                    <div 
+                                      key={perm.code} 
+                                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-border/40 bg-card hover:border-primary/30 transition-all group gap-4"
+                                    >
+                                      <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                          <p className="text-sm font-semibold group-hover:text-primary transition-colors">{perm.name}</p>
+                                          {inRole && (
+                                            <Badge variant="outline" className="text-[9px] h-4 px-1.5 opacity-60">Role Default</Badge>
+                                          )}
+                                        </div>
+                                        <code className="text-[10px] text-muted-foreground bg-muted p-1 px-1.5 rounded uppercase tracking-wider">{perm.code}</code>
+                                      </div>
+                                      
+                                      <RadioGroup 
+                                        value={value} 
+                                        onValueChange={(val) => handleTogglePermission(perm.code, 'user', val as any)}
+                                        className="flex items-center gap-3 bg-muted/30 p-2 rounded-lg border border-border/50"
+                                      >
+                                        <div className="flex items-center space-x-1.5">
+                                          <RadioGroupItem value="inherit" id={`inherit-${perm.code}`} className="h-3.5 w-3.5" />
+                                          <Label htmlFor={`inherit-${perm.code}`} className="text-[10px] cursor-pointer">Inherit</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-1.5">
+                                          <RadioGroupItem value="allow" id={`allow-${perm.code}`} className="h-3.5 w-3.5 border-emerald-500 text-emerald-500" />
+                                          <Label htmlFor={`allow-${perm.code}`} className="text-[10px] cursor-pointer text-emerald-600 font-medium">Allow</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-1.5">
+                                          <RadioGroupItem value="deny" id={`deny-${perm.code}`} className="h-3.5 w-3.5 border-destructive text-destructive" />
+                                          <Label htmlFor={`deny-${perm.code}`} className="text-[10px] cursor-pointer text-destructive font-medium">Deny</Label>
+                                        </div>
+                                      </RadioGroup>
+                                    </div>
+                                  );
+                                })}
                             </div>
                           </AccordionContent>
                         </AccordionItem>

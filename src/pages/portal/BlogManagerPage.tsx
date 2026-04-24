@@ -26,6 +26,7 @@ import { BlockNoteRenderer } from "@/components/blog/BlockNoteRenderer";
 
 export default function BlogManagerPage() {
   const { profile, hasPermission } = useAuth();
+  const canManageBlog = hasPermission("manage_blog");
   const [blogs, setBlogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
@@ -242,7 +243,8 @@ export default function BlogManagerPage() {
         </TabsList>
 
         <TabsContent value="blog" className="space-y-6 mt-6">
-          <Card>
+          {canManageBlog && (
+            <Card>
             <CardContent className="p-6 space-y-4">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <Plus className="h-4 w-4 text-primary" /> 
@@ -342,6 +344,7 @@ export default function BlogManagerPage() {
               </div>
             </CardContent>
           </Card>
+          )}
 
           <div className="space-y-4">
             <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -381,10 +384,12 @@ export default function BlogManagerPage() {
                         
                         <div className="pt-4 flex items-center justify-between">
                           <Button variant="outline" size="sm" onClick={() => window.open(`/blog?blogId=${b.id}`, "_blank")}>Read Full Post</Button>
-                          <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white" onClick={() => handleEditBlog(b)}>Edit</Button>
-                            <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmId(b.id)}>Delete</Button>
-                          </div>
+                          {canManageBlog && (
+                            <div className="flex items-center gap-2">
+                              <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white" onClick={() => handleEditBlog(b)}>Edit</Button>
+                              <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmId(b.id)}>Delete</Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -396,7 +401,8 @@ export default function BlogManagerPage() {
         </TabsContent>
 
         <TabsContent value="gallery" className="space-y-6 mt-6">
-          <Card>
+          {canManageBlog && (
+            <Card>
             <CardContent className="p-6 space-y-4">
               <h2 className="text-lg font-semibold flex items-center gap-2"><Plus className="h-4 w-4 text-primary" /> Add to Gallery Feed</h2>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -432,6 +438,7 @@ export default function BlogManagerPage() {
               </div>
             </CardContent>
           </Card>
+          )}
           
           <div className="space-y-4">
             <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -453,14 +460,16 @@ export default function BlogManagerPage() {
                     <img src={photo.url} alt={photo.caption} className="h-full w-full object-cover" />
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-center">
                       <p className="text-[10px] text-white line-clamp-2 mb-2">{photo.caption || "No caption"}</p>
-                      <Button 
-                        variant="destructive" 
-                        size="sm" 
-                        className="h-7 px-2 text-[10px]" 
-                        onClick={() => handleDeletePhoto(photo.id)}
-                      >
-                        <X className="h-3 w-3 mr-1" /> Delete
-                      </Button>
+                      {canManageBlog && (
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          className="h-7 px-2 text-[10px]" 
+                          onClick={() => handleDeletePhoto(photo.id)}
+                        >
+                          <X className="h-3 w-3 mr-1" /> Delete
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}

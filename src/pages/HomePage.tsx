@@ -84,13 +84,18 @@ function QuoteOfTheDaySection() {
 }
 
 
-function ImpactStatsSection() {
-  const stats = [
+function ImpactStatsSection({ data }: { data: any[] }) {
+  const defaultStats = [
     { label: "Students Represented", value: "2,500+", icon: <Users className="w-3 h-3" /> },
     { label: "Issues Resolved", value: "150+", icon: <CheckCircle2 className="w-3 h-3" /> },
     { label: "Council Projects", value: "24+", icon: <Rocket className="w-3 h-3" /> },
     { label: "Years of Excellence", value: "100+", icon: <Clock className="w-3 h-3" /> }
   ];
+
+  const stats = defaultStats.map(ds => {
+    const found = data.find(apiStat => apiStat.title === ds.label);
+    return found ? { ...ds, value: found.value } : ds;
+  });
 
   return (
     <section className="py-8 md:py-12 bg-primary text-primary-foreground relative overflow-hidden">
@@ -214,6 +219,19 @@ const itemVariants = {
 export default function HomePage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [activeSlides, setActiveSlides] = useState<string[]>(slideshowImages);
+  const [homeStats, setHomeStats] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { data } = await api.get("/home-stats/");
+        setHomeStats(Array.isArray(data) ? data : data.results || []);
+      } catch (err) {
+        console.error("Failed to load home stats", err);
+      }
+    };
+    fetchStats();
+  }, []);
 
   useEffect(() => {
     const fetchCustomSlides = async () => {
@@ -333,7 +351,7 @@ export default function HomePage() {
         <ScrollIndicator />
       </section>
 
-      <ImpactStatsSection />
+      <ImpactStatsSection data={homeStats} />
       <QuoteOfTheDaySection />
       <WhoWeAre />
 

@@ -188,7 +188,6 @@ export default function PortalLayout() {
   const navigate = useNavigate();
   const { user, profile, roles, loading, hasAnyRole, hasPermission, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [ecGranted, setEcGranted] = useState(false);
   const [activeLocks, setActiveLocks] = useState<any[]>([]);
 
   // Meeting request state
@@ -233,21 +232,12 @@ export default function PortalLayout() {
     if (!loading && !user) navigate("/login", { replace: true });
   }, [loading, user, navigate]);
 
-  // Check if user has EC access grant
-  useEffect(() => {
-    if (!user) return;
-    api.get("/ec-access-grants/", { params: { granted_to: user.id } }).then(({ data }) => {
-      const grants = Array.isArray(data) ? data : data.results || [];
-      // either the API filters by `granted_to` or we verify locally just in case
-      if (grants.some((g: any) => g.granted_to === user.id)) setEcGranted(true);
-    }).catch(console.error);
-  }, [user]);
 
   // Poll for active election locks
   useEffect(() => {
     if (!user) return;
     const fetchLocks = () => {
-      api.get("/election-locks/").then(({ data }) => {
+      api.get("/ec-access-locks/").then(({ data }) => {
          const locks = Array.isArray(data) ? data : data.results || [];
          setActiveLocks(locks);
       }).catch(console.error);
@@ -274,8 +264,6 @@ export default function PortalLayout() {
   const visibleGroups = sidebarGroups.map(group => ({
     ...group,
     items: group.items.filter(l => {
-      // EC access grant bypass for elections
-      if (l.path === "/portal/elections" && ecGranted) return true;
 
       // Primary permission check
       if (l.permission && !hasPermission(l.permission)) return false;

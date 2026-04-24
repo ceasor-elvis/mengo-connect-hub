@@ -71,7 +71,8 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export default function ActionPlanPage() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const canManage = hasPermission("manage_action_plans");
   const [plans, setPlans] = useState<ActionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -306,102 +307,104 @@ export default function ActionPlanPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-            <DialogTrigger asChild>
-              <Button className="shadow-lg hover:shadow-primary/20 transition-all">
-                <Plus className="w-4 h-4 mr-2" /> New Strategy
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Create Strategic Action Plan</DialogTitle>
-                <DialogDescription>Outline your next big move for the school.</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-6 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="title">Goal Title</Label>
-                  <Input 
-                    id="title" 
-                    placeholder="e.g. Modernize School Library" 
-                    value={newPlan.title}
-                    onChange={e => setNewPlan({...newPlan, title: e.target.value})}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="objective">Primary Objective</Label>
-                  <Textarea 
-                    id="objective" 
-                    placeholder="What is the main goal we want to achieve?" 
-                    className="min-h-[100px]"
-                    value={newPlan.objective}
-                    onChange={e => setNewPlan({...newPlan, objective: e.target.value})}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+          {canManage && (
+            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+              <DialogTrigger asChild>
+                <Button className="shadow-lg hover:shadow-primary/20 transition-all">
+                  <Plus className="w-4 h-4 mr-2" /> New Strategy
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create Strategic Action Plan</DialogTitle>
+                  <DialogDescription>Outline your next big move for the school.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-6 py-4">
                   <div className="grid gap-2">
-                    <Label>Category</Label>
-                    <Select value={newPlan.category} onValueChange={v => setNewPlan({...newPlan, category: v})}>
+                    <Label htmlFor="title">Goal Title</Label>
+                    <Input 
+                      id="title" 
+                      placeholder="e.g. Modernize School Library" 
+                      value={newPlan.title}
+                      onChange={e => setNewPlan({...newPlan, title: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="objective">Primary Objective</Label>
+                    <Textarea 
+                      id="objective" 
+                      placeholder="What is the main goal we want to achieve?" 
+                      className="min-h-[100px]"
+                      value={newPlan.objective}
+                      onChange={e => setNewPlan({...newPlan, objective: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label>Category</Label>
+                      <Select value={newPlan.category} onValueChange={v => setNewPlan({...newPlan, category: v})}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Target Date</Label>
+                      <Input 
+                        type="date" 
+                        value={newPlan.target_date}
+                        onChange={e => setNewPlan({...newPlan, target_date: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Responsible Office</Label>
+                    <Select value={newPlan.responsible_role} onValueChange={v => setNewPlan({...newPlan, responsible_role: v})}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        {Object.entries(ROLE_LABELS).map(([k,v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="grid gap-2">
-                    <Label>Target Date</Label>
-                    <Input 
-                      type="date" 
-                      value={newPlan.target_date}
-                      onChange={e => setNewPlan({...newPlan, target_date: e.target.value})}
-                    />
+                  <div className="grid gap-3">
+                    <Label className="flex items-center justify-between">
+                      Action Steps
+                      <Button type="button" variant="outline" size="sm" onClick={handleAddStep}>
+                        <Plus className="w-3 h-3 mr-1" /> Add Step
+                      </Button>
+                    </Label>
+                    {newPlan.steps.map((step, idx) => (
+                      <div key={idx} className="flex gap-2">
+                        <Input 
+                          placeholder={`Step ${idx + 1}`} 
+                          value={step.text}
+                          onChange={e => {
+                            const s = [...newPlan.steps];
+                            s[idx].text = e.target.value;
+                            setNewPlan({...newPlan, steps: s});
+                          }}
+                        />
+                        {newPlan.steps.length > 1 && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => setNewPlan({...newPlan, steps: newPlan.steps.filter((_, i) => i !== idx)})}
+                          >
+                            <X className="w-4 h-4 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label>Responsible Office</Label>
-                  <Select value={newPlan.responsible_role} onValueChange={v => setNewPlan({...newPlan, responsible_role: v})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(ROLE_LABELS).map(([k,v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-3">
-                  <Label className="flex items-center justify-between">
-                    Action Steps
-                    <Button type="button" variant="outline" size="sm" onClick={handleAddStep}>
-                      <Plus className="w-3 h-3 mr-1" /> Add Step
-                    </Button>
-                  </Label>
-                  {newPlan.steps.map((step, idx) => (
-                    <div key={idx} className="flex gap-2">
-                      <Input 
-                        placeholder={`Step ${idx + 1}`} 
-                        value={step.text}
-                        onChange={e => {
-                          const s = [...newPlan.steps];
-                          s[idx].text = e.target.value;
-                          setNewPlan({...newPlan, steps: s});
-                        }}
-                      />
-                      {newPlan.steps.length > 1 && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => setNewPlan({...newPlan, steps: newPlan.steps.filter((_, i) => i !== idx)})}
-                        >
-                          <X className="w-4 h-4 text-destructive" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-                <Button onClick={handleCreatePlan}>Create Plan</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+                  <Button onClick={handleCreatePlan}>Create Plan</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
 
@@ -433,9 +436,11 @@ export default function ActionPlanPage() {
                     </div>
                     <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors">{plan.title}</CardTitle>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deletePlan(plan.id)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {canManage && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deletePlan(plan.id)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
                 <CardDescription className="line-clamp-2 mt-1 leading-relaxed">{plan.objective}</CardDescription>
               </CardHeader>
@@ -457,10 +462,10 @@ export default function ActionPlanPage() {
                     {plan.steps.map((step) => (
                       <div 
                         key={step.id} 
-                        className={`flex items-start gap-2 p-2 rounded-lg border border-transparent transition-all cursor-pointer ${
+                        className={`flex items-start gap-2 p-2 rounded-lg border border-transparent transition-all ${
                           step.status === 'completed' ? 'bg-emerald-500/5 text-emerald-700/80' : 'bg-muted/30 hover:border-primary/20'
-                        }`}
-                        onClick={() => toggleStep(plan, step.id)}
+                        } ${canManage ? 'cursor-pointer' : 'cursor-default'}`}
+                        onClick={() => canManage && toggleStep(plan, step.id)}
                       >
                         {step.status === 'completed' ? (
                           <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />

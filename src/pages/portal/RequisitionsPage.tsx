@@ -144,7 +144,7 @@ export default function RequisitionsPage() {
       
       if (newStatus === "Pending Chairperson") {
         notifyRole("chairperson", "Requisition Forwarded", `A new requisition from ${user.username} has been submitted for your approval.`, "info");
-      } else if (newStatus === "Approved") {
+      } else if (newStatus === "Pending Patron") {
         notifyRole("patron", "Requisition Pending Approval", `A requisition has been approved by the Chairperson and is now awaiting your final signature.`, "info");
       }
 
