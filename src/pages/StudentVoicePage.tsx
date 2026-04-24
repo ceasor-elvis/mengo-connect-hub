@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MessageSquare, Send, CheckCircle, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { notifyRole } from "@/hooks/useNotify";
 
 export default function StudentVoicePage() {
   const [submitted, setSubmitted] = useState(false);
@@ -49,6 +50,14 @@ export default function StudentVoicePage() {
 
       setSubmitted(true);
       toast.success("Your submission has been received!");
+      
+      // Notify designated council members who manage voices
+      notifyRole(
+        ["general_secretary", "assistant_general_secretary", "chairperson"],
+        "New Student Voice",
+        `A new ${form.category} submission titled "${form.title}" has been received.`,
+        "info"
+      );
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Failed to submit. Please try again.");
     } finally {

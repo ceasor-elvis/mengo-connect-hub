@@ -4,13 +4,24 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, CheckCircle, Clock, XCircle, Trash2, ListChecks } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useActivityLog } from "@/hooks/useActivityLog";
-import { notifyAllCouncillors } from "@/hooks/useNotify";
+import { notifyRole } from "@/hooks/useNotify";
 
 interface LineItem {
   id: string;
@@ -45,7 +56,7 @@ const statusVariant = (s: string) => {
 };
 
 export default function RequisitionsPage() {
-  const { user, profile, hasAnyRole } = useAuth();
+  const { user, profile, hasPermission } = useAuth();
   const { log } = useActivityLog();
   const [reqs, setReqs] = useState<Requisition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,9 +68,10 @@ export default function RequisitionsPage() {
   const [expenses, setExpenses] = useState<LineItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const isAdminOrPatron = hasAnyRole(["adminabsolute", "patron"]);
-  const isChairperson = hasAnyRole(["chairperson"]);
-  const isFinance = hasAnyRole(["secretary_finance"]);
+  const canApprove = hasPermission("approve_requisition");
+  const canForwardToPatron = hasPermission("forward_req_patron");
+  const canForwardToChair = hasPermission("forward_req_chair");
+  const canManage = hasPermission("manage_requisitions");
 
   const fetchReqs = async () => {
     try {
@@ -131,15 +143,17 @@ export default function RequisitionsPage() {
       fetchReqs();
       
       if (newStatus === "Pending Chairperson") {
-        notifyAllCouncillors("Requisition Forwarded", `New requisition from ${user.username} submitted to Chairperson`, "info");
+        notifyRole("chairperson", "Requisition Forwarded", `A new requisition from ${user.username} has been submitted for your approval.`, "info");
+      } else if (newStatus === "Approved") {
+        notifyRole("patron", "Requisition Pending Approval", `A requisition has been approved by the Chairperson and is now awaiting your final signature.`, "info");
       }
+
     } catch (e: any) {
       toast.error(e.response?.data?.detail || "Error updating status");
     }
   };
 
   const handleDelete = async (id: string, reqPurpose: string) => {
-    if (!window.confirm(`Permanently delete requisition "${reqPurpose}"?`)) return;
     try {
       await api.delete(`/requisitions/${id}/`);
       toast.success("Successfully deleted");
@@ -256,9 +270,9 @@ export default function RequisitionsPage() {
                   </div>
                   <div className="truncate">
                     <p className="font-bold text-foreground text-sm flex items-center gap-2">
-                      {req.id} <span className="font-normal text-muted-foreground">/</span> {req.purpose}
+                      {req.id} <span className="font-normal text-muted-foreground">/</span> {req.purpose || "Unknown Purpose"}
                     </p>
-                    <p className="text-[10px] text-muted-foreground uppercase">{new Date(req.created_at).toLocaleString('en-UG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase">{req.created_at ? new Date(req.created_at).toLocaleString('en-UG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : "-"}</p>
                   </div>
                 </div>
 
@@ -269,7 +283,7 @@ export default function RequisitionsPage() {
 
                 <div className="w-full md:w-auto flex flex-col md:block">
                   <span className="md:hidden text-[10px] text-muted-foreground font-bold uppercase">Net Disbursed</span>
-                  <p className="text-sm font-serif font-bold text-primary">UGX {req.net_disbursed?.toLocaleString()}</p>
+                  <p className="text-sm font-serif font-bold text-primary">UGX {Number(req.net_disbursed || 0).toLocaleString()}</p>
                 </div>
 
                 <div className="w-full md:w-auto flex flex-col md:block">
@@ -279,23 +293,84 @@ export default function RequisitionsPage() {
                   </Badge>
                 </div>
 
-                <div className="w-full flex justify-end gap-2">
-                  {/* Step 1: Submit to Chairperson (Only Finance or Creator) */}
-                  {req.status === "Pending" && (isFinance || req.initiator === (profile?.full_name || user?.username)) && (
+                <div className="w-full flex flex-wrap justify-end gap-2">
+                  {/* View Details Modal */}
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="secondary" size="sm" className="h-8 text-xs">
+                        Details
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="font-serif">Requisition Details</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-6 pt-4">
+                        <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-xl border border-border/50">
+                          <div>
+                            <span className="text-xs uppercase text-muted-foreground font-bold block mb-1">Reference / Purpose</span>
+                            <p className="font-medium text-foreground">{req.purpose || "Unknown"}</p>
+                          </div>
+                          <div>
+                            <span className="text-xs uppercase text-muted-foreground font-bold block mb-1">Initiator</span>
+                            <p className="font-medium text-foreground">{req.initiator}</p>
+                          </div>
+                        </div>
+
+                        {req.liabilities && req.liabilities.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="font-bold text-sm border-b pb-2 text-primary">Liabilities (Debts)</h4>
+                            {req.liabilities.map((l, i) => (
+                              <div key={i} className="flex justify-between items-center text-sm py-1 border-b border-border/50 last:border-0">
+                                <span>{l.item || "Unknown Liability"}</span>
+                                <span className="font-mono text-muted-foreground">UGX {Number(l.amount || 0).toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {req.expenses && req.expenses.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="font-bold text-sm border-b pb-2 text-primary">Expenses (Spendings)</h4>
+                            {req.expenses.map((e, i) => (
+                              <div key={i} className="flex justify-between items-center text-sm py-1 border-b border-border/50 last:border-0">
+                                <span>{e.item || "Unknown Expense"}</span>
+                                <span className="font-mono text-muted-foreground">UGX {Number(e.amount || 0).toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {!((req.liabilities && req.liabilities.length > 0) || (req.expenses && req.expenses.length > 0)) && (
+                          <div className="text-center py-6 text-muted-foreground italic text-sm">
+                            No line items were recorded for this requisition.
+                          </div>
+                        )}
+
+                        <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 flex justify-between items-center mt-2">
+                          <span className="font-bold text-sm text-primary">Total Net Disbursed</span>
+                          <span className="font-serif font-bold text-xl text-primary">UGX {Number(req.net_disbursed || 0).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* Step 1: Submit to Chairperson (Finance, or Creator with manage_requisitions) */}
+                  {req.status === "Pending" && (canForwardToChair || (req.initiator === (profile?.full_name || user?.username) && canManage)) && (
                     <Button size="sm" className="h-8 text-xs bg-gold hover:bg-gold/80" onClick={() => handleStatusUpdate(req.id, "Pending Chairperson", "Forwarded to Chairperson")}>
                       Forward to Chair
                     </Button>
                   )}
 
-                  {/* Step 2: Forward to Patron (Only Chairperson) */}
-                  {req.status === "Pending Chairperson" && isChairperson && (
+                  {/* Step 2: Forward to Patron (Only Chairperson or equivalent) */}
+                  {req.status === "Pending Chairperson" && canForwardToPatron && (
                     <Button size="sm" className="h-8 text-xs bg-primary hover:bg-primary/80" onClick={() => handleStatusUpdate(req.id, "Pending Patron", "Forwarded to Patron")}>
                       Forward to Patron
                     </Button>
                   )}
 
                   {/* Step 3: Patron Approval */}
-                  {req.status === "Pending Patron" && isAdminOrPatron && (
+                  {req.status === "Pending Patron" && canApprove && (
                     <div className="flex gap-1">
                       <Button size="sm" className="h-8 text-xs" onClick={() => handleStatusUpdate(req.id, "Approved", "Requisition Fully Approved")}>Approve</Button>
                       <Button size="sm" variant="destructive" className="h-8 text-xs" onClick={() => handleStatusUpdate(req.id, "Rejected", "Requisition Rejected")}>Reject</Button>
@@ -303,10 +378,28 @@ export default function RequisitionsPage() {
                   )}
 
                   {/* Final Actions (Delete) */}
-                  {isAdminOrPatron && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(req.id, req.purpose)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  {hasPermission("manage_permissions") && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete requisition "{req.purpose}". This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDelete(req.id, req.purpose)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                 </div>
               </CardContent>

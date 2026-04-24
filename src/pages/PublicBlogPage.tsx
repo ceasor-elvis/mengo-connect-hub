@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -11,19 +12,23 @@ import { BlockNoteRenderer } from "@/components/blog/BlockNoteRenderer";
 
 /** Extract plain text from BlockNote JSON for list previews */
 function extractExcerpt(content: string | any[] | null, maxChars = 160): string {
-  try {
-    const blocks: any[] = typeof content === 'string' ? JSON.parse(content) : (Array.isArray(content) ? content : []);
-    const text = blocks
-      .map((b: any) => {
-        const inline = Array.isArray(b.content) ? b.content.map((c: any) => c.text || '').join('') : '';
-        return inline;
-      })
-      .filter(Boolean)
-      .join(' ');
-    return text.length > maxChars ? text.slice(0, maxChars).trimEnd() + '…' : text;
-  } catch {
-    return '';
+  if (!content) return '';
+  if (typeof content === 'string') {
+    try {
+      const parsed = JSON.parse(content);
+      if (!Array.isArray(parsed)) return content.slice(0, maxChars);
+      const text = parsed.map((b: any) => Array.isArray(b.content) ? b.content.map((c: any) => c.text || '').join('') : '').filter(Boolean).join(' ');
+      return text.length > maxChars ? text.slice(0, maxChars).trimEnd() + '…' : text;
+    } catch {
+      const plainText = content.replace(/<[^>]*>/g, '');
+      return plainText.length > maxChars ? plainText.slice(0, maxChars).trimEnd() + '…' : plainText;
+    }
   }
+  if (Array.isArray(content)) {
+    const text = content.map((b: any) => Array.isArray(b.content) ? b.content.map((c: any) => c.text || '').join('') : '').filter(Boolean).join(' ');
+    return text.length > maxChars ? text.slice(0, maxChars).trimEnd() + '…' : text;
+  }
+  return '';
 }
 
 export default function PublicBlogPage() {
@@ -35,10 +40,21 @@ export default function PublicBlogPage() {
    const [loadingGallery, setLoadingGallery] = useState(true);
    const [galleryView, setGalleryView] = useState<"masonry" | "dome">("masonry");
    const [selectedBlog, setSelectedBlog] = useState<any | null>(null);
+   const location = useLocation();
 
   useEffect(() => {
     api.get("/blogs/")
-      .then(({ data }) => setBlogs(Array.isArray(data) ? data : data.results || []))
+      .then(({ data }) => {
+         const fetchedBlogs = Array.isArray(data) ? data : data.results || [];
+         setBlogs(fetchedBlogs);
+         
+         const queryParams = new URLSearchParams(location.search);
+         const blogId = parseInt(queryParams.get("blogId") || "", 10);
+         if (!isNaN(blogId)) {
+           const foundBlog = fetchedBlogs.find((b: any) => b.id === blogId);
+           if (foundBlog) setSelectedBlog(foundBlog);
+         }
+      })
       .catch(() => {})
       .finally(() => setLoadingBlogs(false));
       
@@ -159,7 +175,7 @@ export default function PublicBlogPage() {
                       ) : (
                         <div className="w-20 h-20 sm:w-32 sm:h-28 shrink-0 rounded-md bg-primary/5 border flex items-center justify-center ml-2">
                           <span className="text-2xl sm:text-3xl font-bold text-primary/20">
-                            {b.title.charAt(0).toUpperCase()}
+                            {(b.title || 'U').charAt(0).toUpperCase()}
                           </span>
                         </div>
                       )}

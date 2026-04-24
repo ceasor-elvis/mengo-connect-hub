@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, MessageSquare, CheckCircle2, Users, Rocket, Clock, Quote } from "lucide-react";
 import mengoBadge from "@/assets/mengo-badge.jpg";
@@ -9,6 +9,27 @@ import { api } from "@/lib/api";
 import { motion, useScroll, useTransform } from "framer-motion";
 import HierarchyTree from "@/components/portal/HierarchyTree";
 import { Badge } from "@/components/ui/badge";
+
+/** Extract plain text from BlockNote JSON for list previews */
+function extractExcerpt(content: string | any[] | null, maxChars = 160): string {
+  if (!content) return '';
+  if (typeof content === 'string') {
+    try {
+      const parsed = JSON.parse(content);
+      if (!Array.isArray(parsed)) return content.slice(0, maxChars);
+      const text = parsed.map((b: any) => Array.isArray(b.content) ? b.content.map((c: any) => c.text || '').join('') : '').filter(Boolean).join(' ');
+      return text.length > maxChars ? text.slice(0, maxChars).trimEnd() + '…' : text;
+    } catch {
+      const plainText = content.replace(/<[^>]*>/g, '');
+      return plainText.length > maxChars ? plainText.slice(0, maxChars).trimEnd() + '…' : plainText;
+    }
+  }
+  if (Array.isArray(content)) {
+    const text = content.map((b: any) => Array.isArray(b.content) ? b.content.map((c: any) => c.text || '').join('') : '').filter(Boolean).join(' ');
+    return text.length > maxChars ? text.slice(0, maxChars).trimEnd() + '…' : text;
+  }
+  return '';
+}
 
 function ScrollIndicator() {
   return (
@@ -100,6 +121,7 @@ function ImpactStatsSection() {
 
 function BlogsPreviewSection() {
   const [blogs, setBlogs] = useState<any[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchBlogs = async () => {
@@ -124,7 +146,7 @@ function BlogsPreviewSection() {
             <h2 className="text-2xl md:text-3xl font-serif font-bold text-primary">From the Council Hub</h2>
           </div>
           <Button variant="outline" size="sm" className="group border-primary text-primary hover:bg-primary hover:text-white rounded-full px-5 h-9" asChild>
-            <Link to="/public-blogs">
+            <Link to="/blog">
               View All <ArrowRight className="ml-2 w-3 h-3 group-hover:translate-x-1 transition-transform" />
             </Link>
           </Button>
@@ -137,23 +159,25 @@ function BlogsPreviewSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="group cursor-pointer"
+              className="group"
             >
-              <div className="relative overflow-hidden rounded-xl aspect-[16/9] mb-3">
-                <img
-                  src={post.image_url || post.image || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2671&auto=format&fit=crop"}
-                  alt={post.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-3">
-                  <Badge className="bg-gold text-gold-foreground border-none text-[8px]">News</Badge>
+              <Link to={`/blog?blogId=${post.id}`} className="block h-full cursor-pointer">
+                <div className="relative overflow-hidden rounded-xl aspect-[16/9] mb-3">
+                  <img
+                    src={post.media_url || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2671&auto=format&fit=crop"}
+                    alt={post.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-3">
+                    <Badge className="bg-gold text-gold-foreground border-none text-[8px]">News</Badge>
+                  </div>
                 </div>
-              </div>
-              <h3 className="text-lg font-serif font-bold mb-1.5 group-hover:text-primary transition-colors line-clamp-1">{post.title}</h3>
-              <p className="text-muted-foreground line-clamp-2 mb-2 text-[13px] leading-relaxed">{post.content?.replace(/<[^>]*>/g, '')}</p>
-              <div className="flex items-center text-primary font-bold text-[10px] tracking-tight">
-                Read More <ArrowRight className="ml-1 w-3 h-3" />
-              </div>
+                <h3 className="text-lg font-serif font-bold mb-1.5 group-hover:text-primary transition-colors line-clamp-1">{post.title || 'Untitled Update'}</h3>
+                <p className="text-muted-foreground line-clamp-2 mb-2 text-[13px] leading-relaxed">{extractExcerpt(post.content) || 'No description available.'}</p>
+                <div className="flex items-center text-primary font-bold text-[10px] tracking-tight">
+                  Read More <ArrowRight className="ml-1 w-3 h-3" />
+                </div>
+              </Link>
             </motion.div>
           ))}
         </div>
@@ -194,10 +218,9 @@ export default function HomePage() {
   useEffect(() => {
     const fetchCustomSlides = async () => {
       try {
-        const { data } = await api.get("/documents/");
+        const { data } = await api.get("/home-layouts/");
         const entries = Array.isArray(data) ? data : data.results || [];
         const customSlides = entries
-          .filter((d: any) => d.title === "slideshow_img")
           .map((d: any) => d.file_url || d.file)
           .filter(Boolean);
 

@@ -22,10 +22,9 @@ export default function HomeLayoutPage() {
 
   const fetchImages = async () => {
     try {
-      const { data } = await api.get("/documents/");
+      const { data } = await api.get("/home-layouts/");
       const entries = Array.isArray(data) ? data : data.results || [];
-      const backgrounds = entries.filter((d: any) => d.title === "slideshow_img");
-      setImages(backgrounds);
+      setImages(entries);
     } catch (error) {
       toast.error("Failed to load background images");
     } finally {
@@ -50,11 +49,10 @@ export default function HomeLayoutPage() {
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("title", "slideshow_img"); // Keyword for HomePage filters
-    formData.append("category", "slideshow");
+    formData.append("title", "slideshow_img");
 
     try {
-      await api.post("/documents/", formData, {
+      await api.post("/home-layouts/", formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
       toast.success("Background uploaded successfully!");
@@ -68,9 +66,8 @@ export default function HomeLayoutPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Remove this background image?")) return;
     try {
-      await api.delete(`/documents/${id}/`);
+      await api.delete(`/home-layouts/${id}/`);
       toast.success("Image removed");
       log("removed a homepage background", "layout");
       fetchImages();

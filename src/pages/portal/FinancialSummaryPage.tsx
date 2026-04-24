@@ -41,23 +41,25 @@ export default function FinancialSummaryPage() {
     fetchData();
   }, []);
 
-  const historyReqs = requisitions.filter(r => r.status === "Approved" || r.status === "Rejected");
+  const historyReqs = requisitions.filter(r => r?.status === "Approved" || r?.status === "Rejected");
   const filteredRequisitions = historyReqs.filter(r => 
-    r.purpose.toLowerCase().includes(search.toLowerCase()) || 
-    (r.initiator && r.initiator.toLowerCase().includes(search.toLowerCase()))
+    String(r?.purpose || "").toLowerCase().includes(search.toLowerCase()) || 
+    (r?.initiator && String(r.initiator).toLowerCase().includes(search.toLowerCase()))
   );
 
-  const approvedReqs = requisitions.filter(r => r.status === "Approved");
-  const pendingReqs = requisitions.filter(r => r.status === "Pending" || r.status.startsWith("Pending"));
+  const approvedReqs = requisitions.filter(r => r?.status === "Approved");
+  const pendingReqs = requisitions.filter(r => r?.status === "Pending" || String(r?.status || "").startsWith("Pending"));
   
-  const totalApproved = approvedReqs.reduce((sum, r) => sum + (r.net_disbursed || 0), 0);
-  const totalPending = pendingReqs.reduce((sum, r) => sum + (r.net_disbursed || 0), 0);
+  const totalApproved = approvedReqs.reduce((sum, r) => sum + (Number(r.net_disbursed) || 0), 0);
+  const totalPending = pendingReqs.reduce((sum, r) => sum + (Number(r.net_disbursed) || 0), 0);
 
   // Group by date for AreaChart
   const dateMap: Record<string, number> = {};
   approvedReqs.forEach(r => {
-    const d = new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    dateMap[d] = (dateMap[d] || 0) + (r.net_disbursed || 0);
+    if (r?.created_at) {
+      const d = new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      dateMap[d] = (dateMap[d] || 0) + (Number(r.net_disbursed) || 0);
+    }
   });
   
   // Sort by actual date timestamp
@@ -77,8 +79,8 @@ export default function FinancialSummaryPage() {
   // Group by purpose for BarChart
   const purposeMap: Record<string, number> = {};
   approvedReqs.forEach(r => {
-    const p = r.purpose.split(" ")[0]; // Categorize by first word to make labels fit
-    purposeMap[p] = (purposeMap[p] || 0) + (r.net_disbursed || 0);
+    const p = String(r?.purpose || "Other").split(" ")[0]; // Categorize by first word to make labels fit
+    purposeMap[p] = (purposeMap[p] || 0) + (Number(r.net_disbursed) || 0);
   });
   const purposeData = Object.entries(purposeMap)
     .map(([name, value]) => ({ name, value }))
@@ -309,13 +311,13 @@ export default function FinancialSummaryPage() {
                    filteredRequisitions.map((req) => (
                      <tr key={req.id} className="hover:bg-muted/30 transition-colors group">
                        <td className="px-6 py-4">
-                          <p className="font-semibold text-foreground">{req.purpose}</p>
-                          <p className="text-[10px] text-muted-foreground font-mono mt-0.5">ID: {req.id.substring(0, 8)}...</p>
+                          <p className="font-semibold text-foreground">{req.purpose || "Unknown"}</p>
+                          <p className="text-[10px] text-muted-foreground font-mono mt-0.5">ID: {String(req.id).substring(0, 8)}...</p>
                        </td>
                        <td className="px-6 py-4 text-muted-foreground font-medium">{req.initiator || "SYSTEM"}</td>
                        <td className="px-6 py-4">
                           <div className="font-bold font-mono text-foreground">
-                            UGX {req.net_disbursed?.toLocaleString()}
+                            UGX {Number(req.net_disbursed || 0).toLocaleString()}
                           </div>
                        </td>
                        <td className="px-6 py-4 text-center">
@@ -328,7 +330,7 @@ export default function FinancialSummaryPage() {
                        </td>
                        <td className="px-6 py-4 text-right">
                          <div className="flex justify-end items-center text-muted-foreground font-mono text-xs">
-                           {new Date(req.created_at).toLocaleDateString("en-UG", { day: "2-digit", month: "short", year: "numeric" })}
+                           {req.created_at ? new Date(req.created_at).toLocaleDateString("en-UG", { day: "2-digit", month: "short", year: "numeric" }) : "-"}
                          </div>
                        </td>
                      </tr>

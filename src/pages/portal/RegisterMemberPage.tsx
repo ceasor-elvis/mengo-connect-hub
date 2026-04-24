@@ -31,9 +31,9 @@ const APP_ROLES = Object.keys(ROLE_LABELS);
 
 
 export default function RegisterMemberPage() {
-  const { hasAnyRole, roles } = useAuth();
-  const canManageStreams = hasAnyRole(["chairperson", "adminabsolute", "general_secretary", "patron", "vice_chairperson"]);
-  const isAdminAbsolute = roles.includes("adminabsolute");
+  const { hasPermission } = useAuth();
+  const canManageStreams = hasPermission("register_member");
+  const isAdminAbsolute = hasPermission("manage_permissions");
 
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
@@ -388,7 +388,7 @@ export default function RegisterMemberPage() {
               (p.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
               p.username?.toLowerCase().includes(searchTerm.toLowerCase()))
             ).map((p) => {
-              const isAdminEdit = hasAnyRole(["adminabsolute", "chairperson"]);
+              const isAdminEdit = hasPermission("register_member");
               return (
                 <div key={p.user_id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
                   <div>

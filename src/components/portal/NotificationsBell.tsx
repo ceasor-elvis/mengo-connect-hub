@@ -10,6 +10,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface Notification {
   id: string;
@@ -25,8 +26,44 @@ interface Notification {
 
 export default function NotificationsBell() {
   const { user, roles } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [popoverOpen, setPopoverOpen] = useState(false);
+
+  // Resolve a route from the notification's type and title/message
+  const resolveRoute = (n: Notification): string | null => {
+    const t = (n.type || "").toLowerCase();
+    const title = (n.title || "").toLowerCase();
+    const msg = (n.message || "").toLowerCase();
+    const combined = title + " " + msg;
+
+    if (t === "meeting") return "/portal/programmes";
+    if (combined.includes("requisition")) return "/portal/requisitions";
+    if (combined.includes("programme") || combined.includes("event")) return "/portal/programmes";
+    if (combined.includes("issue")) return "/portal/student-voices";
+    if (combined.includes("application") || combined.includes("election")) return "/portal/elections";
+    if (combined.includes("blog") || combined.includes("announcement")) return "/portal/blog";
+    if (combined.includes("rota")) return "/portal/rota";
+    if (combined.includes("document")) return "/portal/documents";
+    if (combined.includes("gallery")) return "/portal/gallery";
+    if (combined.includes("action plan")) return "/portal/action-plans";
+    if (combined.includes("disciplinary")) return "/portal/dc-cases";
+    return null; // no specific page — stay on current
+  };
+
+  const handleNotifClick = async (n: Notification) => {
+    // Mark as read
+    if (!n.read) {
+      try { await api.patch(`/notifications/${n.id}/`, { read: true }); } catch {}
+      setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
+    }
+    // Navigate
+    const route = resolveRoute(n);
+    if (route) {
+      setPopoverOpen(false);
+      navigate(route);
+    }
+  };
   
   // Feedback state
   const [selectedNotif, setSelectedNotif] = useState<Notification | null>(null);
@@ -138,8 +175,13 @@ export default function NotificationsBell() {
               <div className="divide-y text-left">
                 {(notifications as any[]).map((n) => {
                   if (!n) return null;
+                  const route = resolveRoute(n);
                   return (
-                    <div key={n.id} className={`px-3 py-2 ${!n.read ? "bg-primary/5" : ""}`}>
+                    <div
+                      key={n.id}
+                      className={`px-3 py-2 transition-colors ${!n.read ? "bg-primary/5" : ""} ${route ? "cursor-pointer hover:bg-muted/60" : ""}`}
+                      onClick={() => handleNotifClick(n)}
+                    >
                       <div className="flex items-start gap-2">
                         <Badge variant="outline" className={`text-[9px] mt-0.5 shrink-0 ${typeColors[n.type] || ""}`}>
                           {n.type}

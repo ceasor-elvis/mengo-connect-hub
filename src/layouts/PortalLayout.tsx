@@ -27,6 +27,7 @@ interface NavItem {
   path: string;
   icon: any;
   roles?: AppRole[];
+  permission?: string;
 }
 
 interface NavGroup {
@@ -38,59 +39,49 @@ const sidebarGroups: NavGroup[] = [
   {
     category: "Overview",
     items: [
-      { label: "Dashboard", path: "/portal", icon: LayoutDashboard },
-      { label: "Hierarchy Tree", path: "/portal/hierarchy", icon: Network },
-      { label: "Strategic Action Plan", path: "/portal/action-plan", icon: Target,
-        roles: ["chairperson", "vice_chairperson", "general_secretary", "assistant_general_secretary", "adminabsolute", "patron"] },
+      { label: "Dashboard", path: "/portal", icon: LayoutDashboard, permission: "view_dashboard" },
+      { label: "Hierarchy Tree", path: "/portal/hierarchy", icon: Network, permission: "view_hierarchy" },
+      { label: "Strategic Action Plan", path: "/portal/action-plan", icon: Target, permission: "view_action_plan" },
     ]
   },
   {
     category: "Council Engagement",
     items: [
-      { label: "Student Voices", path: "/portal/student-voices", icon: MessageSquare,
-        roles: ["patron", "chairperson", "general_secretary", "assistant_general_secretary"] },
-      { label: "Issues Management", path: "/portal/issues", icon: AlertTriangle },
-      { label: "Blog Manager", path: "/portal/blog", icon: FileText,
-        roles: ["chairperson", "secretary_publicity", "general_secretary", "adminabsolute"] },
-      { label: "Disciplinary Actions", path: "/portal/disciplinary", icon: Scale,
-        roles: ["disciplinary_committee", "chairperson", "vice_chairperson", "general_secretary"] },
+      { label: "Student Voices", path: "/portal/student-voices", icon: MessageSquare, permission: "view_student_voices" },
+      { label: "Issues Management", path: "/portal/issues", icon: AlertTriangle, permission: "view_issues" },
+      { label: "Blog Manager", path: "/portal/blog", icon: FileText, permission: "view_blog" },
+      { label: "Disciplinary Actions", path: "/portal/disciplinary", icon: Scale, permission: "view_disciplinary" },
     ]
   },
   {
     category: "Operations",
     items: [
-      { label: "Programmes", path: "/portal/programmes", icon: Calendar },
-      { label: "Rota Management", path: "/portal/rota", icon: Users },
-      { label: "Documents & Minutes", path: "/portal/documents", icon: FileText },
+      { label: "Programmes", path: "/portal/programmes", icon: Calendar, permission: "view_programmes" },
+      { label: "Rota Management", path: "/portal/rota", icon: Users, permission: "view_rota" },
+      { label: "Documents & Minutes", path: "/portal/documents", icon: FileText, permission: "view_documents" },
     ]
   },
   {
     category: "Finance",
     items: [
-      { label: "Requisitions", path: "/portal/requisitions", icon: DollarSign,
-        roles: ["patron", "chairperson", "secretary_finance"] },
-      { label: "Financial Summary", path: "/portal/financial-summary", icon: BarChart3,
-        roles: ["patron", "chairperson", "secretary_finance"] },
+      { label: "Requisitions", path: "/portal/requisitions", icon: DollarSign, permission: "view_requisitions" },
+      { label: "Financial Summary", path: "/portal/financial-summary", icon: BarChart3, permission: "view_financial_summary" },
     ]
   },
   {
     category: "Governance",
     items: [
-      { label: "Elections", path: "/portal/elections", icon: Vote,
-        roles: ["patron", "chairperson", "speaker", "electoral_commission"] },
-      { label: "Activity Logs", path: "/portal/logs", icon: Activity,
-        roles: ["patron", "chairperson", "speaker", "electoral_commission"] },
+      { label: "Elections", path: "/portal/elections", icon: Vote, permission: "view_elections" },
+      { label: "Activity Logs", path: "/portal/logs", icon: Activity, permission: "view_logs" },
     ]
   },
   {
     category: "Administration",
     items: [
-      { label: "Register Member", path: "/portal/register-member", icon: UserPlus,
-        roles: ["chairperson"] },
-      { label: "Register Patron", path: "/portal/register-patron", icon: Shield,
-        roles: ["chairperson"] },
-      { label: "Home Layout", path: "/portal/home-layout", icon: Settings,
-        roles: ["adminabsolute"] },
+      { label: "Register Member", path: "/portal/register-member", icon: UserPlus, permission: "register_member" },
+      { label: "Register Patron", path: "/portal/register-patron", icon: Shield, permission: "register_patron" },
+      { label: "Home Layout", path: "/portal/home-layout", icon: Settings, permission: "manage_home_layout" },
+      { label: "Feature Controls", path: "/portal/admin-absolute/features", icon: ShieldCheck, permission: "manage_permissions" },
     ]
   },
 ];
@@ -195,7 +186,7 @@ const NavContent = ({ profile, user, roleLabel, roles, visibleGroups, location, 
 export default function PortalLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile, roles, loading, hasAnyRole, signOut } = useAuth();
+  const { user, profile, roles, loading, hasAnyRole, hasPermission, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [ecGranted, setEcGranted] = useState(false);
   const [activeLocks, setActiveLocks] = useState<any[]>([]);
@@ -283,13 +274,16 @@ export default function PortalLayout() {
   const visibleGroups = sidebarGroups.map(group => ({
     ...group,
     items: group.items.filter(l => {
-      if (roles.includes("patron") && !roles.includes("adminabsolute") && !["Dashboard", "Student Voices", "Programmes", "Documents", "Requisitions"].includes(l.label)) {
-        return false;
-      }
-      if (!l.roles) return true;
-      if (hasAnyRole(l.roles)) return true;
+      // EC access grant bypass for elections
       if (l.path === "/portal/elections" && ecGranted) return true;
-      return false;
+
+      // Primary permission check
+      if (l.permission && !hasPermission(l.permission)) return false;
+
+      // Role fallback if permission not defined
+      if (l.roles && !hasAnyRole(l.roles)) return false;
+
+      return true;
     })
   })).filter(group => group.items.length > 0);
 

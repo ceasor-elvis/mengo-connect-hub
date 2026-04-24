@@ -58,13 +58,13 @@ const ROLE_INFO: Record<string, RoleInfo> = {
 };
 
 export default function DashboardPage() {
-  const { profile, roles, hasAnyRole } = useAuth();
+  const { profile, roles, hasPermission } = useAuth();
   const primaryRole = roles[0];
   const info = primaryRole ? ROLE_INFO[primaryRole] : null;
 
-  const showFinance = hasAnyRole(["patron", "chairperson", "secretary_finance"]);
-  const showVoices = hasAnyRole(["patron", "chairperson", "general_secretary", "assistant_general_secretary"]) || roles.length === 0;
-  const showAllProgress = hasAnyRole(["patron", "chairperson"]) || roles.length === 0;
+  const showFinance = hasPermission("view_financial_summary");
+  const showVoices = hasPermission("view_student_voices");
+  const showAllProgress = hasPermission("view_logs");
 
   const [dashboardData, setDashboardData] = useState<{
     stats: DashboardStats[];

@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useActivityLog } from "@/hooks/useActivityLog";
-import { notifyAllCouncillors } from "@/hooks/useNotify";
+import { notifyRole } from "@/hooks/useNotify";
 import jsPDF from "jspdf";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { unsaLogoB64 } from "@/assets/unsaBase64";
@@ -29,8 +29,8 @@ interface Issue {
 const statusColor = (s: string) => s === "resolved" ? "default" : s === "in_progress" ? "secondary" : "outline";
 
 export default function IssuesPage() {
-  const { user, hasAnyRole } = useAuth();
-  const canManage = hasAnyRole(["chairperson", "patron", "general_secretary"]);
+  const { user, hasPermission } = useAuth();
+  const canManage = hasPermission("manage_issues");
   const { log } = useActivityLog();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,7 +87,12 @@ export default function IssuesPage() {
       });
       toast.success("Issue raised"); 
       log("raised an issue", "issues", title); 
-      notifyAllCouncillors("New Issue", `"${title}" was raised`, "warning"); 
+      notifyRole(
+        ["chairperson", "patron", "general_secretary"],
+        "New Issue Raised",
+        `A new issue titled "${title}" has been raised by ${user.username}.`,
+        "warning"
+      );
       setTitle(""); 
       setDescription(""); 
       setCategory("Infrastructure");

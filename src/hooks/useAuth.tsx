@@ -29,9 +29,11 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   roles: AppRole[];
+  permissions: string[];
   loading: boolean;
   hasRole: (role: AppRole) => boolean;
   hasAnyRole: (roles: AppRole[]) => boolean;
+  hasPermission: (permission: string) => boolean;
   signOut: () => Promise<void>;
   setAuthData: (access: string, refresh: string, user: User, profileData?: Profile, rolesData?: string[]) => void;
 }
@@ -41,9 +43,11 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   roles: [],
+  permissions: [],
   loading: true,
   hasRole: () => false,
   hasAnyRole: () => false,
+  hasPermission: () => false,
   signOut: async () => { },
   setAuthData: () => { },
 });
@@ -53,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = async () => {
@@ -63,10 +68,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         api.get("/users/me/roles/").catch(() => ({ data: [] }))
       ]);
 
-      if (profileRes.data) setProfile(profileRes.data);
+      if (profileRes.data) {
+        setProfile(profileRes.data);
+        if (profileRes.data.permissions) {
+          setPermissions(profileRes.data.permissions);
+        }
+      }
+      
       if (rolesRes.data) {
         const r = Array.isArray(rolesRes.data) ? rolesRes.data : rolesRes.data.roles || [];
-        setRoles(r.map((roleObj: any) => roleObj.role || roleObj));
+        const roleNames = r.map((roleObj: any) => roleObj.role || roleObj);
+        setRoles(roleNames);
+        
+        // If profile didn't have permissions, we can collect them from roles too (failsafe)
+        if (!profileRes.data?.permissions) {
+          const allRolePerms = r.flatMap((roleObj: any) => roleObj.permissions || []);
+          setPermissions(Array.from(new Set(allRolePerms)));
+        }
       }
     } catch (e) {
       console.error("Failed to fetch user data:", e);
@@ -97,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const hasRole = (role: AppRole) => roles.includes('adminabsolute') || roles.includes(role);
   const hasAnyRole = (r: AppRole[]) => roles.includes('adminabsolute') || r.some((role) => roles.includes(role));
+  const hasPermission = (p: string) => roles.includes('adminabsolute') || permissions.includes(p);
 
   const setAuthData = (access: string, refresh: string, u: User, p?: Profile, r?: string[]) => {
     localStorage.setItem("access_token", access);
@@ -104,7 +123,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("user", JSON.stringify(u));
     setSession({ access_token: access, refresh_token: refresh, user: u });
     setUser(u);
-    if (p) setProfile(p);
+    if (p) {
+      setProfile(p);
+      if ((p as any).permissions) setPermissions((p as any).permissions);
+    }
     if (r) setRoles(r);
     else fetchUserData();
   };
@@ -122,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setProfile(null);
     setRoles([]);
+    setPermissions([]);
   };
 
   // Auto-logout on tab change for security
@@ -138,7 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, roles, loading, hasRole, hasAnyRole, signOut, setAuthData }}>
+    <AuthContext.Provider value={{ user, session, profile, roles, permissions, loading, hasRole, hasAnyRole, hasPermission, signOut, setAuthData }}>
       {children}
     </AuthContext.Provider>
   );
