@@ -109,7 +109,7 @@ export function WhoWeAre() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-4xl mx-auto">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6 max-w-4xl mx-auto">
           {values.map((v, i) => (
             <motion.div 
               key={v.title}
@@ -117,13 +117,13 @@ export function WhoWeAre() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className={`rounded-2xl border ${v.color} p-6 text-center backdrop-blur-sm group hover:scale-[1.02] transition-transform duration-500`}
+              className={`rounded-xl sm:rounded-2xl border ${v.color} p-3 sm:p-5 md:p-6 text-center backdrop-blur-sm group hover:scale-[1.02] transition-transform duration-500`}
             >
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-white/50 shadow-inner group-hover:bg-white transition-colors duration-500">
-                <v.icon className="h-5 h-5 text-gold" />
+              <div className="mx-auto mb-2 sm:mb-4 flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-md sm:rounded-lg bg-white/50 shadow-inner group-hover:bg-white transition-colors duration-500">
+                <v.icon className="h-4 w-4 sm:h-5 sm:w-5 text-gold" />
               </div>
-              <h3 className="font-serif text-lg font-bold text-foreground mb-2">{v.title}</h3>
-              <p className="text-[13px] text-muted-foreground italic leading-tight">"{v.description}"</p>
+              <h3 className="font-serif text-[13px] sm:text-base md:text-lg font-bold text-foreground mb-1 sm:mb-2 leading-tight">{v.title}</h3>
+              <p className="text-[10px] sm:text-[13px] text-muted-foreground italic leading-tight hidden xs:block sm:block">"{v.description}"</p>
             </motion.div>
           ))}
         </div>
