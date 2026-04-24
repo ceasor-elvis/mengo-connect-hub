@@ -28,20 +28,20 @@ function NodeCard({
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4, scale: 1.02 }}
       className={`
-        relative group flex flex-col items-center gap-2 rounded-2xl p-4 text-xs font-medium
+        relative group flex flex-col items-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-xs font-medium
         shadow-lg border backdrop-blur-xl transition-all duration-500
         ${!isMultipleRole && profile ? 'cursor-pointer' : 'cursor-default'}
         ${node.color || 'bg-card text-card-foreground'}
-        w-[110px] sm:w-[140px]
+        w-[95px] sm:w-[140px]
         border-white/10 hover:border-white/30
         ${!profile && !isMultipleRole ? 'opacity-60 grayscale-[0.5]' : ''}
       `}
       onClick={(e) => { if (hasChildren) { e.stopPropagation(); onToggle(); } }}
     >
       {hasChildren && (
-        <div className="absolute -right-2 -top-2 w-6 h-6 rounded-full bg-background/80 backdrop-blur-md shadow-xl flex items-center justify-center text-primary z-20 border border-primary/20 group-hover:scale-125 transition-all duration-500 overflow-hidden">
+        <div className="absolute -right-1.5 -top-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-background/80 backdrop-blur-md shadow-xl flex items-center justify-center text-primary z-20 border border-primary/20 group-hover:scale-125 transition-all duration-500 overflow-hidden">
           <motion.div animate={isExpanded ? { rotate: 0 } : { rotate: 180 }} className="flex items-center justify-center">
-            {isExpanded ? <Minus className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+            {isExpanded ? <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
           </motion.div>
           {!isExpanded && <div className="absolute inset-0 rounded-full animate-ping bg-primary/10 -z-10" />}
         </div>
@@ -49,34 +49,34 @@ function NodeCard({
 
       <div className="shrink-0 relative">
         {!isMultipleRole && profile && (profile.profile_pic_url || (profile as any).profile_pic) ? (
-          <div className="relative p-1">
+          <div className="relative p-0.5 sm:p-1">
             <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-gold to-transparent opacity-50 blur-sm" />
-            <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-white shadow-xl relative z-10">
+            <Avatar className="h-8 w-8 sm:h-12 sm:w-12 border-2 border-white shadow-xl relative z-10">
               <AvatarImage src={profile.profile_pic_url || (profile as any).profile_pic || ""} alt={profile.full_name} />
-              <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">{profile.full_name.slice(0, 2).toUpperCase()}</AvatarFallback>
+              <AvatarFallback className="bg-primary/5 text-primary text-[10px] sm:text-xs font-bold">{profile.full_name.slice(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
           </div>
         ) : (
-          <div className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20 shadow-inner ${profile ? 'bg-white/20' : 'bg-black/5'}`}>
-            <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${profile ? 'text-current' : 'text-current/40'}`} />
+          <div className={`h-8 w-8 sm:h-12 sm:w-12 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20 shadow-inner ${profile ? 'bg-white/20' : 'bg-black/5'}`}>
+            <Icon className={`h-4 w-4 sm:h-6 sm:w-6 ${profile ? 'text-current' : 'text-current/40'}`} />
           </div>
         )}
       </div>
 
-      <div className="text-center leading-tight w-full space-y-1">
-        <p className={`font-bold text-[10px] sm:text-[11px] break-words uppercase tracking-widest leading-none ${!profile && !isMultipleRole ? 'text-current/60' : ''}`}>{node.label}</p>
-        <div className="h-[1px] w-6 mx-auto bg-current/20 rounded-full" />
+      <div className="text-center leading-tight w-full space-y-0.5 sm:space-y-1">
+        <p className={`font-bold text-[9px] sm:text-[11px] break-words uppercase tracking-widest leading-[1.1] ${!profile && !isMultipleRole ? 'text-current/60' : ''}`}>{node.label}</p>
+        <div className="h-[1px] w-4 sm:w-6 mx-auto bg-current/20 rounded-full" />
         {isMultipleRole ? (
-          <p className="text-[9px] opacity-70 font-semibold italic tracking-tight">Multiple Members</p>
+          <p className="text-[8px] sm:text-[9px] opacity-70 font-semibold italic tracking-tight">Multiple Members</p>
         ) : profile ? (
-          <p className="text-[9px] opacity-90 font-bold truncate w-full px-1">{profile.full_name}</p>
+          <p className="text-[8px] sm:text-[9px] opacity-90 font-bold truncate w-full px-1">{profile.full_name}</p>
         ) : (
-          <p className="text-[8px] opacity-40 italic uppercase tracking-widest font-light">Vacant</p>
+          <p className="text-[7px] sm:text-[8px] opacity-40 italic uppercase tracking-widest font-light">Vacant</p>
         )}
       </div>
 
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/20 via-transparent to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-      <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-b from-white/20 to-transparent pointer-events-none -z-10" />
+      <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-white/20 via-transparent to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+      <div className="absolute -inset-[1px] rounded-xl sm:rounded-2xl bg-gradient-to-b from-white/20 to-transparent pointer-events-none -z-10" />
     </motion.div>
   );
 
@@ -148,7 +148,7 @@ function TreeBranch({
             exit={{ opacity: 0, y: -10, height: 0 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             className={`flex overflow-hidden ${isVerticalBranch
-              ? 'flex-col items-start ml-[55px] sm:ml-[70px] border-l-2 border-dashed border-primary/20 pl-6 sm:pl-8 py-4 gap-6 w-full'
+              ? 'flex-col items-start ml-[48px] sm:ml-[70px] border-l-2 border-dashed border-primary/20 pl-6 sm:pl-8 py-4 gap-6 w-full'
               : 'flex-row justify-center items-start'}`}
           >
             {children.map((c, index) => (
@@ -160,7 +160,7 @@ function TreeBranch({
                   </>
                 )}
                 {!isVerticalBranch && <div className="w-px h-8 bg-gradient-to-b from-primary/20 to-primary/40 shrink-0" />}
-                {isVerticalBranch && <div className="absolute left-[-26px] sm:left-[-34px] top-[30px] w-6 sm:w-8 h-px bg-gradient-to-r from-primary/20 to-primary/40" />}
+                {isVerticalBranch && <div className="absolute left-[-24px] sm:left-[-34px] top-[30px] w-6 sm:w-8 h-px bg-gradient-to-r from-primary/20 to-primary/40" />}
                 <TreeBranch
                   role={c} tree={tree} roleMap={roleMap} profileMap={profileMap}
                   level={level + 1} defaultExpanded={false} isDesktop={isDesktop}
