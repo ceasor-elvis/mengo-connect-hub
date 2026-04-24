@@ -12,6 +12,7 @@ import { Scale, Plus, AlertCircle, FileText, CheckCircle2, Clock, Send, ShieldCh
 import DocumentViewer from "@/components/portal/DocumentViewer";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { notifyRole } from "@/hooks/useNotify";
 import { useAuth } from "@/hooks/useAuth";
 import jsPDF from "jspdf";
 import mengoBadge from "@/assets/mengo-badge.jpg";
@@ -41,6 +42,7 @@ interface DCDocument {
 
 export default function DisciplinaryPage() {
   const { user, hasPermission } = useAuth();
+  const canManageDC = hasPermission("manage_disciplinary");
   const isChairperson = hasPermission("approve_disciplinary_forwarding");
   const [cases, setCases] = useState<DCCase[]>([]);
   const [documents, setDocuments] = useState<DCDocument[]>([]);
@@ -102,6 +104,7 @@ export default function DisciplinaryPage() {
         description,
         reported_by: user?.id,
       });
+      notifyRole("disciplinary_committee", "New DC Case Logged", `A new disciplinary case regarding ${offender} (${finalCategory}) has been logged.`, "warning");
       toast.success("Case reported successfully");
       setOffender("");
       setDescription("");
@@ -157,6 +160,7 @@ export default function DisciplinaryPage() {
   const handleRequestForward = async (id: string) => {
     try {
       await api.patch(`/dc-cases/${id}/`, { pending_chairperson_approval: true });
+      notifyRole("chairperson", "Case Escalation Request", "A Disciplinary Committee case requires your approval for forwarding to the Patron.", "info");
       toast.success("Forwarding request sent to Chairperson");
       fetchCases();
     } catch { toast.error("Action failed"); }
@@ -165,6 +169,7 @@ export default function DisciplinaryPage() {
   const handleApproveForward = async (id: string) => {
     try {
       await api.patch(`/dc-cases/${id}/`, { is_forwarded_to_patron: true, pending_chairperson_approval: false });
+      notifyRole("patron", "Disciplinary Case Forwarded", "A Disciplinary Case has been approved by the Chairperson and escalated to your office for review.", "warning");
       toast.success("Case approved & forwarded to Patron");
       fetchCases();
     } catch { toast.error("Action failed"); }
@@ -322,9 +327,13 @@ export default function DisciplinaryPage() {
                       "{c.description}"
                     </p>
                     <div className="flex flex-wrap gap-2 pt-2 border-t mt-2">
-                      <Button variant="ghost" size="sm" className="text-xs" onClick={() => updateStatus(c.id, 'Under Investigation')}>Investigate</Button>
-                      <Button variant="ghost" size="sm" className="text-xs" onClick={() => updateStatus(c.id, 'Summoned')}>Summon</Button>
-                      <Button variant="ghost" size="sm" className="text-xs hover:text-green-600" onClick={() => updateStatus(c.id, 'Closed')}>Close Case</Button>
+                      {canManageDC && (
+                        <>
+                          <Button variant="ghost" size="sm" className="text-xs" onClick={() => updateStatus(c.id, 'Under Investigation')}>Investigate</Button>
+                          <Button variant="ghost" size="sm" className="text-xs" onClick={() => updateStatus(c.id, 'Summoned')}>Summon</Button>
+                          <Button variant="ghost" size="sm" className="text-xs hover:text-green-600" onClick={() => updateStatus(c.id, 'Closed')}>Close Case</Button>
+                        </>
+                      )}
                     </div>
 
                     <div className="pt-2 border-t mt-2">
@@ -432,32 +441,34 @@ export default function DisciplinaryPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Case Documentation</CardTitle>
-              <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" variant="outline"><Plus className="h-4 w-4 mr-1" /> Add Document</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Upload Disciplinary Document</DialogTitle>
-                    <DialogDescription>These documents will be accessible to authorized council members.</DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleUploadDocument} className="space-y-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="docTitle">Document Title</Label>
-                      <Input id="docTitle" value={newDocTitle} onChange={e => setNewDocTitle(e.target.value)} placeholder="e.g. DC Procedures 2026" required />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="docFile">File</Label>
-                      <Input id="docFile" type="file" onChange={e => setDocFile(e.target.files?.[0] || null)} required />
-                    </div>
-                    <DialogFooter>
-                      <Button type="submit" disabled={uploadLoading}>
-                        {uploadLoading ? "Uploading..." : "Upload Document"}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
+              {canManageDC && (
+                <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline"><Plus className="h-4 w-4 mr-1" /> Add Document</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Upload Disciplinary Document</DialogTitle>
+                      <DialogDescription>These documents will be accessible to authorized council members.</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleUploadDocument} className="space-y-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="docTitle">Document Title</Label>
+                        <Input id="docTitle" value={newDocTitle} onChange={e => setNewDocTitle(e.target.value)} placeholder="e.g. DC Procedures 2026" required />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="docFile">File</Label>
+                        <Input id="docFile" type="file" onChange={e => setDocFile(e.target.files?.[0] || null)} required />
+                      </div>
+                      <DialogFooter>
+                        <Button type="submit" disabled={uploadLoading}>
+                          {uploadLoading ? "Uploading..." : "Upload Document"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              )}
             </CardHeader>
             <CardContent>
               <div className="space-y-2">

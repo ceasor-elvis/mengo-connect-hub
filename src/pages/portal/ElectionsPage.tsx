@@ -38,6 +38,7 @@ interface Applicant {
   comment?: string;
   gender: string;
   status: string;
+  position: string;
 }
 
 export default function ElectionsPage() {
@@ -45,6 +46,7 @@ export default function ElectionsPage() {
   const [autoProgress, setAutoProgress] = useState(false);
   const [orgName, setOrgName] = useState("VINE STUDENTS' COUNCIL");
   const isTopHead = hasPermission("manage_elections");
+  const canUnlock = hasPermission("manage_permissions");
 
   const [minAverage, setMinAverage] = useState(15);
   const [electionTitle, setElectionTitle] = useState("S.2 Councillors 2026");
@@ -71,6 +73,7 @@ export default function ElectionsPage() {
   const [newSmart, setNewSmart] = useState("");
   const [newConf, setNewConf] = useState("");
   const [newQapp, setNewQapp] = useState("");
+  const [newPosition, setNewPosition] = useState("Councillor");
   const [newComment, setNewComment] = useState("");
 
   // Filtering
@@ -89,12 +92,10 @@ export default function ElectionsPage() {
   const [editSmart, setEditSmart] = useState("");
   const [editConf, setEditConf] = useState("");
   const [editQapp, setEditQapp] = useState("");
+  const [editPosition, setEditPosition] = useState("");
   const [editComment, setEditComment] = useState("");
 
   // EC access delegation
-  const [grants, setGrants] = useState<any[]>([]);
-  const [allProfiles, setAllProfiles] = useState<any[]>([]);
-  const [grantUserId, setGrantUserId] = useState("");
   const [activeLocks, setActiveLocks] = useState<any[]>([]);
 
   // Predefined streams
@@ -116,23 +117,10 @@ export default function ElectionsPage() {
     finally { setLoading(false); }
   };
 
-  const fetchGrants = async () => {
-    try {
-      const { data } = await api.get("/ec-access-grants/");
-      setGrants(Array.isArray(data) ? data : data.results || []);
-    } catch(e) { console.error(e); }
-  };
-
-  const fetchProfiles = async () => {
-    try {
-      const { data } = await api.get("/users/all-profiles/");
-      setAllProfiles(Array.isArray(data) ? data : data.results || []);
-    } catch(e) { console.error(e); }
-  };
 
   const fetchLocks = async () => {
     try {
-      const { data } = await api.get("/election-locks/");
+      const { data } = await api.get("/ec-access-locks/");
       setActiveLocks(Array.isArray(data) ? data : data.results || []);
     } catch(e) { console.error(e); }
   };
@@ -148,7 +136,6 @@ export default function ElectionsPage() {
     fetchApplicants();
     fetchLocks();
     fetchStreams();
-    if (isTopHead) { fetchGrants(); fetchProfiles(); }
   }, []);
 
   useEffect(() => {
@@ -217,7 +204,16 @@ export default function ElectionsPage() {
     if (!newName || !newClass || !newGender || !newSmart || !newConf || !newQapp) {
       toast.error("Fill all required fields"); return;
     }
-    const totalScore = Number(newSmart) + Number(newConf) + Number(newQapp);
+    const smart = Number(newSmart);
+    const conf = Number(newConf);
+    const qapp = Number(newQapp);
+
+    if (smart > 10 || conf > 10 || qapp > 10 || smart < 0 || conf < 0 || qapp < 0) {
+      toast.error("Scores must be between 0 and 10");
+      return;
+    }
+
+    const totalScore = smart + conf + qapp;
     try {
       await api.post("/applications/", {
         applicant_name: newName,
@@ -229,6 +225,7 @@ export default function ElectionsPage() {
         qapp_score: Number(newQapp),
         comment: newComment || generateAutoComment(Number(newSmart), Number(newConf), Number(newQapp), totalScore),
         average_score: totalScore,
+        position: newPosition,
         status: "pending",
       });
       toast.success("Candidate added!");
@@ -278,7 +275,10 @@ export default function ElectionsPage() {
           if (g && (g.startsWith("f") || g === "female")) gender = "female";
           
           // Parse numbers
-          const parseNum = (val: any) => (!isNaN(Number(val)) ? Number(val) : 0);
+          const parseNum = (val: any) => {
+            const n = !isNaN(Number(val)) ? Number(val) : 0;
+            return Math.min(10, Math.max(0, n));
+          };
           const smart = parseNum(row["Smart"] || row["Smart /10"] || row["smart"]);
           const conf = parseNum(row["Conf"] || row["Conf /10"] || row["conf"]);
           const qapp = parseNum(row["Q.App"] || row["Q.App /10"] || row["qapp"]);
@@ -294,6 +294,7 @@ export default function ElectionsPage() {
               conf_score: conf,
               qapp_score: qapp,
               average_score: total,
+              position: row["Position"] || "Councillor",
               comment: generateAutoComment(smart, conf, qapp, total),
               status: "pending",
             });
@@ -326,6 +327,7 @@ export default function ElectionsPage() {
     setEditSmart(a.smart_score?.toString() || "");
     setEditConf(a.conf_score?.toString() || "");
     setEditQapp(a.qapp_score?.toString() || "");
+    setEditPosition(a.position || "Councillor");
     setEditComment(a.comment || "");
   };
 
@@ -334,6 +336,12 @@ export default function ElectionsPage() {
     const smart = Number(editSmart || 0);
     const conf = Number(editConf || 0);
     const qapp = Number(editQapp || 0);
+
+    if (smart > 10 || conf > 10 || qapp > 10 || smart < 0 || conf < 0 || qapp < 0) {
+      toast.error("Scores must be between 0 and 10");
+      return;
+    }
+
     const average_score = smart + conf + qapp;
 
     try {
@@ -346,6 +354,7 @@ export default function ElectionsPage() {
         conf_score: conf,
         qapp_score: qapp,
         average_score,
+        position: editPosition,
         comment: editComment || generateAutoComment(smart, conf, qapp, average_score)
       });
       toast.success("Candidate updated!");
@@ -369,7 +378,12 @@ export default function ElectionsPage() {
 
   const handleAutoScreen = async () => {
     try {
-      await api.post("/applications/auto-screen/", { min_average: minAverage });
+      await api.post("/applications/auto-screen/", { 
+        min_average: minAverage,
+        applicant_class: filterClass,
+        stream: filterStream,
+        gender: filterGender
+      });
       toast.success(`Screened using min target of ${minAverage}/30`);
       fetchApplicants();
     } catch (e: any) {
@@ -377,39 +391,15 @@ export default function ElectionsPage() {
     }
   };
 
-  const toggleStatus = async (id: string, current: string) => {
-    const next = current === "qualified" ? "disqualified" : "qualified";
+  const updateStatus = async (id: string, next: string) => {
     try {
       await api.patch(`/applications/${id}/`, { status: next });
       fetchApplicants();
-    } catch (e) {
-      toast.error("Failed to update status");
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to update status");
     }
   };
 
-  const grantAccess = async () => {
-    if (!grantUserId || !user) return;
-    try {
-      await api.post("/ec-access-grants/", {
-        granted_to: grantUserId,
-      });
-      toast.success("Access granted!"); 
-      fetchGrants(); 
-      setGrantUserId("");
-    } catch(e: any) {
-      toast.error(e.response?.data?.detail || "Error granting access");
-    }
-  };
-
-  const revokeAccess = async (id: string) => {
-    try {
-      await api.delete(`/ec-access-grants/${id}/`);
-      toast.success("Access revoked");
-      fetchGrants();
-    } catch (e) {
-      toast.error("Error revoking access");
-    }
-  };
 
   const getDynamicTitle = () => {
     let parts = [];
@@ -425,7 +415,10 @@ export default function ElectionsPage() {
 
   const lockFilter = async () => {
     try {
-      await api.post("/election-locks/", { filter_id: filterId, locked_by: user?.id });
+      await api.post("/ec-access-locks/", { 
+        filter_id: filterId, 
+        filter_label: (filterClass === "all" ? "All Classes" : filterClass) + " " + (filterStream === "all" ? "" : filterStream)
+      });
       toast.success("Screening criteria locked for all officials.");
       fetchLocks();
     } catch (e) { toast.error("Failed to lock filter"); }
@@ -435,7 +428,7 @@ export default function ElectionsPage() {
     const lock = activeLocks.find(l => l.filter_id === filterId);
     if (!lock) return;
     try {
-      await api.delete(`/election-locks/${lock.id}/`);
+      await api.delete(`/ec-access-locks/${lock.id}/`);
       toast.success("Screening configuration unlocked.");
       fetchLocks();
     } catch (e) { toast.error("Failed to unlock filter"); }
@@ -767,7 +760,7 @@ export default function ElectionsPage() {
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20 select-none">
                   <Lock className="h-4 w-4 animate-pulse" />
                   <span className="text-[10px] font-bold uppercase tracking-wider">Locked</span>
-                  {isTopHead && (
+                  {canUnlock && (
                     <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] hover:bg-destructive/10" onClick={unlockFilter}>
                       Unlock
                     </Button>
@@ -786,112 +779,117 @@ export default function ElectionsPage() {
               </Button>
             </div>
           )}
-          <Dialog open={addOpen} onOpenChange={setAddOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Add Candidate</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-sm">
-              <DialogHeader><DialogTitle>Add Candidate</DialogTitle></DialogHeader>
-              <div className="space-y-3 pt-2">
-                <div><Label>Full Name *</Label><Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Nakamya Faith" /></div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label>Class *</Label>
-                    <Select value={newClass} onValueChange={setNewClass}>
-                      <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
-                      <SelectContent>
-                        {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+          {isTopHead && !isLocked && (
+            <Dialog open={addOpen} onOpenChange={setAddOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Add Candidate</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-sm">
+                <DialogHeader><DialogTitle>Add Candidate</DialogTitle></DialogHeader>
+                <div className="space-y-3 pt-2">
+                  <div><Label>Full Name *</Label><Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Nakamya Faith" /></div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label>Class *</Label>
+                      <Select value={newClass} onValueChange={setNewClass}>
+                        <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+                        <SelectContent>
+                          {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Stream</Label>
+                      <Select value={newStream} onValueChange={(val) => handleStreamSelect(val, setNewStream)}>
+                        <SelectTrigger><SelectValue placeholder="Select Stream" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {streams.map((s) => (
+                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                          ))}
+                          {canManageStreams && <SelectItem value="add_new" className="text-primary font-medium">+ Add New Stream</SelectItem>}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div>
-                    <Label>Stream</Label>
-                    <Select value={newStream} onValueChange={(val) => handleStreamSelect(val, setNewStream)}>
-                      <SelectTrigger><SelectValue placeholder="Select Stream" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {streams.map((s) => (
-                          <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                        ))}
-                        {canManageStreams && <SelectItem value="add_new" className="text-primary font-medium">+ Add New Stream</SelectItem>}
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><Label>Gender *</Label>
+                      <Select value={newGender} onValueChange={setNewGender}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div><Label>Gender *</Label>
-                    <Select value={newGender} onValueChange={setNewGender}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div><Label>Smart /10</Label><Input type="number" min={0} max={10} value={newSmart} onChange={e => setNewSmart(e.target.value)} /></div>
+                    <div><Label>Conf /10</Label><Input type="number" min={0} max={10} value={newConf} onChange={e => setNewConf(e.target.value)} /></div>
+                    <div><Label>Q.App /10</Label><Input type="number" min={0} max={10} value={newQapp} onChange={e => setNewQapp(e.target.value)} /></div>
                   </div>
+                  <div><Label>Position *</Label><Input value={newPosition} onChange={e => setNewPosition(e.target.value)} placeholder="e.g. Councillor" /></div>
+                  <div><Label>Comment</Label><Input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Optional comment" /></div>
+                  <Button onClick={handleAddCandidate} className="w-full">Add Candidate</Button>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div><Label>Smart /10</Label><Input type="number" min={0} max={10} value={newSmart} onChange={e => setNewSmart(e.target.value)} /></div>
-                  <div><Label>Conf /10</Label><Input type="number" min={0} max={10} value={newConf} onChange={e => setNewConf(e.target.value)} /></div>
-                  <div><Label>Q.App /10</Label><Input type="number" min={0} max={10} value={newQapp} onChange={e => setNewQapp(e.target.value)} /></div>
-                </div>
-                <div><Label>Comment</Label><Input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Optional comment" /></div>
-                <Button onClick={handleAddCandidate} className="w-full">Add Candidate</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          )}
 
-          <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" variant="outline"><Upload className="mr-1 h-4 w-4" /> Upload Excel</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-sm">
-              <DialogHeader><DialogTitle>Bulk Upload Candidates</DialogTitle></DialogHeader>
-              <div className="space-y-3 pt-2">
-                <p className="text-xs text-muted-foreground">
-                  Select the Class and Stream first, then choose an Excel file (.xlsx). Extract uses columns: "Name", "Gender", "Smart", "Conf", "Q.App".
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label>Class *</Label>
-                    <Select value={uploadClass} onValueChange={setUploadClass}>
-                      <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
-                      <SelectContent>
-                        {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+          {isTopHead && !isLocked && (
+            <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline"><Upload className="mr-1 h-4 w-4" /> Upload Excel</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-sm">
+                <DialogHeader><DialogTitle>Bulk Upload Candidates</DialogTitle></DialogHeader>
+                <div className="space-y-3 pt-2">
+                  <p className="text-xs text-muted-foreground">
+                    Select the Class and Stream first, then choose an Excel file (.xlsx). Extract uses columns: "Name", "Gender", "Smart", "Conf", "Q.App".
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label>Class *</Label>
+                      <Select value={uploadClass} onValueChange={setUploadClass}>
+                        <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+                        <SelectContent>
+                          {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Stream</Label>
+                      <Select value={uploadStream} onValueChange={(val) => handleStreamSelect(val, setUploadStream)}>
+                        <SelectTrigger><SelectValue placeholder="Select Stream" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {streams.map((s) => (
+                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                          ))}
+                          {canManageStreams && <SelectItem value="add_new" className="text-primary font-medium">+ Add New Stream</SelectItem>}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div>
-                    <Label>Stream</Label>
-                    <Select value={uploadStream} onValueChange={(val) => handleStreamSelect(val, setUploadStream)}>
-                      <SelectTrigger><SelectValue placeholder="Select Stream" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {streams.map((s) => (
-                          <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                        ))}
-                        {canManageStreams && <SelectItem value="add_new" className="text-primary font-medium">+ Add New Stream</SelectItem>}
-                      </SelectContent>
-                    </Select>
+                    <Label>Excel File</Label>
+                    <Input 
+                      type="file" 
+                      accept=".xlsx, .xls, .csv" 
+                      onChange={handleExcelUpload} 
+                      disabled={isUploading}
+                      className="cursor-pointer"
+                    />
                   </div>
+                  {isUploading && <p className="text-xs text-primary animate-pulse">Processing file and uploading candidates...</p>}
                 </div>
-                <div>
-                  <Label>Excel File</Label>
-                  <Input 
-                    type="file" 
-                    accept=".xlsx, .xls, .csv" 
-                    onChange={handleExcelUpload} 
-                    disabled={isUploading}
-                    className="cursor-pointer"
-                  />
-                </div>
-                {isUploading && <p className="text-xs text-primary animate-pulse">Processing file and uploading candidates...</p>}
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
             <Button variant="outline" size="sm" onClick={() => { setExportType("qualified"); setIsExportOpen(true); }} className="w-full">
@@ -984,6 +982,7 @@ export default function ElectionsPage() {
               <div><Label>Conf /10</Label><Input type="number" min={0} max={10} value={editConf} onChange={e => setEditConf(e.target.value)} /></div>
               <div><Label>Q.App /10</Label><Input type="number" min={0} max={10} value={editQapp} onChange={e => setEditQapp(e.target.value)} /></div>
             </div>
+            <div><Label>Position *</Label><Input value={editPosition} onChange={e => setEditPosition(e.target.value)} /></div>
             <div><Label>Comment</Label><Input value={editComment} onChange={e => setEditComment(e.target.value)} /></div>
             <DialogFooter className="mt-4">
               <Button onClick={saveEditCandidate} className="w-full">Save Changes</Button>
@@ -1106,7 +1105,7 @@ export default function ElectionsPage() {
                     <div className="flex items-center gap-1.5 text-destructive font-bold animate-pulse text-[10px] uppercase tracking-tighter">
                       <Lock className="h-3 w-3" /> System Locked (Official Use Only)
                     </div>
-                    {isTopHead && (
+                    {canUnlock && (
                       <Button variant="outline" size="sm" className="h-7 text-[10px] border-destructive/30 text-destructive hover:bg-destructive/5" onClick={unlockFilter}>
                         Unlock Configuration
                       </Button>
@@ -1124,6 +1123,7 @@ export default function ElectionsPage() {
                   variant="outline" 
                   className="border-stone-300 text-xs px-6 font-bold hover:bg-white" 
                   onClick={handleAutoScreen}
+                  disabled={isLocked}
                 >
                   Auto-Screen with {((minAverage / 30) * 100).toFixed(0)}%
                 </Button>
@@ -1146,37 +1146,8 @@ export default function ElectionsPage() {
                     <Input value={electionTitle} onChange={e => setElectionTitle(e.target.value)} />
                   </div>
                 </div>
-                <Button size="sm" onClick={handleAutoScreen}><UserCheck className="mr-1 h-4 w-4" /> Auto-Screen All</Button>
+                <Button size="sm" onClick={handleAutoScreen} disabled={isLocked}><UserCheck className="mr-1 h-4 w-4" /> Auto-Screen All</Button>
 
-                {/* EC Access Delegation */}
-                <div className="border-t pt-3 mt-3">
-                  <h4 className="text-sm font-semibold flex items-center gap-2 mb-2"><ShieldCheck className="h-4 w-4 text-primary" /> EC Access Delegation</h4>
-                  <p className="text-xs text-muted-foreground mb-2">Grant other councillors access to the Elections module.</p>
-                  <div className="flex gap-2 flex-wrap">
-                    <Select value={grantUserId} onValueChange={setGrantUserId}>
-                      <SelectTrigger className="w-48"><SelectValue placeholder="Select councillor" /></SelectTrigger>
-                      <SelectContent>
-                        {allProfiles.filter(p => !grants.some(g => g.granted_to === p.user_id)).map(p => (
-                          <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button size="sm" onClick={grantAccess} disabled={!grantUserId}>Grant Access</Button>
-                  </div>
-                  {grants.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      {grants.map(g => {
-                        const p = allProfiles.find(pr => pr.user_id === g.granted_to);
-                        return (
-                          <div key={g.id} className="flex items-center justify-between rounded bg-background px-3 py-1.5 text-sm">
-                            <span>{p?.full_name || "Unknown"}</span>
-                            <Button size="sm" variant="ghost" className="text-destructive h-7 text-xs" onClick={() => revokeAccess(g.id)}>Revoke</Button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
               </CardContent>
             </Card>
           )}
@@ -1200,7 +1171,8 @@ export default function ElectionsPage() {
                   <th className="py-2 px-2 text-left font-medium text-muted-foreground">Name</th>
                   <th className="py-2 px-2 text-left font-medium text-muted-foreground">Class</th>
                   <th className="py-2 px-2 text-left font-medium text-muted-foreground hidden sm:table-cell">Stream</th>
-                  <th className="py-2 px-2 text-left font-medium text-muted-foreground hidden sm:table-cell">Gender</th>
+                  <th className="py-2 px-2 text-left font-medium text-muted-foreground hidden lg:table-cell">Gender</th>
+                  <th className="py-2 px-2 text-left font-medium text-muted-foreground hidden xl:table-cell">Position</th>
                   <th className="py-2 px-2 text-left font-medium text-muted-foreground" title="Smartness">Smt</th>
                   <th className="py-2 px-2 text-left font-medium text-muted-foreground" title="Confidence">Cnf</th>
                   <th className="py-2 px-2 text-left font-medium text-muted-foreground" title="Quick at Application">Q.A</th>
@@ -1221,6 +1193,7 @@ export default function ElectionsPage() {
                     <td className="py-2 px-2 text-muted-foreground">{a.applicant_class}</td>
                     <td className="py-2 px-2 text-muted-foreground hidden lg:table-cell">{(a as any).stream || "—"}</td>
                     <td className="py-2 px-2 capitalize text-muted-foreground hidden sm:table-cell">{a.gender}</td>
+                    <td className="py-2 px-2 text-muted-foreground hidden xl:table-cell">{a.position}</td>
                     <td className="py-2 px-2 text-muted-foreground">{a.smart_score || "—"}</td>
                     <td className="py-2 px-2 text-muted-foreground">{a.conf_score || "—"}</td>
                     <td className="py-2 px-2 text-muted-foreground">{a.qapp_score || "—"}</td>
@@ -1238,13 +1211,22 @@ export default function ElectionsPage() {
                       </Badge>
                     </td>
                     <td className="py-2 px-2 flex flex-wrap gap-1 min-w-[140px]">
-                      {a.status !== "pending" && (
-                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => toggleStatus(a.id, a.status)}>
-                          {a.status === "qualified" ? "Disqualify" : "Qualify"}
-                        </Button>
-                      )}
-                      {isTopHead && (
+                      {isTopHead && !isLocked && (
                         <>
+                          {a.status === "pending" ? (
+                            <>
+                              <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] sm:text-xs text-primary hover:bg-primary/10" onClick={() => updateStatus(a.id, "qualified")}>
+                                Qualify
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] sm:text-xs text-destructive hover:bg-destructive/10" onClick={() => updateStatus(a.id, "disqualified")}>
+                                Disqualify
+                              </Button>
+                            </>
+                          ) : (
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] sm:text-xs" onClick={() => updateStatus(a.id, a.status === "qualified" ? "disqualified" : "qualified")}>
+                              {a.status === "qualified" ? "Disqualify" : "Qualify"}
+                            </Button>
+                          )}
                           <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Edit" onClick={() => openEditModal(a)}>
                             <Pencil className="h-4 w-4 text-muted-foreground" />
                           </Button>

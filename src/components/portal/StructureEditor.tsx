@@ -79,7 +79,7 @@ export default function StructureEditor({ onTreeUpdated }: { onTreeUpdated: () =
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.put("/hierarchy-tree/", JSON.stringify(nodes));
+      await api.put("/users/hierarchy-tree/", nodes);
       toast.success("Cabinet structure updated successfully!");
       onTreeUpdated();
     } catch (e) {
@@ -166,22 +166,17 @@ export default function StructureEditor({ onTreeUpdated }: { onTreeUpdated: () =
                         </div>
                         <div className="space-y-2">
                            <Label>Unique ID (role)</Label>
-                           {/* Handling ID change requires more care, using a controlled update */}
+                           {/* Handling ID change using onBlur to safely cascade changes across the node structure */}
                            <Input 
-                              value={selectedNode.role} 
-                              onChange={(e) => {
-                                 // Very naive update loop handler, normally requires a separate form state or strict blur.
-                                 // For this, we'll just block spaces and weird chars.
+                              key={selectedNode.role}
+                              defaultValue={selectedNode.role} 
+                              onBlur={(e) => {
                                  const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
-                                 // updateRoleID(val); // In full form, we'd only apply on blur, doing it simple here:
-                                 setNodes(nodes.map(n => n.role === selectedRole ? { ...n, role: val } : n));
-                                 setSelectedRole(val); // dangerous React loop hack! Actually, this will break parent links if changed while typing. 
-                                 // Better approach: Disable editing role ID for simplicity, or have complex sync. 
-                                 // Let's just update the label and use the auto-generated ID for new nodes, OR only allow edit on blur.
+                                 e.target.value = val;
+                                 updateRoleID(val);
                               }}
-                              disabled={true} 
                            />
-                           <p className="text-[10px] text-muted-foreground">Role IDs are immutable once created to preserve system links.</p>
+                           <p className="text-[10px] text-muted-foreground">Unique identifier used for programming permissions. Only letters, numbers, and underscores allowed.</p>
                         </div>
                      </div>
 

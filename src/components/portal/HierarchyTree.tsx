@@ -4,10 +4,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { useHierarchy, RoleNode, AppRole, ICON_MAP } from "@/hooks/useHierarchy";
-import { Plus, Minus, Users, User } from "lucide-react";
+import { Plus, Minus, Users, User, GraduationCap, School, Info } from "lucide-react";
 import { api } from "@/lib/api";
 
-interface ProfileMap { [userId: string]: { full_name: string; profile_pic_url: string | null } }
+interface ProfileMap { 
+  [userId: string]: { 
+    full_name: string; 
+    profile_pic_url: string | null;
+    student_class?: string;
+    stream?: string;
+    gender?: string;
+    bio?: string;
+  } 
+}
 interface RoleMap { [role: string]: string }
 
 function NodeCard({
@@ -36,10 +45,21 @@ function NodeCard({
         border-white/10 hover:border-white/30
         ${!profile && !isMultipleRole ? 'opacity-60 grayscale-[0.5]' : ''}
       `}
-      onClick={(e) => { if (hasChildren) { e.stopPropagation(); onToggle(); } }}
+      onClick={(e) => { 
+        if (hasChildren && (!profile || isMultipleRole)) { 
+          e.stopPropagation(); 
+          onToggle(); 
+        } 
+      }}
     >
       {hasChildren && (
-        <div className="absolute -right-1.5 -top-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-background/80 backdrop-blur-md shadow-xl flex items-center justify-center text-primary z-20 border border-primary/20 group-hover:scale-125 transition-all duration-500 overflow-hidden">
+        <div 
+          className="absolute -right-1.5 -top-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-background/80 backdrop-blur-md shadow-xl flex items-center justify-center text-primary z-20 border border-primary/20 group-hover:scale-125 transition-all duration-500 overflow-hidden cursor-pointer hover:bg-primary/10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+        >
           <motion.div animate={isExpanded ? { rotate: 0 } : { rotate: 180 }} className="flex items-center justify-center">
             {isExpanded ? <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
           </motion.div>
@@ -85,26 +105,89 @@ function NodeCard({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <div onClick={(e) => e.stopPropagation()}>{cardContent}</div>
+        {cardContent}
       </DialogTrigger>
-      <DialogContent className="max-w-sm p-0 overflow-hidden bg-transparent border-none shadow-none">
-        <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} className="flex flex-col items-center gap-6">
-          <div className="relative group">
-            <div className="absolute inset-0 bg-gold blur-[50px] opacity-40 group-hover:opacity-60 transition-opacity animate-pulse" />
-            <Avatar className="h-48 w-48 border-8 border-white shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] relative z-10 transition-transform duration-500 hover:scale-105">
-              <AvatarImage src={profile.profile_pic_url || (profile as any).profile_pic || ""} alt={profile.full_name} />
-              <AvatarFallback className="bg-muted text-4xl font-serif">{profile.full_name.slice(0, 2).toUpperCase()}</AvatarFallback>
-            </Avatar>
-          </div>
-          <div className="bg-white/90 backdrop-blur-xl px-10 py-6 rounded-[2.5rem] border border-white/40 shadow-2xl text-center relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gold to-transparent opacity-50" />
-            <h2 className="font-serif text-2xl font-bold text-primary mb-1">{profile.full_name}</h2>
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <div className="h-px w-4 bg-gold/30" />
-              <p className="text-[10px] font-bold text-gold uppercase tracking-[0.4em]">{node.label}</p>
-              <div className="h-px w-4 bg-gold/30" />
+      <DialogContent className="max-w-xl p-0 overflow-hidden bg-background/40 backdrop-blur-3xl border-white/20 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] rounded-[2.5rem]">
+        <motion.div 
+          initial={{ scale: 0.95, opacity: 0 }} 
+          animate={{ scale: 1, opacity: 1 }} 
+          className="relative"
+        >
+          {/* Header Background Pattern */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-background -z-10" />
+          <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-primary/5 to-transparent -z-10" />
+          
+          <div className="p-8 sm:p-10">
+            <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+              {/* Profile Image Section */}
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gold blur-[40px] opacity-20 group-hover:opacity-40 transition-opacity animate-pulse" />
+                <Avatar className="h-40 w-40 sm:h-52 sm:w-52 border-8 border-white shadow-2xl relative z-10 transition-transform duration-700 group-hover:scale-[1.02]">
+                  <AvatarImage src={profile.profile_pic_url || (profile as any).profile_pic || ""} alt={profile.full_name} className="object-cover" />
+                  <AvatarFallback className="bg-muted text-5xl font-serif">{profile.full_name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                
+                {/* Status Badge */}
+                <div className="absolute -bottom-2 -right-2 bg-gold text-white text-[10px] font-black uppercase tracking-tighter px-4 py-1.5 rounded-full shadow-lg z-20 border-2 border-white">
+                  Active Officer
+                </div>
+              </div>
+
+              {/* Basic Info Section */}
+              <div className="flex-1 text-center md:text-left space-y-4">
+                <div>
+                  <h2 className="font-serif text-3xl sm:text-4xl font-black text-primary leading-tight tracking-tight mb-1">
+                    {profile.full_name}
+                  </h2>
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/5 border border-primary/10 text-primary">
+                    <Icon className="h-4 w-4" />
+                    <span className="text-xs font-bold uppercase tracking-widest leading-none">{node.label}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white/40 border border-white/60 p-3 rounded-2xl">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                      <GraduationCap className="h-3.5 w-3.5" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Class</span>
+                    </div>
+                    <p className="text-sm font-bold text-primary">{profile.student_class || 'N/A'}</p>
+                  </div>
+                  <div className="bg-white/40 border border-white/60 p-3 rounded-2xl">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                      <School className="h-3.5 w-3.5" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Stream</span>
+                    </div>
+                    <p className="text-sm font-bold text-primary">{profile.stream || 'N/A'}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-primary/60">
+                      <Info className="h-4 w-4" />
+                      <span className="text-xs font-black uppercase tracking-widest">About Member</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed italic line-clamp-4">
+                      {profile.bio || "No biography provided for this council member. They are dedicated to serving the students of Mengo Senior School."}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <p className="text-[10px] text-muted-foreground/60 italic">Official Council Member</p>
+
+            {/* Footer / Meta Data */}
+            <div className="mt-10 pt-6 border-t border-primary/5 flex flex-wrap justify-between items-center gap-4">
+              <div className="flex gap-4">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                  <span className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">Certified Council Official</span>
+                </div>
+              </div>
+              <p className="text-[10px] font-medium text-muted-foreground/40 italic">
+                Ref: MSS-COUNCIL-{profile.full_name.split(' ').join('-').toUpperCase()}
+              </p>
+            </div>
           </div>
         </motion.div>
       </DialogContent>
@@ -198,7 +281,14 @@ export default function HierarchyTree({ refreshKey }: { refreshKey?: number }) {
         const pm: ProfileMap = {};
         const profiles = Array.isArray(profilesData) ? profilesData : profilesData.results || [];
         profiles.forEach((p: any) => {
-          pm[p.user_id] = { full_name: p.full_name, profile_pic_url: p.profile_pic_url || p.profile_pic || null };
+          pm[p.user_id] = { 
+            full_name: p.full_name, 
+            profile_pic_url: p.profile_pic_url || p.profile_pic || null,
+            student_class: p.student_class,
+            stream: p.stream,
+            gender: p.gender,
+            bio: p.bio
+          };
         });
         setProfileMap(pm);
       }
