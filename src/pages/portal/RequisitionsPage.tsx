@@ -56,7 +56,7 @@ const statusVariant = (s: string) => {
 };
 
 export default function RequisitionsPage() {
-  const { user, profile, hasAnyRole } = useAuth();
+  const { user, profile, hasPermission } = useAuth();
   const { log } = useActivityLog();
   const [reqs, setReqs] = useState<Requisition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,9 +68,10 @@ export default function RequisitionsPage() {
   const [expenses, setExpenses] = useState<LineItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const isAdminOrPatron = hasAnyRole(["adminabsolute", "patron"]);
-  const isChairperson = hasAnyRole(["chairperson"]);
-  const isFinance = hasAnyRole(["secretary_finance"]);
+  const canApprove = hasPermission("approve_requisition");
+  const canForwardToPatron = hasPermission("forward_req_patron");
+  const canForwardToChair = hasPermission("forward_req_chair");
+  const canManage = hasPermission("manage_requisitions");
 
   const fetchReqs = async () => {
     try {
@@ -354,22 +355,22 @@ export default function RequisitionsPage() {
                     </DialogContent>
                   </Dialog>
 
-                  {/* Step 1: Submit to Chairperson (Only Finance or Creator) */}
-                  {req.status === "Pending" && (isFinance || req.initiator === (profile?.full_name || user?.username)) && (
+                  {/* Step 1: Submit to Chairperson (Finance, or Creator with manage_requisitions) */}
+                  {req.status === "Pending" && (canForwardToChair || (req.initiator === (profile?.full_name || user?.username) && canManage)) && (
                     <Button size="sm" className="h-8 text-xs bg-gold hover:bg-gold/80" onClick={() => handleStatusUpdate(req.id, "Pending Chairperson", "Forwarded to Chairperson")}>
                       Forward to Chair
                     </Button>
                   )}
 
-                  {/* Step 2: Forward to Patron (Only Chairperson) */}
-                  {req.status === "Pending Chairperson" && isChairperson && (
+                  {/* Step 2: Forward to Patron (Only Chairperson or equivalent) */}
+                  {req.status === "Pending Chairperson" && canForwardToPatron && (
                     <Button size="sm" className="h-8 text-xs bg-primary hover:bg-primary/80" onClick={() => handleStatusUpdate(req.id, "Pending Patron", "Forwarded to Patron")}>
                       Forward to Patron
                     </Button>
                   )}
 
                   {/* Step 3: Patron Approval */}
-                  {req.status === "Pending Patron" && isAdminOrPatron && (
+                  {req.status === "Pending Patron" && canApprove && (
                     <div className="flex gap-1">
                       <Button size="sm" className="h-8 text-xs" onClick={() => handleStatusUpdate(req.id, "Approved", "Requisition Fully Approved")}>Approve</Button>
                       <Button size="sm" variant="destructive" className="h-8 text-xs" onClick={() => handleStatusUpdate(req.id, "Rejected", "Requisition Rejected")}>Reject</Button>
@@ -377,7 +378,7 @@ export default function RequisitionsPage() {
                   )}
 
                   {/* Final Actions (Delete) */}
-                  {isAdminOrPatron && (
+                  {hasPermission("manage_permissions") && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">

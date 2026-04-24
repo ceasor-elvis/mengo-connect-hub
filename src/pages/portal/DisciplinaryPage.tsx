@@ -40,8 +40,8 @@ interface DCDocument {
 }
 
 export default function DisciplinaryPage() {
-  const { user, hasAnyRole } = useAuth();
-  const isChairperson = hasAnyRole(["chairperson"]);
+  const { user, hasPermission } = useAuth();
+  const isChairperson = hasPermission("approve_disciplinary_forwarding");
   const [cases, setCases] = useState<DCCase[]>([]);
   const [documents, setDocuments] = useState<DCDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -362,7 +362,7 @@ export default function DisciplinaryPage() {
                         </>
                       )}
 
-                      {hasAnyRole(["disciplinary_committee", "general_secretary", "vice_chairperson"]) && !isChairperson && (
+                      {hasPermission("manage_disciplinary") && !isChairperson && (
                         <>
                           {c.is_forwarded_to_patron ? (
                             <p className="text-xs text-amber-700 font-medium flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Forwarded to Patron by Chairperson</p>

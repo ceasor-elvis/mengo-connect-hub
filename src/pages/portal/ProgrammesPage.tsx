@@ -36,7 +36,7 @@ interface Programme {
 }
 
 export default function ProgrammesPage() {
-  const { user, hasAnyRole } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { log } = useActivityLog();
   const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +58,7 @@ export default function ProgrammesPage() {
   const [editIsBigEvent, setEditIsBigEvent] = useState(false);
   const [editSubmitting, setEditSubmitting] = useState(false);
 
-  const canAdd = hasAnyRole(["general_secretary", "secretary_publicity", "adminabsolute", "chairperson"]);
+  const canAdd = hasPermission("manage_programmes");
 
   const fetchProgrammes = async () => {
     try {

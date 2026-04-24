@@ -41,10 +41,10 @@ interface Applicant {
 }
 
 export default function ElectionsPage() {
-  const { user, hasAnyRole } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [autoProgress, setAutoProgress] = useState(false);
   const [orgName, setOrgName] = useState("VINE STUDENTS' COUNCIL");
-  const isTopHead = hasAnyRole(["patron", "chairperson", "speaker", "electoral_commission", "general_secretary"]);
+  const isTopHead = hasPermission("manage_elections");
 
   const [minAverage, setMinAverage] = useState(15);
   const [electionTitle, setElectionTitle] = useState("S.2 Councillors 2026");
@@ -98,7 +98,7 @@ export default function ElectionsPage() {
   const [activeLocks, setActiveLocks] = useState<any[]>([]);
 
   // Predefined streams
-  const canManageStreams = hasAnyRole(["chairperson", "adminabsolute", "general_secretary", "patron", "vice_chairperson"]);
+  const canManageStreams = hasPermission("manage_elections");
   const [streams, setStreams] = useState<any[]>([]);
   const [addStreamOpen, setAddStreamOpen] = useState(false);
   const [newStreamName, setNewStreamName] = useState("");
@@ -1218,7 +1218,7 @@ export default function ElectionsPage() {
                 ) : filteredApplicants.map((a) => (
                   <tr key={a.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
                     <td className="py-2 px-2 font-medium">{a.applicant_name}</td>
-                    <td className="py-2 px-2 text-muted-foreground">{a.class}</td>
+                    <td className="py-2 px-2 text-muted-foreground">{a.applicant_class}</td>
                     <td className="py-2 px-2 text-muted-foreground hidden lg:table-cell">{(a as any).stream || "—"}</td>
                     <td className="py-2 px-2 capitalize text-muted-foreground hidden sm:table-cell">{a.gender}</td>
                     <td className="py-2 px-2 text-muted-foreground">{a.smart_score || "—"}</td>

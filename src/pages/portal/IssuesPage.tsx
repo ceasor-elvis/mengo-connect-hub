@@ -29,8 +29,8 @@ interface Issue {
 const statusColor = (s: string) => s === "resolved" ? "default" : s === "in_progress" ? "secondary" : "outline";
 
 export default function IssuesPage() {
-  const { user, hasAnyRole } = useAuth();
-  const canManage = hasAnyRole(["chairperson", "patron", "general_secretary"]);
+  const { user, hasPermission } = useAuth();
+  const canManage = hasPermission("manage_issues");
   const { log } = useActivityLog();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);

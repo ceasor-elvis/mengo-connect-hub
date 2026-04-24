@@ -144,8 +144,8 @@ function DutyEditor({ duties, setDuties, councillors }: { duties: Duty[]; setDut
 }
 
 export default function RotaPage() {
-  const { user, hasAnyRole } = useAuth();
-  const canEdit = hasAnyRole([...EDITOR_ROLES] as any[]);
+  const { user, hasPermission } = useAuth();
+  const canEdit = hasPermission("manage_rota");
 
   const [rotas, setRotas] = useState<RotaRow[]>([]);
   const [loading, setLoading] = useState(true);

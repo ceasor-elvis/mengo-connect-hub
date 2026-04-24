@@ -10,8 +10,8 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 
 export default function RegisterPatronPage() {
-  const { roles } = useAuth();
-  const isAdminAbsolute = roles.includes("adminabsolute");
+  const { hasPermission } = useAuth();
+  const isAdminAbsolute = hasPermission("manage_permissions");
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);

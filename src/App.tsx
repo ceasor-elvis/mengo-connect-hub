@@ -31,6 +31,7 @@ import ActionPlanPage from "@/pages/portal/ActionPlanPage";
 import SettingsPage from "@/pages/portal/SettingsPage";
 import FinancialSummaryPage from "@/pages/portal/FinancialSummaryPage";
 import HomeLayoutPage from "@/pages/portal/HomeLayoutPage";
+import PermissionManagementPage from "@/pages/portal/PermissionManagementPage";
 import NotFound from "./pages/NotFound.tsx";
 const queryClient = new QueryClient();
 
@@ -63,50 +64,57 @@ const App = () => (
                 <Route path="hierarchy" element={<HierarchyPage />} />
 
                 {/* Student Voices – secretariat & leadership */}
-                <Route element={<RoleGuard allowedRoles={["patron", "chairperson", "general_secretary", "assistant_general_secretary"]} />}>
+                <Route element={<RoleGuard allowedPermission="view_student_voices" />}>
                   <Route path="student-voices" element={<StudentVoicesPage />} />
                 </Route>
 
                 {/* Requisitions & Finance Summary – finance chain */}
-                <Route element={<RoleGuard allowedRoles={["patron", "chairperson", "secretary_finance", "adminabsolute"]} />}>
+                <Route element={<RoleGuard allowedPermission="view_requisitions" />}>
                   <Route path="requisitions" element={<RequisitionsPage />} />
                   <Route path="financial-summary" element={<FinancialSummaryPage />} />
                 </Route>
 
                 {/* Blog Manager – Publicity & leadership */}
-                <Route element={<RoleGuard allowedRoles={["chairperson", "general_secretary", "secretary_publicity", "adminabsolute"]} />}>
+                <Route element={<RoleGuard allowedPermission="view_blog" />}>
                   <Route path="blog" element={<BlogManagerPage />} />
                 </Route>
                 
                 {/* Disciplinary - DC & leadership */}
-                <Route element={<RoleGuard allowedRoles={["disciplinary_committee", "chairperson", "vice_chairperson", "general_secretary"]} />}>
+                <Route element={<RoleGuard allowedPermission="view_disciplinary" />}>
                   <Route path="disciplinary" element={<DisciplinaryPage />} />
                 </Route>
 
                 {/* Elections – leadership & EC */}
-                <Route element={<RoleGuard allowedRoles={["patron", "chairperson", "speaker", "electoral_commission"]} />}>
+                <Route element={<RoleGuard allowedPermission="view_elections" />}>
                   <Route path="elections" element={<ElectionsPage />} />
                 </Route>
 
                 {/* Activity Logs – leadership & EC */}
-                <Route element={<RoleGuard allowedRoles={["patron", "chairperson", "speaker", "electoral_commission"]} />}>
+                <Route element={<RoleGuard allowedPermission="view_logs" />}>
                   <Route path="logs" element={<ActivityLogsPage />} />
                 </Route>
 
                 {/* Register Member & Patron – top leadership only */}
-                <Route element={<RoleGuard allowedRoles={["patron", "chairperson"]} />}>
+                <Route element={<RoleGuard allowedPermission="register_member" />}>
                   <Route path="register-member" element={<RegisterMemberPage />} />
+                </Route>
+                <Route element={<RoleGuard allowedPermission="register_patron" />}>
                   <Route path="register-patron" element={<RegisterPatronPage />} />
                 </Route>
 
                 {/* Action Plan – leadership only */}
-                <Route element={<RoleGuard allowedRoles={["adminabsolute", "patron", "chairperson", "vice_chairperson", "general_secretary", "assistant_general_secretary"]} />}>
+                <Route element={<RoleGuard allowedPermission="view_action_plan" />}>
                   <Route path="action-plan" element={<ActionPlanPage />} />
                 </Route>
 
                 {/* Home Layout – admin only */}
-                <Route element={<RoleGuard allowedRoles={["adminabsolute"]} />}>
+                <Route element={<RoleGuard allowedPermission="manage_home_layout" />}>
                   <Route path="home-layout" element={<HomeLayoutPage />} />
+                </Route>
+
+                {/* Permission Management - Admin Absolute only */}
+                <Route element={<RoleGuard allowedPermission="manage_permissions" />}>
+                  <Route path="admin-absolute/features" element={<PermissionManagementPage />} />
                 </Route>
               </Route>
 

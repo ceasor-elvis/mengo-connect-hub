@@ -57,7 +57,7 @@ function daysUntilDeletion(rejectedAt: string | null): number | null {
 }
 
 export default function StudentVoicesPage() {
-  const { user, roles, hasAnyRole } = useAuth();
+  const { user, roles, hasPermission } = useAuth();
   const [voices, setVoices] = useState<Voice[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -238,7 +238,9 @@ export default function StudentVoicesPage() {
     toast.success("Voices report preview generated!");
   };
 
-  const isChairperson = hasAnyRole(["chairperson"]);
+  const canApproveForward = hasPermission("approve_voice_forwarding");
+  const canRequestForward = hasPermission("request_voice_forwarding");
+  const canManage = hasPermission("manage_student_voices");
 
   const handleRequestForward = async () => {
     if (!selected) return;
@@ -367,7 +369,7 @@ export default function StudentVoicesPage() {
         ))}
       </div>
 
-      {!roles.includes("patron") || roles.includes("adminabsolute") ? (
+      {!hasPermission("manage_home_layout") ? (
         <div className="flex items-center gap-4 py-1.5 px-3 border border-dashed rounded-lg bg-muted/20">
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Smart Tone:</span>
           <div className="flex gap-2">
@@ -539,9 +541,9 @@ export default function StudentVoicesPage() {
                     </div>
                   )}
 
-                  <div className="flex flex-col gap-3 border-t pt-3">
+                    <div className="flex flex-col gap-3 border-t pt-3">
                     <div className="flex items-center justify-between gap-2">
-                      <Button variant="outline" size="sm" className="gap-1.5" onClick={startEdit}>
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={startEdit} disabled={!canManage}>
                         <Pencil className="h-3.5 w-3.5" /> Edit
                       </Button>
                       <div className="flex items-center gap-2">
@@ -552,7 +554,7 @@ export default function StudentVoicesPage() {
                           variant={confirmDelete ? "destructive" : "outline"}
                           size="sm"
                           className="gap-1.5"
-                          disabled={deleting}
+                          disabled={deleting || !canManage}
                           onClick={handleDelete}
                           onBlur={() => setConfirmDelete(false)}
                         >
@@ -562,7 +564,7 @@ export default function StudentVoicesPage() {
                       </div>
                     </div>
 
-                    {isChairperson && (
+                    {canApproveForward && (
                       <>
                         {selected.pending_chairperson_approval && !selected.is_forwarded_to_patron && (
                           <div className="w-full p-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-md mb-1">
@@ -581,7 +583,7 @@ export default function StudentVoicesPage() {
                       </>
                     )}
 
-                    {hasAnyRole(["general_secretary", "assistant_general_secretary"]) && !isChairperson && (
+                    {canRequestForward && !canApproveForward && (
                       <>
                         {selected.is_forwarded_to_patron ? (
                           <div className="w-full p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 rounded-md">

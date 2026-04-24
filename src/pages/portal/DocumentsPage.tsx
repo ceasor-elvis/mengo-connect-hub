@@ -22,7 +22,7 @@ const catColor = (c: string) => {
 };
 
 export default function DocumentsPage() {
-  const { user, hasRole, hasAnyRole } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [docs, setDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -186,7 +186,7 @@ export default function DocumentsPage() {
                   </div>
 
                   {/* Requisition - Finance & Leadership */}
-                  {hasAnyRole(["secretary_finance", "chairperson", "adminabsolute"]) && (
+                  {hasPermission("manage_requisitions") && (
                     <div 
                       className="flex items-center gap-4 p-4 rounded-xl border border-primary/10 hover:bg-primary/5 cursor-pointer transition-all hover:border-primary/30"
                       onClick={() => setActiveTemplate("requisition")}
@@ -202,7 +202,7 @@ export default function DocumentsPage() {
                   )}
 
                   {/* Meeting Minutes - GS & Leadership */}
-                  {hasAnyRole(["general_secretary", "chairperson", "adminabsolute"]) && (
+                  {hasPermission("manage_documents") && (
                     <div 
                       className="flex items-center gap-4 p-4 rounded-xl border border-primary/10 hover:bg-primary/5 cursor-pointer transition-all hover:border-primary/30"
                       onClick={() => setActiveTemplate("minutes")}
@@ -331,8 +331,8 @@ export default function DocumentsPage() {
          filtered.length === 0 ? <p className="text-center py-8 text-muted-foreground">No documents found.</p> :
          filtered.map((doc) => {
             const isPending = doc.target_office === 'patron_pending_chairperson';
-            const canApprove = isPending && hasRole('chairperson');
-            const canDelete = doc.uploaded_by === user?.username || hasRole('adminabsolute');
+            const canApprove = isPending && hasPermission('approve_voice_forwarding'); // Reusing this logic or using a new one
+            const canDelete = doc.uploaded_by === user?.username || hasPermission('manage_permissions');
             const fileUrl = doc.file_url || doc.file || "#";
 
             return (

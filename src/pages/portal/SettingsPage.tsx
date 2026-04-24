@@ -23,7 +23,8 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
 
-  const isAdmin = useAuth().hasAnyRole(["adminabsolute", "chairperson"]);
+  const { hasPermission } = useAuth();
+  const isAdmin = hasPermission("manage_permissions");
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

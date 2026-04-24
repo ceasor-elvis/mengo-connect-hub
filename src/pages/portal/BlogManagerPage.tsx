@@ -25,7 +25,7 @@ import {
 import { BlockNoteRenderer } from "@/components/blog/BlockNoteRenderer";
 
 export default function BlogManagerPage() {
-  const { profile } = useAuth();
+  const { profile, hasPermission } = useAuth();
   const [blogs, setBlogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
