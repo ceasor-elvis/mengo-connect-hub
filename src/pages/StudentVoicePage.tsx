@@ -42,7 +42,7 @@ export default function StudentVoicePage() {
         formData.append("file", file);
       }
 
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/student-voices/`, formData, {
+      await api.post("/student-voices/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },

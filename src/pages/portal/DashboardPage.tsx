@@ -367,12 +367,24 @@ export default function DashboardPage() {
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs font-semibold">
                       <span className="text-muted-foreground">Budget Utilization</span>
-                      <span className="text-primary">{Math.round((dashboardData.finance.find((f:any)=>f.l==="Spent")?.raw / dashboardData.finance.find((f:any)=>f.l==="Budget")?.raw) * 100)}%</span>
+                      <span className="text-primary">
+                        {(() => {
+                          const spent = dashboardData.finance.find((f: any) => f.l === "Spent")?.raw || 0;
+                          const budget = dashboardData.finance.find((f: any) => f.l === "Budget")?.raw || 0;
+                          return budget > 0 ? Math.round((spent / budget) * 100) : 0;
+                        })()}%
+                      </span>
                     </div>
                     <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-indigo-500 rounded-full" 
-                        style={{ width: `${(dashboardData.finance.find((f:any)=>f.l==="Spent")?.raw / dashboardData.finance.find((f:any)=>f.l==="Budget")?.raw) * 100}%` }}
+                        style={{ 
+                          width: (() => {
+                            const spent = dashboardData.finance.find((f: any) => f.l === "Spent")?.raw || 0;
+                            const budget = dashboardData.finance.find((f: any) => f.l === "Budget")?.raw || 0;
+                            return `${budget > 0 ? Math.min((spent / budget) * 100, 100) : 0}%`;
+                          })()
+                        }}
                       />
                     </div>
                   </div>
