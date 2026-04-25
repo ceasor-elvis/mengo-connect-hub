@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Loader2, BarChart3, Activity, Wallet, TrendingUp, CreditCard, ArrowUpRight } from "lucide-react";
+import { Search, Loader2, BarChart3, Activity, Wallet, TrendingUp, CreditCard, ArrowUpRight, PiggyBank } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie } from "recharts";
 
 interface Requisition {
   id: string;
@@ -22,13 +22,30 @@ export default function FinancialSummaryPage() {
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [financeAnalytics, setFinanceAnalytics] = useState({
+    monthlyComparison: [] as any[],
+    sourceDistribution: [] as any[]
+  });
+  const [totalIncome, setTotalIncome] = useState(0);
 
   const fetchData = async () => {
     try {
-      const reqsRes = await api.get('/requisitions/');
+      const [reqsRes, statsRes] = await Promise.all([
+        api.get('/requisitions/'),
+        api.get('/dashboard/stats/')
+      ]);
       const reqs = Array.isArray(reqsRes.data) ? reqsRes.data : reqsRes.data.results || [];
-      // Include all reqs so we can calculate pendings
       setRequisitions(reqs);
+      
+      const stats = statsRes.data;
+      if (stats.financeAnalytics) {
+        setFinanceAnalytics(stats.financeAnalytics);
+      }
+      
+      // Calculate total income from the summary stats in dashboard
+      const budgetNode = stats.finance?.find((f: any) => f.l === "Budget");
+      if (budgetNode) setTotalIncome(budgetNode.raw);
+
     } catch (error) {
       console.error("Failed to fetch financial data", error);
       toast.error("Failed to load financial records");
@@ -122,22 +139,60 @@ export default function FinancialSummaryPage() {
       </div>
 
       {/* KPI Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="relative overflow-hidden border-border/50 shadow-sm transition-all hover:shadow-md bg-emerald-500/5">
+          <div className="absolute top-0 right-0 p-4 opacity-10 text-emerald-600">
+             <PiggyBank className="h-16 w-16" />
+          </div>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-emerald-600">Total Revenue</CardTitle>
+            <ArrowUpRight className="h-4 w-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold font-mono tracking-tight text-emerald-700 dark:text-emerald-400">
+              <span className="text-muted-foreground/50 text-xl mr-1">UGX</span>
+              {totalIncome.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              All-time registered income
+            </p>
+          </CardContent>
+        </Card>
+
         <Card className="relative overflow-hidden border-border/50 shadow-sm transition-all hover:shadow-md">
           <div className="absolute top-0 right-0 p-4 opacity-10">
              <Wallet className="h-16 w-16" />
           </div>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Expenditure</CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald-500" />
+            <TrendingUp className="h-4 w-4 text-rose-500" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold font-mono tracking-tight text-foreground">
               <span className="text-muted-foreground text-xl mr-1">UGX</span>
               {totalApproved.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground mt-2 flex items-center">
-              <ArrowUpRight className="h-3 w-3 mr-1 text-emerald-500" /> All-time approved disbursements
+            <p className="text-xs text-muted-foreground mt-2">
+              Approved disbursements
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border-border/50 shadow-sm transition-all hover:shadow-md bg-primary/5">
+          <div className="absolute top-0 right-0 p-4 opacity-10 text-primary">
+             <Activity className="h-16 w-16" />
+          </div>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-primary">Current Balance</CardTitle>
+            <TrendingUp className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold font-mono tracking-tight text-primary">
+              <span className="text-muted-foreground/50 text-xl mr-1">UGX</span>
+              {(totalIncome - totalApproved).toLocaleString()}
+            </div>
+            <p className="text-xs text-primary/60 mt-2">
+              Available liquid capital
             </p>
           </CardContent>
         </Card>
@@ -156,31 +211,83 @@ export default function FinancialSummaryPage() {
               {totalPending.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Capital required for pending requisitions
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border-border/50 shadow-sm transition-all hover:shadow-md bg-primary/5">
-          <div className="absolute top-0 right-0 p-4 opacity-5 text-primary">
-             <BarChart3 className="h-16 w-16" />
-          </div>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-primary">Requisition Volume</CardTitle>
-            <BarChart3 className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold font-mono tracking-tight text-primary">
-              {approvedReqs.length} <span className="text-sm font-normal text-primary/70">Approved</span>
-            </div>
-            <p className="text-xs text-primary/60 mt-2">
-              Out of {requisitions.length} total historical requests
+              Unprocessed requisitions
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Layer */}
+      {/* Analytics Insight Layer */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+         <Card className="border-border/50 shadow-sm overflow-hidden bg-gradient-to-br from-background to-muted/20">
+            <CardHeader>
+               <CardTitle className="text-base font-semibold">Income vs Expenditure</CardTitle>
+               <CardDescription>Monthly comparison of revenue trajectory and outflow.</CardDescription>
+            </CardHeader>
+            <CardContent>
+               <div className="h-[300px] w-full">
+                  {financeAnalytics.monthlyComparison.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={financeAnalytics.monthlyComparison} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" vertical={false} />
+                        <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                        <YAxis tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`} axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                        <RechartsTooltip 
+                           contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }}
+                        />
+                        <Area type="monotone" dataKey="income" stroke="#10b981" fill="#10b981" fillOpacity={0.1} stackId="1" />
+                        <Area type="monotone" dataKey="spent" stroke="#ef4444" fill="#ef4444" fillOpacity={0.1} stackId="2" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-muted-foreground italic text-sm">Insufficient historical data</div>
+                  )}
+               </div>
+            </CardContent>
+         </Card>
+
+         <Card className="border-border/50 shadow-sm">
+            <CardHeader>
+               <CardTitle className="text-base font-semibold">Revenue Composition</CardTitle>
+               <CardDescription>Breakdown of income by registration source.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col md:flex-row items-center gap-4">
+               <div className="h-[250px] w-full md:w-1/2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={financeAnalytics.sourceDistribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {financeAnalytics.sourceDistribution.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+               </div>
+               <div className="w-full md:w-1/2 space-y-2">
+                  {financeAnalytics.sourceDistribution.map((item, index) => (
+                    <div key={item.name} className="flex items-center justify-between text-sm">
+                       <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                          <span className="text-muted-foreground truncate max-w-[120px]">{item.name}</span>
+                       </div>
+                       <span className="font-mono font-bold uppercase transition-all duration-300 transform group-hover:scale-105 inline-block">UGX {item.value.toLocaleString()}</span>
+                    </div>
+                  ))}
+               </div>
+            </CardContent>
+         </Card>
+      </div>
+
+      {/* Legacy Charts Layer - Kept for detailed requisition views */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Area Chart */}
         <Card className="lg:col-span-2 border-border/50 shadow-sm">

@@ -20,7 +20,8 @@ import {
   Briefcase,
   Users,
   X,
-  FileText
+  FileText,
+  Pencil
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -49,6 +50,8 @@ interface ActionPlan {
   status: 'pending' | 'in_progress' | 'achieved';
   progress: number;
   created_by: string;
+  owner_class?: string;
+  owner_stream?: string;
 }
 
 const CATEGORIES = ["Welfare", "Academic", "Digital", "Infrastructure", "Discipline", "Social", "Finance"];
@@ -57,6 +60,9 @@ const STATUS_COLORS: Record<string, string> = {
   in_progress: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   achieved: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
 };
+
+const SHARED_ROLES = ["councillor"];
+const CLASSES = ["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"];
 
 const ROLE_LABELS: Record<string, string> = {
   chairperson: "Chairperson",
@@ -68,14 +74,20 @@ const ROLE_LABELS: Record<string, string> = {
   secretary_health: "Sec. Health",
   secretary_publicity: "Sec. Publicity",
   patron: "School Patron",
+  councillor: "Councillor",
+  adminabsolute: "Absolute Admin",
 };
 
 export default function ActionPlanPage() {
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, hasRole, roles } = useAuth();
+  const isAdmin = hasRole("adminabsolute");
   const canManage = hasPermission("manage_action_plans");
   const [plans, setPlans] = useState<ActionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<ActionPlan | null>(null);
+  const [streams, setStreams] = useState<string[]>([]);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [exportFooterText, setExportFooterText] = useState("ANOINTED TO BEAR FRUIT");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -87,6 +99,8 @@ export default function ActionPlanPage() {
     category: "Welfare",
     target_date: "",
     responsible_role: "chairperson",
+    owner_class: "",
+    owner_stream: "",
     steps: [{ text: "", status: 'pending' }]
   });
 
@@ -103,7 +117,17 @@ export default function ActionPlanPage() {
 
   useEffect(() => {
     fetchPlans();
+    // Fetch streams for admin office assignment
+    api.get("/streams/").then(({ data }) => {
+      setStreams(Array.isArray(data) ? data.map((s: any) => s.name) : []);
+    });
   }, []);
+
+  useEffect(() => {
+    if (roles.length > 0 && !isAdmin) {
+      setNewPlan(prev => ({ ...prev, responsible_role: roles[0] }));
+    }
+  }, [roles, isAdmin]);
 
   const handleAddStep = () => {
     setNewPlan({ ...newPlan, steps: [...newPlan.steps, { text: "", status: 'pending' }] });
@@ -121,6 +145,9 @@ export default function ActionPlanPage() {
         status: 'pending',
         progress: 0,
         created_by: user?.id,
+        owner_role: isAdmin ? newPlan.responsible_role : undefined,
+        owner_class: isAdmin ? newPlan.owner_class : undefined,
+        owner_stream: isAdmin ? newPlan.owner_stream : undefined,
         steps: newPlan.steps.map((s, i) => ({ ...s, id: `${Date.now()}-${i}` }))
       };
       await api.post("/action-plans/", payload);
@@ -128,12 +155,46 @@ export default function ActionPlanPage() {
       setIsAddOpen(false);
       setNewPlan({
         title: "", objective: "", category: "Welfare", target_date: "", 
-        responsible_role: "chairperson", steps: [{ text: "", status: 'pending' }]
+        responsible_role: !isAdmin && roles[0] ? roles[0] : "chairperson", 
+        owner_class: "", owner_stream: "",
+        steps: [{ text: "", status: 'pending' }]
       });
       fetchPlans();
     } catch (e) {
       toast.error("Failed to create plan");
     }
+  };
+
+  const handleUpdatePlan = async () => {
+    if (!editingPlan || !editingPlan.title || !editingPlan.objective) {
+      return toast.error("Please fill in the title and objective");
+    }
+    try {
+      const completedCount = editingPlan.steps.filter(s => s.status === 'completed').length;
+      const progress = editingPlan.steps.length > 0 ? Math.round((completedCount / editingPlan.steps.length) * 100) : 0;
+      const status = progress === 100 ? 'achieved' : progress > 0 ? 'in_progress' : 'pending';
+
+      const payload = {
+        ...editingPlan,
+        progress,
+        status,
+        owner_role: isAdmin ? editingPlan.responsible_role : undefined,
+        owner_class: isAdmin ? editingPlan.owner_class : undefined,
+        owner_stream: isAdmin ? editingPlan.owner_stream : undefined,
+      };
+      await api.patch(`/action-plans/${editingPlan.id}/`, payload);
+      toast.success("Strategic plan updated successfully");
+      setIsEditOpen(false);
+      setEditingPlan(null);
+      fetchPlans();
+    } catch (e) {
+      toast.error("Failed to update plan");
+    }
+  };
+
+  const openEditDialog = (plan: ActionPlan) => {
+    setEditingPlan(plan);
+    setIsEditOpen(true);
   };
 
   const toggleStep = async (plan: ActionPlan, stepId: string) => {
@@ -358,15 +419,42 @@ export default function ActionPlanPage() {
                       />
                     </div>
                   </div>
-                  <div className="grid gap-2">
-                    <Label>Responsible Office</Label>
-                    <Select value={newPlan.responsible_role} onValueChange={v => setNewPlan({...newPlan, responsible_role: v})}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(ROLE_LABELS).map(([k,v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {isAdmin && (
+                    <div className="grid gap-4">
+                      <div className="grid gap-2">
+                        <Label>Responsible Office</Label>
+                        <Select value={newPlan.responsible_role} onValueChange={v => setNewPlan({...newPlan, responsible_role: v})}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(ROLE_LABELS).map(([k,v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {SHARED_ROLES.includes(newPlan.responsible_role) && (
+                        <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                          <div className="grid gap-2">
+                            <Label>Target Class</Label>
+                            <Select value={newPlan.owner_class} onValueChange={v => setNewPlan({...newPlan, owner_class: v})}>
+                              <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+                              <SelectContent>
+                                {CLASSES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid gap-2">
+                            <Label>Target Stream</Label>
+                            <Select value={newPlan.owner_stream} onValueChange={v => setNewPlan({...newPlan, owner_stream: v})}>
+                              <SelectTrigger><SelectValue placeholder="Select Stream" /></SelectTrigger>
+                              <SelectContent>
+                                {streams.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="grid gap-3">
                     <Label className="flex items-center justify-between">
                       Action Steps
@@ -437,9 +525,24 @@ export default function ActionPlanPage() {
                     <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors">{plan.title}</CardTitle>
                   </div>
                   {canManage && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deletePlan(plan.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        onClick={() => openEditDialog(plan)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => deletePlan(plan.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
                 <CardDescription className="line-clamp-2 mt-1 leading-relaxed">{plan.objective}</CardDescription>
@@ -484,7 +587,14 @@ export default function ActionPlanPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
                       <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Office in Charge</span>
-                      <span className="text-xs font-bold">{ROLE_LABELS[plan.responsible_role] || 'Leadership'}</span>
+                      <span className="text-xs font-bold">
+                        {ROLE_LABELS[plan.responsible_role] || 'Leadership'}
+                        {plan.responsible_role === 'councillor' && plan.owner_class && (
+                          <span className="ml-1 text-[10px] text-muted-foreground whitespace-nowrap">
+                            ({plan.owner_class} {plan.owner_stream})
+                          </span>
+                        )}
+                      </span>
                     </div>
                     <div className="flex flex-col text-right">
                       <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Target Completion</span>
@@ -498,15 +608,143 @@ export default function ActionPlanPage() {
               </CardContent>
             </Card>
           ))}
-          <DocumentViewer 
-        isOpen={!!previewUrl} 
-        onClose={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} 
-        fileUrl={previewUrl} 
-        title={`Council Strategic Plan`} 
-        type="pdf"
-      />
-    </div>
-      )}
+      </div>
+    )}
+
+    <DocumentViewer 
+      isOpen={!!previewUrl} 
+      onClose={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} 
+      fileUrl={previewUrl} 
+      title={`Council Strategic Plan`} 
+      type="pdf"
+    />
+      {/* Edit Plan Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Strategic Action Plan</DialogTitle>
+            <DialogDescription>
+              Modify your strategic goals and action steps.
+            </DialogDescription>
+          </DialogHeader>
+          {editingPlan && (
+            <div className="space-y-4 py-4">
+              <div className="grid gap-2">
+                <Label>Title of Strategic Action Plan</Label>
+                <Input 
+                  value={editingPlan.title} 
+                  onChange={e => setEditingPlan({...editingPlan, title: e.target.value})}
+                  placeholder="e.g. Enhancing Student Welfare Through Digital Systems"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Main Objective</Label>
+                <Textarea 
+                  value={editingPlan.objective} 
+                  onChange={e => setEditingPlan({...editingPlan, objective: e.target.value})}
+                  placeholder="What do you want to achieve?"
+                  className="h-20"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Category</Label>
+                  <Select value={editingPlan.category} onValueChange={v => setEditingPlan({...editingPlan, category: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Target Completion Date</Label>
+                  <Input 
+                    type="date" 
+                    value={editingPlan.target_date ? editingPlan.target_date.split('T')[0] : ""} 
+                    onChange={e => setEditingPlan({...editingPlan, target_date: e.target.value})}
+                  />
+                </div>
+              </div>
+              
+              {isAdmin && (
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label>Responsible Office</Label>
+                    <Select value={editingPlan.responsible_role} onValueChange={v => setEditingPlan({...editingPlan, responsible_role: v})}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(ROLE_LABELS).map(([k,v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {SHARED_ROLES.includes(editingPlan.responsible_role) && (
+                    <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                      <div className="grid gap-2">
+                        <Label>Target Class</Label>
+                        <Select value={editingPlan.owner_class} onValueChange={v => setEditingPlan({...editingPlan, owner_class: v})}>
+                          <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+                          <SelectContent>
+                            {CLASSES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Target Stream</Label>
+                        <Select value={editingPlan.owner_stream} onValueChange={v => setEditingPlan({...editingPlan, owner_stream: v})}>
+                          <SelectTrigger><SelectValue placeholder="Select Stream" /></SelectTrigger>
+                          <SelectContent>
+                            {streams.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid gap-3">
+                <Label className="flex items-center justify-between">
+                  Action Steps
+                  <Button variant="outline" size="sm" onClick={() => setEditingPlan({...editingPlan, steps: [...editingPlan.steps, { id: Date.now().toString(), text: "", status: 'pending' }]})}>
+                    <Plus className="h-3 w-3 mr-1" /> Add Milestone
+                  </Button>
+                </Label>
+                <div className="space-y-2">
+                  {editingPlan.steps.map((step, idx) => (
+                    <div key={step.id} className="flex gap-2">
+                      <Input 
+                        value={step.text} 
+                        onChange={e => {
+                          const newSteps = [...editingPlan.steps];
+                          newSteps[idx].text = e.target.value;
+                          setEditingPlan({...editingPlan, steps: newSteps});
+                        }}
+                        placeholder={`Step ${idx + 1}`}
+                        className="flex-1"
+                      />
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => {
+                          setEditingPlan({...editingPlan, steps: editingPlan.steps.filter((_, i) => i !== idx)});
+                        }}
+                        disabled={editingPlan.steps.length === 1}
+                      >
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdatePlan}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Calendar, FileText, AlertTriangle, Users,
   MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network, UserPlus, Lock, Settings, Scale, Shield, ShieldCheck,
-  Target, Video, BarChart3
+  Target, Video, BarChart3, PiggyBank
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -65,6 +65,7 @@ const sidebarGroups: NavGroup[] = [
     category: "Finance",
     items: [
       { label: "Requisitions", path: "/portal/requisitions", icon: DollarSign, permission: "view_requisitions" },
+      { label: "Income Registration", path: "/portal/income", icon: PiggyBank, permission: "view_financial_summary" },
       { label: "Financial Summary", path: "/portal/financial-summary", icon: BarChart3, permission: "view_financial_summary" },
     ]
   },
@@ -333,7 +334,7 @@ export default function PortalLayout() {
           <div className="bg-destructive/10 border-b border-destructive/20 px-4 py-2 flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-destructive font-medium">
               <Lock className="h-4 w-4" />
-              <span>Election screening is currently locked.</span>
+              <span>Screening is currently locked for {activeLocks.length} {activeLocks.length === 1 ? 'category' : 'categories'}.</span>
             </div>
             <Button size="sm" variant="link" className="text-destructive h-auto p-0" asChild>
                <Link to="/portal/elections">View Status &rarr;</Link>

@@ -108,6 +108,20 @@ export default function ElectionsPage() {
   const filterId = `${filterClass}-${filterStream}`.toLowerCase();
   const isLocked = activeLocks.some(l => l.filter_id === filterId);
 
+  const isCandidateLocked = (applicant: Applicant) => {
+    const classId = applicant.applicant_class?.toLowerCase();
+    const streamId = applicant.stream?.toLowerCase() || 'all';
+    const specificId = `${classId}-${streamId}`;
+    const classAllId = `${classId}-all`;
+    const allAllId = 'all-all';
+    
+    return activeLocks.some(l => 
+        l.filter_id === specificId || 
+        l.filter_id === classAllId || 
+        l.filter_id === allAllId
+    );
+  };
+
   const fetchApplicants = async () => {
     try {
       const { data } = await api.get("/applications/");
@@ -432,6 +446,14 @@ export default function ElectionsPage() {
       toast.success("Screening configuration unlocked.");
       fetchLocks();
     } catch (e) { toast.error("Failed to unlock filter"); }
+  };
+
+  const unlockSpecific = async (lockId: string) => {
+    try {
+      await api.delete(`/ec-access-locks/${lockId}/`);
+      toast.success("Category unlocked.");
+      fetchLocks();
+    } catch (e) { toast.error("Failed to unlock"); }
   };
 
   const addImageToDoc = (doc: jsPDF, src: string, x: number, y: number, w: number, h: number, format: string) => {
@@ -770,6 +792,49 @@ export default function ElectionsPage() {
                 <Button variant="outline" size="sm" className="border-primary/20" onClick={lockFilter} disabled={!isTopHead}>
                   <Lock className="mr-1 h-4 w-4" /> Lock Filter
                 </Button>
+              )}
+              {activeLocks.length > 0 && isTopHead && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="secondary" size="sm" className="relative">
+                      <ShieldCheck className="mr-1 h-4 w-4" /> 
+                      Locks Summary
+                      <Badge className="ml-1 h-4 min-w-[16px] px-1 bg-primary text-[9px] flex items-center justify-center">
+                        {activeLocks.length}
+                      </Badge>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Lock className="h-5 w-5" /> Active Locks Summary
+                      </DialogTitle>
+                      <DialogDescription>
+                        The following categories are currently locked for screening evaluation.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2 mt-4 max-h-[40vh] overflow-y-auto pr-2">
+                      {activeLocks.map((l) => (
+                        <div key={l.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold">{l.filter_label || l.filter_id}</span>
+                            <span className="text-[10px] text-muted-foreground uppercase font-medium">{l.filter_id}</span>
+                          </div>
+                          {canUnlock && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-3"
+                              onClick={() => unlockSpecific(l.id)}
+                            >
+                              Unlock
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </DialogContent>
+                </Dialog>
               )}
               <Button variant="outline" size="sm" onClick={generateCriteriaPDF}>
                 <FileText className="mr-1 h-4 w-4" /> Log Criteria
@@ -1211,7 +1276,7 @@ export default function ElectionsPage() {
                       </Badge>
                     </td>
                     <td className="py-2 px-2 flex flex-wrap gap-1 min-w-[140px]">
-                      {isTopHead && !isLocked && (
+                      {isTopHead && !isCandidateLocked(a) && (
                         <>
                           {a.status === "pending" ? (
                             <>
@@ -1235,6 +1300,7 @@ export default function ElectionsPage() {
                           </Button>
                         </>
                       )}
+                      {isCandidateLocked(a) && <Badge variant="outline" className="text-[10px] bg-destructive/10 text-destructive border-destructive/20 h-6">Locked</Badge>}
                     </td>
                   </tr>
                 ))}

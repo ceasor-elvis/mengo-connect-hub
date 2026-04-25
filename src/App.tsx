@@ -32,6 +32,7 @@ import SettingsPage from "@/pages/portal/SettingsPage";
 import FinancialSummaryPage from "@/pages/portal/FinancialSummaryPage";
 import HomeLayoutPage from "@/pages/portal/HomeLayoutPage";
 import PermissionManagementPage from "@/pages/portal/PermissionManagementPage";
+import IncomePage from "@/pages/portal/IncomePage";
 import NotFound from "./pages/NotFound.tsx";
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const App = () => (
                 {/* Requisitions & Finance Summary – finance chain */}
                 <Route element={<RoleGuard allowedPermission="view_requisitions" />}>
                   <Route path="requisitions" element={<RequisitionsPage />} />
+                  <Route path="income" element={<IncomePage />} />
                   <Route path="financial-summary" element={<FinancialSummaryPage />} />
                 </Route>
 

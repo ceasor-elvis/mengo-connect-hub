@@ -114,7 +114,7 @@ export default function ActivityLogsPage() {
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">No activity logs found</p>
           ) : (
-            <ScrollArea className="max-h-[60vh]">
+            <ScrollArea className="h-[500px]">
               <div className="space-y-1.5">
                 {filtered.map((l) => (
                   <div key={l.id} className="flex items-start gap-2 rounded-lg border p-2">
