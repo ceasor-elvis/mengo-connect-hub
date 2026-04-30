@@ -22,6 +22,7 @@ export interface Profile {
   full_name: string;
   profile_pic: string | null;   // from backend
   student_class: string | null; // from backend
+  stream: string | null;        // from backend
 }
 
 interface AuthContextType {

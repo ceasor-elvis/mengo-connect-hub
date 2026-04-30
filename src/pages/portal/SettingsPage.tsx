@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Lock, Trash2, ImagePlus } from "lucide-react";
+import { Loader2, Lock, Trash2, ImagePlus, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
@@ -22,6 +22,11 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
+  
+  // Council Config state
+  const [orgName, setOrgName] = useState("");
+  const [slogan, setSlogan] = useState("");
+  const [savingConfig, setSavingConfig] = useState(false);
 
   const { hasPermission } = useAuth();
   const isAdmin = hasPermission("manage_permissions");
@@ -81,6 +86,29 @@ export default function SettingsPage() {
       toast.error(e.response?.data?.detail || "Failed to update password");
     } finally {
       setChangingPassword(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+       try {
+         const { data } = await api.get('/council-config/');
+         setOrgName(data.org_name);
+         setSlogan(data.slogan);
+       } catch (err) { /* silent fail */ }
+    };
+    fetchConfig();
+  }, []);
+
+  const handleSaveConfig = async () => {
+    setSavingConfig(true);
+    try {
+      await api.patch('/council-config/', { org_name: orgName, slogan });
+      toast.success("Council configuration updated!");
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Failed to update configuration");
+    } finally {
+      setSavingConfig(false);
     }
   };
 
@@ -232,6 +260,40 @@ export default function SettingsPage() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Organization Settings — Chairperson only */}
+      {(isAdmin || ['chairperson', 'general_secretary', 'adminabsolute'].includes(profile?.role || '')) && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="text-primary flex items-center gap-2">
+              <Settings2 className="h-5 w-5" />
+              Organization Settings
+            </CardTitle>
+            <CardDescription>Setup the organization name and slogan for reports and documents.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Organization Name</Label>
+              <Input
+                value={orgName}
+                onChange={e => setOrgName(e.target.value)}
+                placeholder="e.g. MENGO SENIOR SCHOOL COUNCIL BODY"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Report Slogan</Label>
+              <Input
+                value={slogan}
+                onChange={e => setSlogan(e.target.value)}
+                placeholder="e.g. ANOINTED TO BEAR FRUIT"
+              />
+            </div>
+            <Button onClick={handleSaveConfig} disabled={savingConfig} className="w-full">
+              {savingConfig && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Update Council Settings
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -17,10 +17,21 @@ import DocumentViewer from "@/components/portal/DocumentViewer";
 import * as XLSX from "xlsx";
 import { Settings2, Download } from "lucide-react";
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
 interface Challenge { description: string; when: string; impact: string; }
 interface Solution { problem: string; description: string; benefit: string; }
 
-export default function MonthlyReportForm({ onSuccess }: { onSuccess: () => void }) {
+export default function MonthlyReportForm({ 
+  onSuccess, 
+  submitTarget = "documents" 
+}: { 
+  onSuccess: () => void; 
+  submitTarget?: "documents" | "reports" | "both";
+}) {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showOfficeSelect, setShowOfficeSelect] = useState(false);
@@ -30,7 +41,7 @@ export default function MonthlyReportForm({ onSuccess }: { onSuccess: () => void
   
   // Section 1: Basic Details
   const [formData, setFormData] = useState({
-    monthDate: new Date().toLocaleDateString("en-UG", { day: "numeric", month: "long", year: "numeric" }),
+    monthDate: `${MONTH_NAMES[new Date().getMonth()]} ${new Date().getFullYear()}`,
     classStream: "",
     classTeacher: "",
     generalPerformance: "",
@@ -43,14 +54,63 @@ export default function MonthlyReportForm({ onSuccess }: { onSuccess: () => void
     monitress: "",
     student1: "",
     student2: "",
-    councilName: "VINE STUDENTS' COUNCIL BODY"
+    councilName: "LOADING..."
   });
 
-  // Autofill from profile
+  // Autofill from profile and Config
   useEffect(() => {
-    if (profile?.student_class) {
-      setFormData(prev => ({ ...prev, classStream: profile.student_class }));
+    if (profile) {
+      const fullClass = profile.student_class 
+        ? `${profile.student_class}${profile.stream ? ' ' + profile.stream : ''}` 
+        : "";
+      
+      const isMale = (profile.gender || "").toLowerCase() === 'male';
+      setFormData(prev => ({ 
+        ...prev, 
+        classStream: fullClass,
+        [isMale ? 'maleCouncillor' : 'femaleCouncillor']: profile.full_name || ""
+      }));
     }
+
+    const fetchClassCouncillors = async () => {
+      if (!profile?.student_class) return;
+      try {
+        const res = await api.get('/users/all-profiles/');
+        const allProfiles = Array.isArray(res.data) ? res.data : (res.data.results || []);
+        
+        const classMembers = allProfiles.filter((p: any) => 
+          p.student_class === profile.student_class && 
+          (p.stream || "").toLowerCase() === (profile.stream || "").toLowerCase()
+        );
+        
+        const male = classMembers.find((p: any) => (p.gender || "").toLowerCase() === 'male')?.full_name || "";
+        const female = classMembers.find((p: any) => (p.gender || "").toLowerCase() === 'female')?.full_name || "";
+        
+        setFormData(prev => ({
+          ...prev,
+          maleCouncillor: male || prev.maleCouncillor,
+          femaleCouncillor: female || prev.femaleCouncillor
+        }));
+      } catch (err) {
+        console.error("Failed to fetch councillors", err);
+      }
+    };
+
+    const fetchConfig = async () => {
+      try {
+        const { data } = await api.get('/council-config/');
+        setFormData(prev => ({ 
+          ...prev, 
+          councilName: data.org_name || "MENGO SENIOR SCHOOL COUNCIL BODY"
+        }));
+        setExportFooterText(data.slogan || "ANOINTED TO BEAR FRUIT");
+      } catch (err) {
+        setFormData(prev => ({ ...prev, councilName: "MENGO SENIOR SCHOOL COUNCIL BODY" }));
+      }
+    };
+
+    fetchConfig();
+    fetchClassCouncillors();
   }, [profile]);
 
   const OFFICES = [
@@ -232,49 +292,75 @@ export default function MonthlyReportForm({ onSuccess }: { onSuccess: () => void
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setLoading(true);
     try {
       const pdfBlob = await generatePDF();
       const fileName = `Monthly_Report_${formData.classStream.replace(/\s+/g, "_")}_${formData.monthDate.split(" ").join("_")}.pdf`;
       
-      const fd = new FormData();
-      fd.append("title", fileName.replace(".pdf", ""));
-      fd.append("category", "Reports");
-      fd.append("access_level", "shared");
-      fd.append("target_office", selectedOffice);
-      fd.append("file", pdfBlob, fileName);
+      // 1. Submit to Documents if requested
+      if (submitTarget === "documents" || submitTarget === "both") {
+        const fd = new FormData();
+        fd.append("title", fileName.replace(".pdf", ""));
+        fd.append("category", "Reports");
+        fd.append("access_level", "shared");
+        fd.append("target_office", selectedOffice);
+        fd.append("file", pdfBlob, fileName);
+        await api.post("/documents/", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      }
 
-      await api.post("/documents/", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      // 2. Submit to Reports if requested
+      if (submitTarget === "reports" || submitTarget === "both") {
+        const title = `${formData.classStream} Monthly Report – ${formData.monthDate}`;
+          
+        const content = JSON.stringify({
+          ...formData,
+          challenges,
+          solutions,
+          reportLevel: "class"
+        });
+        
+        const payload: any = { 
+          title, 
+          content,
+          period_month: new Date().getMonth() + 1,
+          period_year: new Date().getFullYear()
+        };
+        
+        await api.post("/reports/monthly/", payload);
+      }
+
       toast.success("Monthly Report submitted successfully!");
       onSuccess();
-    } catch (err) {
-      toast.error("Failed to submit report");
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || "Failed to submit report");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto px-1">
+    <form onSubmit={handleSubmit} className="space-y-6 px-1">
       <Card>
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-sm font-bold uppercase tracking-widest text-center">Section 1: Class Identification</CardTitle>
         </CardHeader>
         <CardContent className="pt-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label>Month and Date *</Label>
-              <Input placeholder="e.g. March 2026" value={formData.monthDate} onChange={e => setFormData({...formData, monthDate: e.target.value})} required />
+              <Label>Report Month *</Label>
+              <Input value={formData.monthDate} readOnly className="bg-muted cursor-not-allowed" />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Class and Stream *</Label>
+              <Input placeholder="e.g. S.2 NORTH" value={formData.classStream} readOnly className="bg-muted cursor-not-allowed" required />
             </div>
             <div className="space-y-2">
               <Label>Council / Organization Name *</Label>
-              <Input placeholder="e.g. VINE STUDENTS' COUNCIL" value={formData.councilName} onChange={e => setFormData({...formData, councilName: e.target.value})} required />
-            </div>
-            <div className="space-y-2">
-              <Label>Class and Stream *</Label>
-              <Input placeholder="e.g. S.2 NORTH" value={formData.classStream} onChange={e => setFormData({...formData, classStream: e.target.value})} required />
+              <Input placeholder="e.g. VINE STUDENTS' COUNCIL" value={formData.councilName} readOnly className="bg-muted cursor-not-allowed" required />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Class Teacher</Label>
@@ -381,8 +467,8 @@ export default function MonthlyReportForm({ onSuccess }: { onSuccess: () => void
           <CardTitle className="text-sm font-bold uppercase tracking-widest text-center">Section 4: Signatories</CardTitle>
         </CardHeader>
         <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2"><Label>Male Councillor</Label><Input value={formData.maleCouncillor} onChange={e => setFormData({...formData, maleCouncillor: e.target.value})} /></div>
-          <div className="space-y-2"><Label>Female Councillor</Label><Input value={formData.femaleCouncillor} onChange={e => setFormData({...formData, femaleCouncillor: e.target.value})} /></div>
+          <div className="space-y-2"><Label>Male Councillor</Label><Input value={formData.maleCouncillor} readOnly className="bg-muted cursor-not-allowed" /></div>
+          <div className="space-y-2"><Label>Female Councillor</Label><Input value={formData.femaleCouncillor} readOnly className="bg-muted cursor-not-allowed" /></div>
           <div className="space-y-2"><Label>Monitor</Label><Input value={formData.monitor} onChange={e => setFormData({...formData, monitor: e.target.value})} /></div>
           <div className="space-y-2"><Label>Monitress</Label><Input value={formData.monitress} onChange={e => setFormData({...formData, monitress: e.target.value})} /></div>
           <div className="space-y-2"><Label>Student 1</Label><Input value={formData.student1} onChange={e => setFormData({...formData, student1: e.target.value})} /></div>
@@ -401,9 +487,9 @@ export default function MonthlyReportForm({ onSuccess }: { onSuccess: () => void
             <Label>Document Footer Slogan</Label>
             <Input 
               value={exportFooterText} 
-              onChange={e => setExportFooterText(e.target.value)} 
+              readOnly
               placeholder="e.g. ANOINTED TO BEAR FRUIT"
-              className="bg-background font-bold text-red-700"
+              className="bg-muted cursor-not-allowed font-bold text-red-700"
             />
           </div>
         </CardContent>
@@ -432,24 +518,33 @@ export default function MonthlyReportForm({ onSuccess }: { onSuccess: () => void
         <Dialog open={showOfficeSelect} onOpenChange={setShowOfficeSelect}>
           <DialogTrigger asChild>
             <Button type="button" size="lg" disabled={loading}>
-               <Send className="mr-2 h-4 w-4"/> Submit Report to Office
+               <Send className="mr-2 h-4 w-4"/> {submitTarget === 'reports' ? 'Submit Official Report' : 'Submit Report to Office'}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-sm">
-            <DialogHeader><DialogTitle>Choose Target Office</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>{submitTarget === 'reports' ? 'Confirm Submission' : 'Choose Target Office'}</DialogTitle>
+            </DialogHeader>
             <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>Select target official/office:</Label>
-                <Select value={selectedOffice} onValueChange={setSelectedOffice}>
-                  <SelectTrigger><SelectValue placeholder="Choose an office" /></SelectTrigger>
-                  <SelectContent>
-                    {OFFICES.map(o => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+              {(submitTarget === 'documents' || submitTarget === 'both') && (
+                <div className="space-y-2">
+                  <Label>Select target official/office:</Label>
+                  <Select value={selectedOffice} onValueChange={setSelectedOffice}>
+                    <SelectTrigger><SelectValue placeholder="Choose an office" /></SelectTrigger>
+                    <SelectContent>
+                      {OFFICES.map(o => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {submitTarget === 'reports' && (
+                <p className="text-sm text-muted-foreground">
+                  This will submit your monthly report to the central council archive. Once submitted, it will be locked for the remainder of the month.
+                </p>
+              )}
               <Button 
-                onClick={handleSubmit} 
-                disabled={loading || !selectedOffice} 
+                onClick={() => handleSubmit()} 
+                disabled={loading || ((submitTarget === 'documents' || submitTarget === 'both') && !selectedOffice)} 
                 className="w-full h-12"
               >
                 {loading ? "Generating & Sending..." : `Confirm Submission`}

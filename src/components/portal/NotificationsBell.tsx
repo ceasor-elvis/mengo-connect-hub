@@ -48,6 +48,7 @@ export default function NotificationsBell() {
     if (combined.includes("gallery")) return "/portal/gallery";
     if (combined.includes("action plan")) return "/portal/action-plans";
     if (combined.includes("disciplinary")) return "/portal/dc-cases";
+    if (combined.includes("report")) return "/portal/reports";
     return null; // no specific page — stay on current
   };
 
