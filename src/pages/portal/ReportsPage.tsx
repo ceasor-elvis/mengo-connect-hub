@@ -252,7 +252,8 @@ export default function ReportsPage() {
   const [viewReport, setViewReport] = useState<any>(null);
 
   const hasClassAndStream = !!(profile?.student_class && profile?.stream);
-  const [tab, setTab] = useState<"monthly" | "general" | "tracker">(hasClassAndStream ? "monthly" : "general");
+  const defaultTab = hasClassAndStream ? "monthly" : (canManage ? "general" : "monthly");
+  const [tab, setTab] = useState<"monthly" | "general" | "tracker">(defaultTab);
   
   const editor = useCreateBlockNote();
 
@@ -287,7 +288,7 @@ export default function ReportsPage() {
   const loadTracker = async () => {
     try {
       setTrackerLoading(true);
-      const res = await api.get("/reports/tracker/");
+      const res = await api.get("/reports/tracker/", { params: { month: currentMonth, year: currentYear } });
       setTrackerData(res.data.tracker);
     } catch (err) {
       console.error("Tracker loading error", err);
@@ -521,10 +522,12 @@ export default function ReportsPage() {
             My Class Report
           </button>
         )}
-        <button onClick={() => setTab("general")}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${tab === "general" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-          Reports Archive
-        </button>
+        {canManage && (
+          <button onClick={() => setTab("general")}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${tab === "general" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            Reports Archive
+          </button>
+        )}
         {canManage && (
           <button onClick={() => setTab("tracker")}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${tab === "tracker" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
@@ -582,7 +585,7 @@ export default function ReportsPage() {
       )}
 
       {/* ─────────────────────────── GENERAL REPORTS ARCHIVE TAB ─────────────────────────── */}
-      {tab === "general" && (
+      {tab === "general" && canManage && (
         <div className="space-y-4">
           <div className="flex flex-col md:flex-row gap-3 justify-between items-start md:items-center bg-muted/20 p-3 rounded-lg border">
             <div className="flex flex-wrap items-center gap-2 flex-1">
