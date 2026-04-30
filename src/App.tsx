@@ -33,6 +33,7 @@ import FinancialSummaryPage from "@/pages/portal/FinancialSummaryPage";
 import HomeLayoutPage from "@/pages/portal/HomeLayoutPage";
 import PermissionManagementPage from "@/pages/portal/PermissionManagementPage";
 import IncomePage from "@/pages/portal/IncomePage";
+import ReportsPage from "@/pages/portal/ReportsPage";
 import NotFound from "./pages/NotFound.tsx";
 const queryClient = new QueryClient();
 
@@ -107,6 +108,11 @@ const App = () => (
                 {/* Action Plan – leadership only */}
                 <Route element={<RoleGuard allowedPermission="view_action_plan" />}>
                   <Route path="action-plan" element={<ActionPlanPage />} />
+                </Route>
+
+                {/* Reports – all roles with view_reports */}
+                <Route element={<RoleGuard allowedPermission="view_reports" />}>
+                  <Route path="reports" element={<ReportsPage />} />
                 </Route>
 
                 {/* Home Layout – admin only */}

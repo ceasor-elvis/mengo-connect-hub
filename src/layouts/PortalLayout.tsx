@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Calendar, FileText, AlertTriangle, Users,
   MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network, UserPlus, Lock, Settings, Scale, Shield, ShieldCheck,
-  Target, Video, BarChart3, PiggyBank
+  Target, Video, BarChart3, PiggyBank, ClipboardList
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,7 @@ const sidebarGroups: NavGroup[] = [
       { label: "Programmes", path: "/portal/programmes", icon: Calendar, permission: "view_programmes" },
       { label: "Rota Management", path: "/portal/rota", icon: Users, permission: "view_rota" },
       { label: "Documents & Minutes", path: "/portal/documents", icon: FileText, permission: "view_documents" },
+      { label: "Reports", path: "/portal/reports", icon: ClipboardList, permission: "view_reports" },
     ]
   },
   {

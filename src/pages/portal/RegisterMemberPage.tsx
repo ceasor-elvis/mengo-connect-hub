@@ -98,6 +98,7 @@ export default function RegisterMemberPage() {
         full_name: editingMember.full_name,
         username: editingMember.username,
         student_class: editingMember.student_class,
+        stream: (editingMember.stream && editingMember.stream !== "none") ? editingMember.stream : null,
         gender: editingMember.gender,
         role: editingMember.role,
       });
@@ -485,7 +486,7 @@ export default function RegisterMemberPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Gender</Label>
+                  <Label>Gender *</Label>
                   <Select value={editingMember.gender} onValueChange={v => setEditingMember({...editingMember, gender: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -494,6 +495,18 @@ export default function RegisterMemberPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Stream</Label>
+                <Select value={editingMember.stream || "none"} onValueChange={v => setEditingMember({...editingMember, stream: v})}>
+                  <SelectTrigger><SelectValue placeholder="Select Stream" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {streams.map((s) => (
+                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Position</Label>
