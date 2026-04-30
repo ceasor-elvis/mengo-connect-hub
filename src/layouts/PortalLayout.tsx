@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import NotificationsBell from "@/components/portal/NotificationsBell";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import SystemUpdateModal from "@/components/portal/SystemUpdateModal";
 
 type AppRole = string;
 
@@ -284,6 +285,7 @@ export default function PortalLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
+      <SystemUpdateModal />
       {/* Desktop sidebar */}
       <aside className="hidden w-56 flex-col border-r bg-sidebar lg:flex">
         <div className="flex h-12 items-center gap-2 border-b border-sidebar-border px-3">

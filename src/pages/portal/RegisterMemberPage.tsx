@@ -5,7 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserPlus, ArrowUpCircle, Plus, Loader2, Search, Edit2, ShieldAlert, Key, Trash2, Check } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { 
+  UserPlus, ArrowUpCircle, Plus, Loader2, Search, Edit2, ShieldAlert, 
+  Key, Trash2, Check, Rocket, Megaphone, Clock
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
@@ -34,6 +38,7 @@ export default function RegisterMemberPage() {
   const { hasPermission } = useAuth();
   const canManageStreams = hasPermission("register_member");
   const isAdminAbsolute = hasPermission("manage_permissions");
+  const canPostUpdates = hasPermission("manage_system_updates");
 
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
@@ -62,16 +67,53 @@ export default function RegisterMemberPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [reseting, setReseting] = useState(false);
 
+  // System Updates State
+  const [systemUpdates, setSystemUpdates] = useState<any[]>([]);
+  const [newUpdate, setNewUpdate] = useState({ title: "", content: "", version: "" });
+  const [postingUpdate, setPostingUpdate] = useState(false);
+
   const fetchProfiles = () => api.get("/users/all-profiles/").then(res => setProfiles(Array.isArray(res.data) ? res.data : (res.data.results || []))).catch(() => {});
   const fetchStreams = () => api.get("/streams/").then(res => setStreams(Array.isArray(res.data) ? res.data : (res.data.results || []))).catch(() => {});
   const [notifications, setNotifications] = useState<any[]>([]);
   const fetchNotifications = () => api.get("/notifications/").then(res => setNotifications(res.data)).catch(() => {});
+  const fetchSystemUpdates = () => api.get("/system-updates/").then(res => setSystemUpdates(Array.isArray(res.data) ? res.data : (res.data.results || []))).catch(() => {});
 
   useEffect(() => {
     fetchProfiles();
     fetchStreams();
     fetchNotifications();
+    if (canPostUpdates) fetchSystemUpdates();
   }, []);
+
+  const handlePostUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUpdate.title || !newUpdate.content) {
+      toast.error("Please fill in the title and content");
+      return;
+    }
+    setPostingUpdate(true);
+    try {
+      await api.post("/system-updates/", newUpdate);
+      toast.success("System announcement posted!");
+      setNewUpdate({ title: "", content: "", version: "" });
+      fetchSystemUpdates();
+    } catch (e: any) {
+      toast.error("Failed to post update");
+    } finally {
+      setPostingUpdate(false);
+    }
+  };
+
+  const handleDeleteUpdate = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this update?")) return;
+    try {
+      await api.delete(`/system-updates/${id}/`);
+      toast.success("Update deleted");
+      fetchSystemUpdates();
+    } catch (e) {
+      toast.error("Failed to delete update");
+    }
+  };
 
   const handleAddStream = async () => {
     if (!newStreamName) return;
@@ -113,19 +155,14 @@ export default function RegisterMemberPage() {
   };
 
   const handleDeleteMember = async (member: any) => {
-    if (!window.confirm(`Are you sure you want to securely remove ${member.full_name}? This will securely wipe their system information and permanently hide their account.`)) return;
+    if (!window.confirm(`Are you sure you want to permanently delete ${member.full_name}? This will remove them from the database and cannot be undone.`)) return;
     
     try {
-      await api.patch(`/users/${member.user_id}/profile/admin/`, {
-        full_name: "Removed Member",
-        student_class: "N/A",
-        gender: "N/A",
-        role: "councillor"
-      });
-      toast.success("Member securely anonymized and removed from directory.");
+      await api.delete(`/users/${member.user_id}/profile/admin/`);
+      toast.success("Member successfully deleted from the database.");
       fetchProfiles();
     } catch (e: any) {
-      toast.error(e.response?.data?.detail || "Failed to remove member.");
+      toast.error(e.response?.data?.detail || "Failed to delete member.");
     }
   };
 
@@ -212,18 +249,19 @@ export default function RegisterMemberPage() {
   return (
     <div className="mx-auto max-w-lg">
       <div className="mb-6">
-        <h1 className="font-serif text-2xl font-bold">Manage Members</h1>
+        <h1 className="font-serif text-2xl font-bold">Administration Center</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Register new council members or upgrade a councillor to leadership.
+          Manage members, roles, and system-wide announcements.
         </p>
       </div>
 
       <Tabs defaultValue="register">
-        <TabsList className="grid w-full grid-cols-4 mb-4">
+        <TabsList className={`grid w-full mb-4 ${canPostUpdates ? 'grid-cols-5' : 'grid-cols-4'}`}>
           <TabsTrigger value="register">Register</TabsTrigger>
           <TabsTrigger value="upgrade">Upgrade</TabsTrigger>
           <TabsTrigger value="members">Members</TabsTrigger>
           <TabsTrigger value="requests">Requests</TabsTrigger>
+          {canPostUpdates && <TabsTrigger value="updates">Updates</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="register">
@@ -455,6 +493,84 @@ export default function RegisterMemberPage() {
           {notifications.filter(n => n.title === "Password Reset Request" && (!n.read || completedResets.includes(n.id))).length === 0 && (
             <p className="text-center text-sm text-muted-foreground py-10">No pending requests.</p>
           )}
+        </div>
+      </TabsContent>
+
+      <TabsContent value="updates" className="space-y-6">
+        <form onSubmit={handlePostUpdate} className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Megaphone className="h-5 w-5 text-primary" />
+            <h3 className="font-bold">Post System Update</h3>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Update Title *</Label>
+            <Input 
+              placeholder="e.g. New Feature: Financial Summaries" 
+              value={newUpdate.title} 
+              onChange={e => setNewUpdate({...newUpdate, title: e.target.value})} 
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Content *</Label>
+            <Textarea 
+              placeholder="Describe what's new..." 
+              rows={4}
+              value={newUpdate.content} 
+              onChange={e => setNewUpdate({...newUpdate, content: e.target.value})} 
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Version (Optional)</Label>
+            <Input 
+              placeholder="e.g. v2.1.0" 
+              value={newUpdate.version} 
+              onChange={e => setNewUpdate({...newUpdate, version: e.target.value})} 
+            />
+          </div>
+
+          <Button type="submit" className="w-full" disabled={postingUpdate}>
+            {postingUpdate ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Rocket className="mr-2 h-4 w-4" />}
+            Post Announcement
+          </Button>
+        </form>
+
+        <div className="space-y-4">
+          <h3 className="font-bold flex items-center gap-2">
+            <Clock className="h-5 w-5 text-muted-foreground" />
+            Announcement History
+          </h3>
+          
+          <div className="space-y-3">
+            {systemUpdates.map((update) => (
+              <div key={update.id} className="p-4 rounded-xl border bg-card shadow-sm group">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h4 className="font-bold text-sm">{update.title}</h4>
+                    <p className="text-[10px] text-muted-foreground">
+                      {new Date(update.created_at).toLocaleDateString()} • {update.version || "No version"}
+                    </p>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
+                    onClick={() => handleDeleteUpdate(update.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
+                  {update.content}
+                </p>
+              </div>
+            ))}
+            {systemUpdates.length === 0 && (
+              <p className="text-center text-sm text-muted-foreground py-10">No updates posted yet.</p>
+            )}
+          </div>
         </div>
       </TabsContent>
       </Tabs>

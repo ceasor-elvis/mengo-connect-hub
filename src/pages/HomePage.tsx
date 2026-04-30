@@ -338,13 +338,7 @@ export default function HomePage() {
                 </Link>
               </Button>
             </motion.div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full sm:w-auto">
-              <Button variant="outline" className="w-full sm:w-auto px-6 py-5 text-sm border-2 border-white/20 text-white hover:bg-white/10 backdrop-blur-md rounded-lg transition-all font-bold uppercase tracking-wider" asChild>
-                <Link to="/login" className="flex items-center group">
-                  Council Portal <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </Button>
-            </motion.div>
+
           </motion.div>
         </motion.div>
 
