@@ -36,13 +36,9 @@ export function PublicNavbar() {
               <Link to={l.path}>{l.label}</Link>
             </Button>
           ))}
-          {user ? (
+          {user && (
             <Button variant="gold" size="sm" asChild>
               <Link to="/portal">Dashboard</Link>
-            </Button>
-          ) : (
-            <Button variant="gold" size="sm" asChild>
-              <Link to="/login">Councillor Login</Link>
             </Button>
           )}
         </div>
@@ -67,13 +63,9 @@ export function PublicNavbar() {
                 <Link to={l.path}>{l.label}</Link>
               </Button>
             ))}
-            {user ? (
+            {user && (
               <Button variant="gold" asChild onClick={() => setOpen(false)}>
                 <Link to="/portal">Dashboard</Link>
-              </Button>
-            ) : (
-              <Button variant="gold" asChild onClick={() => setOpen(false)}>
-                <Link to="/login">Councillor Login</Link>
               </Button>
             )}
           </div>
