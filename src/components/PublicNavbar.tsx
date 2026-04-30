@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import mengoBadge from "@/assets/mengo-badge.jpg";
+import { useAuth } from "@/hooks/useAuth";
 
 const navLinks = [
   { label: "Home", path: "/" },
@@ -13,6 +14,7 @@ const navLinks = [
 export function PublicNavbar() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const { user } = useAuth();
 
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
@@ -34,9 +36,15 @@ export function PublicNavbar() {
               <Link to={l.path}>{l.label}</Link>
             </Button>
           ))}
-          <Button variant="gold" size="sm" asChild>
-            <Link to="/login">Councillor Login</Link>
-          </Button>
+          {user ? (
+            <Button variant="gold" size="sm" asChild>
+              <Link to="/portal">Dashboard</Link>
+            </Button>
+          ) : (
+            <Button variant="gold" size="sm" asChild>
+              <Link to="/login">Councillor Login</Link>
+            </Button>
+          )}
         </div>
 
         {/* Mobile toggle */}
@@ -59,9 +67,15 @@ export function PublicNavbar() {
                 <Link to={l.path}>{l.label}</Link>
               </Button>
             ))}
-            <Button variant="gold" asChild onClick={() => setOpen(false)}>
-              <Link to="/login">Councillor Login</Link>
-            </Button>
+            {user ? (
+              <Button variant="gold" asChild onClick={() => setOpen(false)}>
+                <Link to="/portal">Dashboard</Link>
+              </Button>
+            ) : (
+              <Button variant="gold" asChild onClick={() => setOpen(false)}>
+                <Link to="/login">Councillor Login</Link>
+              </Button>
+            )}
           </div>
         </div>
       )}
