@@ -71,7 +71,7 @@ export default function RegisterMemberPage() {
   const [editingMember, setEditingMember] = useState<any | null>(null);
   const [resetingUser, setResetingUser] = useState<any | null>(null);
   const [completedResets, setCompletedResets] = useState<string[]>([]);
-  const [newTempPassword, setNewTempPassword] = useState("");
+
   const [savingEdit, setSavingEdit] = useState(false);
   const [reseting, setReseting] = useState(false);
 
@@ -182,12 +182,13 @@ export default function RegisterMemberPage() {
 
   const handleAdminReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resetingUser || !newTempPassword) return;
+    if (!resetingUser) return;
+    const defaultPassword = `mss@${new Date().getFullYear()}`;
     setReseting(true);
     try {
       await api.post("/users/admin-reset-password/", {
         user_id: resetingUser.id,
-        new_password: newTempPassword,
+        new_password: defaultPassword,
       });
 
       if (resetingUser.notificationId) {
@@ -195,9 +196,8 @@ export default function RegisterMemberPage() {
         setCompletedResets(prev => [...prev, resetingUser.notificationId]);
       }
       
-      toast.success("Password reset successfully!");
+      toast.success(`Password reset to ${defaultPassword} successfully!`);
       setResetingUser(null);
-      setNewTempPassword("");
     } catch (e: any) {
       toast.error(e.response?.data?.detail || "Reset failed");
     } finally {
@@ -686,13 +686,13 @@ export default function RegisterMemberPage() {
             <div className="space-y-2">
               <Label>New Temporary Password</Label>
               <Input 
-                type="password" 
-                placeholder="Enter new password" 
-                value={newTempPassword} 
-                onChange={e => setNewTempPassword(e.target.value)} 
+                type="text" 
+                disabled
+                value={`mss@${new Date().getFullYear()}`}
+                className="bg-muted text-muted-foreground"
               />
             </div>
-            <Button onClick={handleAdminReset} className="w-full" disabled={reseting || !newTempPassword}>
+            <Button onClick={handleAdminReset} className="w-full" disabled={reseting}>
               {reseting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Reset Password
             </Button>
           </div>

@@ -32,7 +32,7 @@ export default function PublicBlogPage() {
   const location = useLocation();
 
   useEffect(() => {
-    api.get("/blogs/")
+    api.get("/blogs/?public=true")
       .then(({ data }) => {
          const fetchedBlogs = Array.isArray(data) ? data : data.results || [];
          setBlogs(fetchedBlogs);

@@ -81,7 +81,9 @@ const ROLE_LABELS: Record<string, string> = {
 export default function ActionPlanPage() {
   const { user, hasPermission, hasRole, roles } = useAuth();
   const isAdmin = hasRole("adminabsolute");
-  const canManage = hasPermission("manage_action_plans");
+  // If they can view action plans (which is required to access the page), 
+  // they should be able to create and manage their own plans.
+  const canManage = hasPermission("view_action_plan");
   const [plans, setPlans] = useState<ActionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);

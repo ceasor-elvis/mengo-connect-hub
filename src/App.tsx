@@ -31,6 +31,7 @@ import ActivityLogsPage from "@/pages/portal/ActivityLogsPage";
 import RegisterMemberPage from "@/pages/portal/RegisterMemberPage";
 import RegisterPatronPage from "./pages/portal/RegisterPatronPage";
 import BlogManagerPage from "@/pages/portal/BlogManagerPage";
+import GalleryManagerPage from "@/pages/portal/GalleryManagerPage";
 import DisciplinaryPage from "@/pages/portal/DisciplinaryPage";
 import ActionPlanPage from "@/pages/portal/ActionPlanPage";
 import SettingsPage from "@/pages/portal/SettingsPage";
@@ -100,6 +101,7 @@ const App = () => (
                 {/* Blog Manager – Publicity & leadership */}
                 <Route element={<RoleGuard allowedPermission="view_blog" />}>
                   <Route path="blog" element={<BlogManagerPage />} />
+                  <Route path="gallery" element={<RoleGuard allowedPermission="manage_blog"><GalleryManagerPage /></RoleGuard>} />
                 </Route>
                 
                 {/* Disciplinary - DC & leadership */}

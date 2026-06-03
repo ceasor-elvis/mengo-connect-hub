@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Calendar, FileText, AlertTriangle, Users,
   MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network, UserPlus, Lock, Settings, Scale, Shield, ShieldCheck,
-  Target, Video, BarChart3, PiggyBank, ClipboardList
+  Target, Video, BarChart3, PiggyBank, ClipboardList, ImageIcon
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,7 @@ const sidebarGroups: NavGroup[] = [
       { label: "Student Voices", path: "/portal/student-voices", icon: MessageSquare, permission: "view_student_voices" },
       { label: "Issues Management", path: "/portal/issues", icon: AlertTriangle, permission: "view_issues" },
       { label: "Blog Manager", path: "/portal/blog", icon: FileText, permission: "view_blog" },
+      { label: "Gallery Manager", path: "/portal/gallery", icon: ImageIcon, permission: "manage_blog" },
       { label: "Disciplinary Actions", path: "/portal/disciplinary", icon: Scale, permission: "view_disciplinary" },
     ]
   },

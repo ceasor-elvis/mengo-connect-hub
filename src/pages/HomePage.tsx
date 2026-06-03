@@ -46,12 +46,20 @@ function ScrollIndicator() {
   );
 }
 
-function ChairpersonAddressSection({ config }: { config: any }) {
+function ChairpersonAddressSection({ config, chairpersonProfile }: { config: any, chairpersonProfile?: any }) {
   const quote = config?.chairperson_quote || "We represent student aspirations, protect welfare, and foster competent leadership. Our mandate is to serve with transparency, ensuring every single voice is valued.";
-  const name = config?.chairperson_name || "Ssekandi Brian";
+  const name = chairpersonProfile?.full_name || config?.chairperson_name || "Ssekandi Brian";
   const title = config?.chairperson_title || "Student Council Chairperson";
-  const initials = config?.chairperson_initials || "SB";
+  
+  // Calculate initials from name if not provided
+  let initials = config?.chairperson_initials || "SB";
+  if (chairpersonProfile?.full_name) {
+    const parts = chairpersonProfile.full_name.split(' ');
+    initials = parts.length > 1 ? `${parts[0][0]}${parts[parts.length-1][0]}` : parts[0][0];
+  }
+  
   const tenure = config?.chairperson_tenure || "Mengo Senior School · 2025/2026";
+  const profilePic = chairpersonProfile?.profile_pic;
 
   return (
     <section className="bg-background py-16 md:py-20 border-y overflow-hidden relative">
@@ -84,8 +92,12 @@ function ChairpersonAddressSection({ config }: { config: any }) {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="flex-shrink-0 flex items-center gap-4 bg-muted/30 border border-border/40 p-5 rounded-2xl md:w-80"
           >
-            <div className="relative w-14 h-14 rounded-full overflow-hidden border border-gold/40 flex-shrink-0 bg-primary flex items-center justify-center text-white font-serif text-lg font-bold">
-              {initials}
+            <div className={`relative w-14 h-14 rounded-full overflow-hidden border border-gold/40 flex-shrink-0 ${profilePic ? '' : 'bg-primary flex items-center justify-center text-white font-serif text-lg font-bold'}`}>
+              {profilePic ? (
+                <img src={profilePic} alt={name} className="w-full h-full object-cover" />
+              ) : (
+                initials.toUpperCase()
+              )}
             </div>
             <div className="text-left">
               <p className="font-serif font-bold text-foreground text-base">{name}</p>
@@ -149,7 +161,7 @@ function BlogsPreviewSection() {
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
-        const { data } = await api.get("/blogs/?limit=3");
+        const { data } = await api.get("/blogs/?limit=3&public=true");
         setBlogs(Array.isArray(data) ? data.slice(0, 3) : data.results?.slice(0, 3) || []);
       } catch (err) {
         console.error("Failed to load blogs", err);
@@ -444,7 +456,7 @@ function BoardMiniCard({ m, size = "md", delay = 0, highlight = false }: { m: an
   );
 }
 
-function CouncilBoardPreview() {
+function CouncilBoardPreviewWrapper({ config }: { config: any }) {
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -460,6 +472,18 @@ function CouncilBoardPreview() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const chair = members.find(m => m.role === "chairperson");
+
+  return (
+    <>
+      <ChairpersonAddressSection config={config} chairpersonProfile={chair} />
+      <CouncilBoardPreview members={members} loading={loading} />
+    </>
+  );
+}
+
+function CouncilBoardPreview({ members, loading }: { members: any[], loading: boolean }) {
 
   const chair      = members.find(m => m.role === "chairperson");
   const viceChair  = members.find(m => m.role === "vice_chairperson");
@@ -739,7 +763,7 @@ export default function HomePage() {
                   </Button>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                  <Button variant="outline" className="px-6 py-5 text-xs font-bold uppercase tracking-widest border-white/60 text-white hover:bg-white hover:text-black hover:border-white transition-all rounded-lg" asChild>
+                  <Button className="px-6 py-5 text-xs font-bold uppercase tracking-widest bg-[#800000] text-white hover:bg-[#800000]/90 transition-all rounded-lg shadow-xl" asChild>
                     <Link to="/council-board">
                       View Board
                     </Link>
@@ -759,7 +783,7 @@ export default function HomePage() {
               {activeSlides.map((img, index) => (
                 <motion.div
                   key={`${img}-${index}`}
-                  style={{ backgroundImage: `url('${img}')`, y: index === currentImageIndex ? y1 : 0 }}
+                  style={{ backgroundImage: `url('${img}')` }}
                   className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-[2000ms] ease-in-out ${
                     index === currentImageIndex ? "opacity-100 scale-105" : "opacity-0 scale-100"
                   }`}
@@ -798,11 +822,11 @@ export default function HomePage() {
       </section>
 
       <ImpactStatsSection data={homeStats} />
-      <ChairpersonAddressSection config={config} />
-      <WhoWeAre />
+      
+      {/* Fetch members at page level so we can pass chairperson */}
+      <CouncilBoardPreviewWrapper config={config} />
 
-      {/* ── Council Board Preview ──────────────────────────── */}
-      <CouncilBoardPreview />
+      <WhoWeAre />
 
       <BlogsPreviewSection />
       <TimelineSection />

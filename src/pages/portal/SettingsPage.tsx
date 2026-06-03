@@ -119,7 +119,7 @@ export default function SettingsPage() {
   const handleSaveConfig = async () => {
     setSavingConfig(true);
     try {
-      await api.patch('/council-config/', { 
+      await api.post('/council-config/', { 
         org_name: orgName, 
         slogan,
         chairperson_name: chairpersonName,
@@ -317,24 +317,9 @@ export default function SettingsPage() {
             <div className="border-t border-primary/20 pt-4 mt-4 space-y-4">
               <h3 className="text-sm font-semibold text-primary">Chairperson's Address (Homepage)</h3>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Chairperson Name</Label>
-                  <Input
-                    value={chairpersonName}
-                    onChange={e => setChairpersonName(e.target.value)}
-                    placeholder="e.g. Ssekandi Brian"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Initials</Label>
-                  <Input
-                    value={chairpersonInitials}
-                    onChange={e => setChairpersonInitials(e.target.value)}
-                    placeholder="e.g. SB"
-                  />
-                </div>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Name and initials are automatically pulled from the current Chairperson's profile.
+              </p>
 
               <div className="space-y-2">
                 <Label>Chairperson Title</Label>

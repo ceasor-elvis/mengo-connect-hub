@@ -218,7 +218,7 @@ export default function StructureEditor({ onTreeUpdated }: { onTreeUpdated: () =
                      <div className="space-y-3 pt-4 border-t">
                         <Label>Direct Subordinates (Children Nodes)</Label>
                         <p className="text-[11px] text-muted-foreground leading-tight">
-                           Select rolls that fall directly under this office in the hierarchy.
+                           Select roles that fall directly under this office in the hierarchy.
                         </p>
                         
                         <div className="bg-muted/30 border rounded-md p-3 space-y-2">
