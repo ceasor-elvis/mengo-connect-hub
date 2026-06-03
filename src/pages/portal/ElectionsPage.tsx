@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Download, ShieldCheck, Settings2, UserCheck, Vote, Trash2, Pencil, Lock, Upload, FileText } from "lucide-react";
+import { Plus, Download, ShieldCheck, Settings2, UserCheck, Vote, Trash2, Pencil, Lock, Upload, FileText, Send, RotateCcw, LayoutGrid, List, Award, TrendingUp, UserMinus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
@@ -24,6 +25,25 @@ const generateAutoComment = (smart: number, conf: number, qapp: number, total: n
   if (total < 15) return "Lacks confidence and quite ignorant";
   return "Average";
 };
+
+const getGradient = (name: string) => {
+  const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const gradients = [
+    "from-primary to-primary/80",
+    "from-accent to-accent/80",
+    "from-indigo-600 to-indigo-400",
+    "from-emerald-600 to-emerald-400",
+    "from-teal-600 to-teal-400",
+    "from-slate-700 to-slate-500"
+  ];
+  return gradients[hash % gradients.length];
+};
+
+const getInitials = (name: string) => {
+  if (!name) return "??";
+  return name.split(" ").slice(0, 2).map(p => p[0]).join("").toUpperCase();
+};
+
 
 
 interface Applicant {
@@ -43,6 +63,7 @@ interface Applicant {
 
 export default function ElectionsPage() {
   const { user, hasPermission } = useAuth();
+  const navigate = useNavigate();
   const [autoProgress, setAutoProgress] = useState(false);
   const [orgName, setOrgName] = useState("VINE STUDENTS' COUNCIL");
   const isTopHead = hasPermission("manage_elections");
@@ -104,6 +125,95 @@ export default function ElectionsPage() {
   const [addStreamOpen, setAddStreamOpen] = useState(false);
   const [newStreamName, setNewStreamName] = useState("");
   const [addingStream, setAddingStream] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
+
+  const [roles, setRoles] = useState<any[]>([]);
+  const [isCustomPosition, setIsCustomPosition] = useState(false);
+  const [customPosition, setCustomPosition] = useState("");
+  const [isEditCustomPosition, setIsEditCustomPosition] = useState(false);
+  const [editCustomPosition, setEditCustomPosition] = useState("");
+
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [votingTypes, setVotingTypes] = useState<any[]>([]);
+  const [selectedVotingTypeId, setSelectedVotingTypeId] = useState("");
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [isNewCategory, setIsNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+
+  const fetchRoles = async () => {
+    try {
+      const { data } = await api.get("/users/all-roles/");
+      setRoles(data);
+      if (data.length > 0) {
+        setNewPosition(data[0].role);
+      }
+    } catch (e) {
+      console.error("Failed to fetch roles", e);
+    }
+  };
+
+  const fetchVotingTypes = async () => {
+    try {
+      const { data } = await api.get("/voting-types");
+      setVotingTypes(data);
+      if (data.length > 0) {
+        setSelectedVotingTypeId(data[0].id);
+      }
+    } catch (e) {
+      console.error("Failed to fetch voting types", e);
+    }
+  };
+
+  const fetchCategoriesForType = async (typeId: string) => {
+    if (!typeId) return;
+    try {
+      const { data } = await api.get(`/categories?voting_type_id=${typeId}`);
+      setCategories(data);
+      setSelectedCategoryId("auto");
+      setIsNewCategory(false);
+    } catch (e) {
+      console.error("Failed to fetch categories", e);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedVotingTypeId) {
+      fetchCategoriesForType(selectedVotingTypeId);
+    }
+  }, [selectedVotingTypeId]);
+
+  const openTransferModal = () => {
+    fetchVotingTypes();
+    setIsTransferModalOpen(true);
+  };
+
+  const handleTransferToEvote = async () => {
+    const qualifiedInFilter = filteredApplicants.filter(a => a.status === "qualified");
+    if (qualifiedInFilter.length === 0) {
+      toast.error("No qualified candidates in the current filter to transfer.");
+      return;
+    }
+
+    setIsTransferring(true);
+    try {
+      const payload = {
+        voting_type_id: selectedVotingTypeId,
+        candidate_ids: qualifiedInFilter.map(a => a.id),
+        category_id: isNewCategory || selectedCategoryId === "auto" ? null : (selectedCategoryId || null),
+        category_name: isNewCategory ? newCategoryName : null,
+      };
+
+      const { data } = await api.post("/election/transfer-qualified", payload);
+      toast.success(data.detail || "Successfully transferred candidates to e-voting!");
+      setIsTransferModalOpen(false);
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Failed to transfer candidates to e-voting.");
+    } finally {
+      setIsTransferring(false);
+    }
+  };
 
   const filterId = `${filterClass}-${filterStream}`.toLowerCase();
   const isLocked = activeLocks.some(l => l.filter_id === filterId);
@@ -150,6 +260,7 @@ export default function ElectionsPage() {
     fetchApplicants();
     fetchLocks();
     fetchStreams();
+    fetchRoles();
   }, []);
 
   useEffect(() => {
@@ -218,6 +329,11 @@ export default function ElectionsPage() {
     if (!newName || !newClass || !newGender || !newSmart || !newConf || !newQapp) {
       toast.error("Fill all required fields"); return;
     }
+    const positionToSend = isCustomPosition ? customPosition : newPosition;
+    if (!positionToSend) {
+      toast.error("Please specify a position");
+      return;
+    }
     const smart = Number(newSmart);
     const conf = Number(newConf);
     const qapp = Number(newQapp);
@@ -239,13 +355,15 @@ export default function ElectionsPage() {
         qapp_score: Number(newQapp),
         comment: newComment || generateAutoComment(Number(newSmart), Number(newConf), Number(newQapp), totalScore),
         average_score: totalScore,
-        position: newPosition,
+        position: positionToSend,
         status: "pending",
       });
       toast.success("Candidate added!");
       setAddOpen(false);
       setNewName(""); setNewClass(""); setNewStream(""); 
       setNewGender("male"); setNewSmart(""); setNewConf(""); setNewQapp(""); setNewComment("");
+      setCustomPosition("");
+      setIsCustomPosition(false);
       fetchApplicants();
     } catch (e: any) {
       toast.error(e.response?.data?.detail || "Failed to add candidate");
@@ -341,12 +459,27 @@ export default function ElectionsPage() {
     setEditSmart(a.smart_score?.toString() || "");
     setEditConf(a.conf_score?.toString() || "");
     setEditQapp(a.qapp_score?.toString() || "");
-    setEditPosition(a.position || "Councillor");
     setEditComment(a.comment || "");
+
+    const positionExists = roles.some(r => r.role === a.position);
+    if (positionExists) {
+      setEditPosition(a.position || "");
+      setIsEditCustomPosition(false);
+      setEditCustomPosition("");
+    } else {
+      setEditPosition("custom");
+      setIsEditCustomPosition(true);
+      setEditCustomPosition(a.position || "");
+    }
   };
 
   const saveEditCandidate = async () => {
     if (!editingId) return;
+    const positionToSend = isEditCustomPosition ? editCustomPosition : editPosition;
+    if (!positionToSend) {
+      toast.error("Please specify a position");
+      return;
+    }
     const smart = Number(editSmart || 0);
     const conf = Number(editConf || 0);
     const qapp = Number(editQapp || 0);
@@ -368,7 +501,7 @@ export default function ElectionsPage() {
         conf_score: conf,
         qapp_score: qapp,
         average_score,
-        position: editPosition,
+        position: positionToSend,
         comment: editComment || generateAutoComment(smart, conf, qapp, average_score)
       });
       toast.success("Candidate updated!");
@@ -747,21 +880,27 @@ export default function ElectionsPage() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="font-serif text-xl font-bold text-foreground sm:text-2xl">Electoral Commission</h1>
-          <p className="text-sm text-muted-foreground">Manage candidates, screening & ballots.</p>
+    <div className="space-y-6">
+      {/* Header Panel with Premium Gradient Border & Shadow */}
+      <div className="relative overflow-hidden rounded-2xl border border-border/40 bg-card/40 p-6 backdrop-blur-md shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="absolute top-0 left-0 h-1.5 w-full bg-hero-gradient" />
+        <div className="space-y-1">
+          <h1 className="font-serif text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-accent animate-pulse" />
+            Electoral Commission Board
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground font-medium max-w-lg">
+            Evaluate, screen, and manage candidates for {orgName}. Access configurations, lock parameters, and print secure ballot sheets.
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
           {isTopHead && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
               {canManageStreams && (
                 <Dialog open={addStreamOpen} onOpenChange={setAddStreamOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Plus className="mr-1 h-4 w-4" /> Add Stream
+                    <Button variant="outline" size="sm" className="h-9 text-xs font-semibold hover:bg-muted/50 transition-colors">
+                      <Plus className="mr-1.5 h-3.5 w-3.5 text-primary" /> Add Stream
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-sm">
@@ -771,7 +910,7 @@ export default function ElectionsPage() {
                         <Label>Stream Name</Label>
                         <Input value={newStreamName} onChange={e => setNewStreamName(e.target.value)} placeholder="e.g. NORTH" />
                       </div>
-                      <Button onClick={handleAddStream} className="w-full" disabled={addingStream}>
+                      <Button onClick={handleAddStream} className="w-full font-bold" disabled={addingStream}>
                         {addingStream ? "Saving..." : "Save Stream"}
                       </Button>
                     </div>
@@ -779,27 +918,27 @@ export default function ElectionsPage() {
                 </Dialog>
               )}
               {isLocked ? (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20 select-none">
-                  <Lock className="h-4 w-4 animate-pulse" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Locked</span>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive border border-destructive/20 select-none text-[10px] font-bold uppercase tracking-wider">
+                  <Lock className="h-3.5 w-3.5 animate-pulse" />
+                  <span>Locked</span>
                   {canUnlock && (
-                    <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] hover:bg-destructive/10" onClick={unlockFilter}>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] hover:bg-destructive/15 text-destructive ml-1" onClick={unlockFilter}>
                       Unlock
                     </Button>
                   )}
                 </div>
               ) : (
-                <Button variant="outline" size="sm" className="border-primary/20" onClick={lockFilter} disabled={!isTopHead}>
-                  <Lock className="mr-1 h-4 w-4" /> Lock Filter
+                <Button variant="outline" size="sm" className="h-9 text-xs font-semibold border-primary/20 hover:bg-primary/5" onClick={lockFilter} disabled={!isTopHead}>
+                  <Lock className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Lock Criteria
                 </Button>
               )}
               {activeLocks.length > 0 && isTopHead && (
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button variant="secondary" size="sm" className="relative">
-                      <ShieldCheck className="mr-1 h-4 w-4" /> 
+                    <Button variant="secondary" size="sm" className="h-9 text-xs font-semibold relative">
+                      <ShieldCheck className="mr-1.5 h-3.5 w-3.5 text-emerald-500" /> 
                       Locks Summary
-                      <Badge className="ml-1 h-4 min-w-[16px] px-1 bg-primary text-[9px] flex items-center justify-center">
+                      <Badge className="ml-1.5 h-4 min-w-[16px] px-1 bg-primary text-[9px] flex items-center justify-center font-bold">
                         {activeLocks.length}
                       </Badge>
                     </Button>
@@ -807,7 +946,7 @@ export default function ElectionsPage() {
                   <DialogContent className="max-w-md">
                     <DialogHeader>
                       <DialogTitle className="flex items-center gap-2">
-                        <Lock className="h-5 w-5" /> Active Locks Summary
+                        <Lock className="h-5 w-5 text-primary" /> Active Locks Summary
                       </DialogTitle>
                       <DialogDescription>
                         The following categories are currently locked for screening evaluation.
@@ -836,140 +975,595 @@ export default function ElectionsPage() {
                   </DialogContent>
                 </Dialog>
               )}
-              <Button variant="outline" size="sm" onClick={generateCriteriaPDF}>
-                <FileText className="mr-1 h-4 w-4" /> Log Criteria
+              <Button variant="outline" size="sm" className="h-9 text-xs font-semibold" onClick={generateCriteriaPDF}>
+                <FileText className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Log Criteria
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowSettings(!showSettings)}>
-                <Settings2 className="mr-1 h-4 w-4" /> Settings
+              <Button variant="outline" size="sm" className="h-9 text-xs font-semibold" onClick={() => setShowSettings(!showSettings)}>
+                <Settings2 className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Config
               </Button>
+              {isTopHead && (
+                <Button variant="outline" size="sm" className="h-9 text-xs font-semibold hover:bg-destructive/5 border-destructive/20 text-destructive hover:text-destructive" onClick={() => navigate("/portal/elections/control")}>
+                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset & Controls
+                </Button>
+              )}
             </div>
           )}
-          {isTopHead && !isLocked && (
-            <Dialog open={addOpen} onOpenChange={setAddOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Add Candidate</Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-sm">
-                <DialogHeader><DialogTitle>Add Candidate</DialogTitle></DialogHeader>
-                <div className="space-y-3 pt-2">
-                  <div><Label>Full Name *</Label><Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Nakamya Faith" /></div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label>Class *</Label>
-                      <Select value={newClass} onValueChange={setNewClass}>
-                        <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
-                        <SelectContent>
-                          {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map((c) => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Stream</Label>
-                      <Select value={newStream} onValueChange={(val) => handleStreamSelect(val, setNewStream)}>
-                        <SelectTrigger><SelectValue placeholder="Select Stream" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {streams.map((s) => (
-                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                          ))}
-                          {canManageStreams && <SelectItem value="add_new" className="text-primary font-medium">+ Add New Stream</SelectItem>}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div><Label>Gender *</Label>
-                      <Select value={newGender} onValueChange={setNewGender}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div><Label>Smart /10</Label><Input type="number" min={0} max={10} value={newSmart} onChange={e => setNewSmart(e.target.value)} /></div>
-                    <div><Label>Conf /10</Label><Input type="number" min={0} max={10} value={newConf} onChange={e => setNewConf(e.target.value)} /></div>
-                    <div><Label>Q.App /10</Label><Input type="number" min={0} max={10} value={newQapp} onChange={e => setNewQapp(e.target.value)} /></div>
-                  </div>
-                  <div><Label>Position *</Label><Input value={newPosition} onChange={e => setNewPosition(e.target.value)} placeholder="e.g. Councillor" /></div>
-                  <div><Label>Comment</Label><Input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Optional comment" /></div>
-                  <Button onClick={handleAddCandidate} className="w-full">Add Candidate</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
-
-          {isTopHead && !isLocked && (
-            <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" variant="outline"><Upload className="mr-1 h-4 w-4" /> Upload Excel</Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-sm">
-                <DialogHeader><DialogTitle>Bulk Upload Candidates</DialogTitle></DialogHeader>
-                <div className="space-y-3 pt-2">
-                  <p className="text-xs text-muted-foreground">
-                    Select the Class and Stream first, then choose an Excel file (.xlsx). Extract uses columns: "Name", "Gender", "Smart", "Conf", "Q.App".
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label>Class *</Label>
-                      <Select value={uploadClass} onValueChange={setUploadClass}>
-                        <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
-                        <SelectContent>
-                          {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map((c) => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Stream</Label>
-                      <Select value={uploadStream} onValueChange={(val) => handleStreamSelect(val, setUploadStream)}>
-                        <SelectTrigger><SelectValue placeholder="Select Stream" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {streams.map((s) => (
-                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                          ))}
-                          {canManageStreams && <SelectItem value="add_new" className="text-primary font-medium">+ Add New Stream</SelectItem>}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Excel File</Label>
-                    <Input 
-                      type="file" 
-                      accept=".xlsx, .xls, .csv" 
-                      onChange={handleExcelUpload} 
-                      disabled={isUploading}
-                      className="cursor-pointer"
-                    />
-                  </div>
-                  {isUploading && <p className="text-xs text-primary animate-pulse">Processing file and uploading candidates...</p>}
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
-            <Button variant="outline" size="sm" onClick={() => { setExportType("qualified"); setIsExportOpen(true); }} className="w-full">
-              <FileText className="mr-1 h-4 w-4" /> Qualified List
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => { setExportType("ballot"); setIsExportOpen(true); }} className="w-full">
-              <Download className="mr-1 h-4 w-4" /> Generate Ballot
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => { setExportType("screening"); setIsExportOpen(true); }} className="w-full">
-              <FileText className="mr-1 h-4 w-4" /> Full Screening
-            </Button>
-          </div>
         </div>
       </div>
 
+      {/* Dynamic Statistics Dashboard Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
+        {[
+          { label: "Total Candidates", value: filteredApplicants.length, icon: UserCheck, color: "text-blue-500", bg: "bg-blue-500/10 border-blue-500/20" },
+          { label: "Avg Total /30", value: avgTotal.toFixed(1), icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/10 border-emerald-500/20" },
+          { label: "Avg Percentage", value: `${avgPerc.toFixed(1)}%`, icon: Sparkles, color: "text-amber-500", bg: "bg-amber-500/10 border-amber-500/20" },
+          { label: "Highest Score", value: highest, icon: Award, color: "text-indigo-500", bg: "bg-indigo-500/10 border-indigo-500/20" },
+          { label: "Lowest Score", value: lowest, icon: UserMinus, color: "text-rose-500", bg: "bg-rose-500/10 border-rose-500/20" },
+          { label: "Qualified Count", value: `${qualified}/${filteredApplicants.length}`, icon: Vote, color: "text-primary", bg: "bg-primary/10 border-primary/20" }
+        ].map((stat, i) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={i} className="border border-border/50 bg-card/50 backdrop-blur-md shadow-md hover:-translate-y-1 hover:shadow-lg hover:border-primary/25 transition-all duration-300">
+              <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                <div className={`p-2 rounded-xl ${stat.bg} mb-2`}>
+                  <Icon className={`h-4 w-4 ${stat.color}`} />
+                </div>
+                <span className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">{stat.value}</span>
+                <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-semibold mt-1 tracking-wider">{stat.label}</span>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Advanced Settings & Branding Panel */}
+      {showSettings && (
+        <Card className="border border-primary/20 bg-primary/5 shadow-inner overflow-hidden animate-in slide-in-from-top-3 fade-in duration-300">
+          <CardContent className="p-6 space-y-4">
+            <div className="flex items-center gap-2 text-primary font-bold">
+              <Settings2 className="h-5 w-5" />
+              <h3 className="text-sm font-bold uppercase tracking-wider">Screening & Evaluation Configurations</h3>
+            </div>
+            
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-foreground">Minimum Target Score (/30)</Label>
+                <div className="flex gap-2">
+                  <Input type="number" min={0} max={30} value={minAverage} onChange={e => setMinAverage(Number(e.target.value))} className="bg-background max-w-[120px]" />
+                  <Button variant="outline" size="sm" onClick={handleSetThresholdFromAvg} className="h-10 text-xs">
+                    Use Class Avg ({avgTotal.toFixed(0)})
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-foreground">Election Session Title</Label>
+                <Input value={electionTitle} onChange={e => setElectionTitle(e.target.value)} className="bg-background" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-foreground">Document Branding Header</Label>
+                <Input value={orgName} onChange={e => setOrgName(e.target.value)} className="bg-background" />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-primary/10">
+              <p className="text-xs text-muted-foreground italic">
+                Auto-screening moves applicants with a total score of at least <strong className="text-foreground">{minAverage}/30</strong> to 'qualified' status.
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => { setExportType("criteria"); setIsExportOpen(true); }} className="text-xs">
+                  <FileText className="mr-1 h-3.5 w-3.5" /> Log Criteria
+                </Button>
+                <Button size="sm" onClick={handleAutoScreen} disabled={isLocked} className="text-xs font-bold">
+                  <UserCheck className="mr-1 h-3.5 w-3.5" /> Apply Auto-Screen
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Interactive Filters Panel */}
+      <Card className="border border-border/40 bg-card/60 backdrop-blur-md shadow-lg">
+        <CardContent className="p-4 sm:p-6 grid gap-4 sm:grid-cols-4 items-end">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Search Candidate</Label>
+            <Input placeholder="Search name..." value={filterSearch} onChange={e => setFilterSearch(e.target.value)} className="h-9 bg-background/50" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Target Class</Label>
+            <Select value={filterClass} onValueChange={setFilterClass}>
+              <SelectTrigger className="h-9 bg-background/50"><SelectValue placeholder="All Classes" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Classes</SelectItem>
+                {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Stream Option</Label>
+            <Select value={filterStream} onValueChange={setFilterStream}>
+              <SelectTrigger className="h-9 bg-background/50"><SelectValue placeholder="All Streams" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Streams</SelectItem>
+                {streams.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Gender Filter</Label>
+            <Select value={filterGender} onValueChange={setFilterGender}>
+              <SelectTrigger className="h-9 bg-background/50"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Genders</SelectItem>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Roster Layout & Workspace */}
+      <div className="space-y-4">
+        {/* Workspace Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/40 p-3 rounded-xl border border-border/30">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <Vote className="h-4 w-4 text-primary" /> Evaluation Roster
+            </h2>
+            <Badge variant="secondary" className="px-2 py-0.5 text-xs font-semibold">
+              {filteredApplicants.length} Candidates
+            </Badge>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* View Mode Switcher */}
+            <div className="flex items-center rounded-lg border border-border/80 bg-background p-0.5">
+              <Button 
+                variant={viewMode === "grid" ? "secondary" : "ghost"} 
+                size="sm" 
+                className="h-7 px-2.5 text-xs gap-1 font-semibold cursor-pointer" 
+                onClick={() => setViewMode("grid")}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" /> Grid
+              </Button>
+              <Button 
+                variant={viewMode === "table" ? "secondary" : "ghost"} 
+                size="sm" 
+                className="h-7 px-2.5 text-xs gap-1 font-semibold cursor-pointer" 
+                onClick={() => setViewMode("table")}
+              >
+                <List className="h-3.5 w-3.5" /> List
+              </Button>
+            </div>
+
+            {/* Quick Actions Panel */}
+            {isTopHead && !isLocked && (
+              <div className="flex items-center gap-1.5">
+                <Dialog open={addOpen} onOpenChange={setAddOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="h-8 text-xs font-bold bg-primary hover:bg-primary/95 text-primary-foreground shadow-sm">
+                      <Plus className="mr-1 h-3.5 w-3.5" /> Add Candidate
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-sm">
+                    <DialogHeader><DialogTitle>Add Candidate</DialogTitle></DialogHeader>
+                    <div className="space-y-3 pt-2">
+                      <div><Label>Full Name *</Label><Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Nakamya Faith" /></div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label>Class *</Label>
+                          <Select value={newClass} onValueChange={setNewClass}>
+                            <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+                            <SelectContent>
+                              {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map((c) => (
+                                <SelectItem key={c} value={c}>{c}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Stream</Label>
+                          <Select value={newStream} onValueChange={(val) => handleStreamSelect(val, setNewStream)}>
+                            <SelectTrigger><SelectValue placeholder="Select Stream" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              {streams.map((s) => (
+                                <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                              ))}
+                              {canManageStreams && <SelectItem value="add_new" className="text-primary font-medium">+ Add New Stream</SelectItem>}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div><Label>Gender *</Label>
+                          <Select value={newGender} onValueChange={setNewGender}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="male">Male</SelectItem>
+                              <SelectItem value="female">Female</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div><Label>Smart /10</Label><Input type="number" min={0} max={10} value={newSmart} onChange={e => setNewSmart(e.target.value)} /></div>
+                        <div><Label>Conf /10</Label><Input type="number" min={0} max={10} value={newConf} onChange={e => setNewConf(e.target.value)} /></div>
+                        <div><Label>Q.App /10</Label><Input type="number" min={0} max={10} value={newQapp} onChange={e => setNewQapp(e.target.value)} /></div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Position *</Label>
+                        {isCustomPosition ? (
+                          <div className="flex gap-2">
+                            <Input value={customPosition} onChange={e => setCustomPosition(e.target.value)} placeholder="Enter custom position" />
+                            <Button type="button" variant="outline" size="sm" onClick={() => { setIsCustomPosition(false); if(roles.length > 0) setNewPosition(roles[0].role); }}>Select</Button>
+                          </div>
+                        ) : (
+                          <Select value={newPosition} onValueChange={(val) => {
+                            if (val === "custom") {
+                              setIsCustomPosition(true);
+                              setCustomPosition("");
+                            } else {
+                              setNewPosition(val);
+                            }
+                          }}>
+                            <SelectTrigger><SelectValue placeholder="Select Position" /></SelectTrigger>
+                            <SelectContent>
+                              {roles.map((r) => (
+                                <SelectItem key={r.role} value={r.role}>
+                                  {r.role.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value="custom" className="text-primary font-medium">+ Custom Position...</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                      <div><Label>Comment</Label><Input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Optional comment" /></div>
+                      <Button onClick={handleAddCandidate} className="w-full">Add Candidate</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline" className="h-8 text-xs font-semibold">
+                      <Upload className="mr-1 h-3.5 w-3.5" /> Upload Excel
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-sm">
+                    <DialogHeader><DialogTitle>Bulk Upload Candidates</DialogTitle></DialogHeader>
+                    <div className="space-y-3 pt-2">
+                      <p className="text-xs text-muted-foreground">
+                        Select the Class and Stream first, then choose an Excel file (.xlsx). Extract uses columns: "Name", "Gender", "Smart", "Conf", "Q.App".
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label>Class *</Label>
+                          <Select value={uploadClass} onValueChange={setUploadClass}>
+                            <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+                            <SelectContent>
+                              {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map((c) => (
+                                <SelectItem key={c} value={c}>{c}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Stream</Label>
+                          <Select value={uploadStream} onValueChange={(val) => handleStreamSelect(val, setUploadStream)}>
+                            <SelectTrigger><SelectValue placeholder="Select Stream" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              {streams.map((s) => (
+                                <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                              ))}
+                              {canManageStreams && <SelectItem value="add_new" className="text-primary font-medium">+ Add New Stream</SelectItem>}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Excel File</Label>
+                        <Input 
+                          type="file" 
+                          accept=".xlsx, .xls, .csv" 
+                          onChange={handleExcelUpload} 
+                          disabled={isUploading}
+                          className="cursor-pointer"
+                        />
+                      </div>
+                      {isUploading && <p className="text-xs text-primary animate-pulse">Processing file and uploading candidates...</p>}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* candidate grid / cards view (Grid Mode) */}
+        {viewMode === "grid" ? (
+          filteredApplicants.length === 0 ? (
+            <div className="text-center py-12 border border-dashed rounded-2xl bg-card/25 border-border/80">
+              <UserCheck className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-sm font-semibold text-muted-foreground">No candidates match the active filters.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredApplicants.map((a) => {
+                const initials = getInitials(a.applicant_name || "");
+                const gradient = getGradient(a.applicant_name || "");
+                const scorePercentage = (a.average_score / 30) * 100;
+                
+                return (
+                  <Card key={a.id} className="relative overflow-hidden border border-border/50 bg-card/60 backdrop-blur-md shadow-md hover:-translate-y-1 hover:shadow-lg transition-all duration-300 group">
+                    {/* Qualification indicator top-bar */}
+                    <div className={`absolute top-0 left-0 h-1 w-full ${
+                      a.status === "qualified" 
+                        ? "bg-green-500" 
+                        : a.status === "disqualified" 
+                        ? "bg-red-500" 
+                        : "bg-amber-500"
+                    }`} />
+
+                    {/* Card Actions overlay at top right */}
+                    {isTopHead && !isCandidateLocked(a) && (
+                      <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-background/90 backdrop-blur-sm p-1 rounded-lg border shadow-sm z-10">
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-muted" onClick={() => openEditModal(a)}>
+                          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-destructive/10 text-destructive" onClick={() => handleDeleteCandidate(a.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
+
+                    {isCandidateLocked(a) && (
+                      <div className="absolute top-3 right-3 z-10">
+                        <Badge variant="outline" className="bg-destructive/15 text-destructive border-destructive/25 text-[9px] font-bold uppercase tracking-wider py-0.5 px-1.5 flex items-center gap-1">
+                          <Lock className="h-2.5 w-2.5" /> Locked
+                        </Badge>
+                      </div>
+                    )}
+
+                    <CardContent className="p-5 space-y-4">
+                      {/* Top Row: Avatar & Profile */}
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center text-white text-sm font-bold shadow-md bg-gradient-to-br ${gradient}`}>
+                          {initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-foreground text-sm truncate leading-tight">{a.applicant_name}</h4>
+                          <span className="text-[10px] font-bold text-primary uppercase tracking-wider mt-0.5 block">{a.position}</span>
+                          <div className="flex gap-1 mt-1 flex-wrap">
+                            <Badge variant="outline" className="text-[9px] font-medium bg-muted/50 py-0 px-1.5 border-border/60">
+                              {a.applicant_class}
+                            </Badge>
+                            {a.stream && (
+                              <Badge variant="outline" className="text-[9px] font-medium bg-muted/50 py-0 px-1.5 border-border/60">
+                                {a.stream}
+                              </Badge>
+                            )}
+                            <Badge variant="outline" className="text-[9px] font-medium bg-muted/50 py-0 px-1.5 capitalize border-border/60">
+                              {a.gender}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Middle Row: Score Breakdown bars */}
+                      <div className="space-y-2 border-y border-border/50 py-3 my-2">
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[9px] font-semibold text-muted-foreground">
+                            <span>Smartness</span>
+                            <span>{a.smart_score || 0}/10</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-primary" style={{ width: `${(a.smart_score || 0) * 10}%` }} />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[9px] font-semibold text-muted-foreground">
+                            <span>Confidence</span>
+                            <span>{a.conf_score || 0}/10</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-accent" style={{ width: `${(a.conf_score || 0) * 10}%` }} />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[9px] font-semibold text-muted-foreground">
+                            <span>Quick Application (Q.A)</span>
+                            <span>{a.qapp_score || 0}/10</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-indigo-500" style={{ width: `${(a.qapp_score || 0) * 10}%` }} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Comment section */}
+                      {a.comment && (
+                        <div className="p-2.5 rounded-lg bg-muted/40 border border-border/40 text-[10px] text-muted-foreground italic leading-relaxed">
+                          "{a.comment}"
+                        </div>
+                      )}
+
+                      {/* Bottom Footer: Stats summary + Decision action bar */}
+                      <div className="flex items-center justify-between gap-2 border-t border-border/30 pt-3">
+                        <div className="flex flex-col">
+                          <span className="text-[9px] uppercase font-bold text-muted-foreground">Total Score</span>
+                          <span className={`text-base font-extrabold ${a.average_score >= minAverage ? "text-primary" : "text-destructive"}`}>
+                            {a.average_score} <span className="text-[10px] font-medium text-muted-foreground">({scorePercentage.toFixed(0)}%)</span>
+                          </span>
+                        </div>
+
+                        {/* Decision Buttons */}
+                        {isTopHead && !isCandidateLocked(a) ? (
+                          <div className="flex gap-1.5">
+                            {a.status === "pending" ? (
+                              <>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="h-8 px-3 text-[10px] font-bold border-green-500/30 text-green-500 hover:bg-green-500/10 hover:text-green-500" 
+                                  onClick={() => updateStatus(a.id, "qualified")}
+                                >
+                                  Qualify
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="h-8 px-3 text-[10px] font-bold border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-500" 
+                                  onClick={() => updateStatus(a.id, "disqualified")}
+                                >
+                                  Disqualify
+                                </Button>
+                              </>
+                            ) : (
+                              <Button 
+                                variant={a.status === "qualified" ? "destructive" : "default"} 
+                                size="sm" 
+                                className="h-8 px-3 text-[10px] font-bold" 
+                                onClick={() => updateStatus(a.id, a.status === "qualified" ? "disqualified" : "qualified")}
+                              >
+                                {a.status === "qualified" ? "Disqualify" : "Qualify"}
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <Badge variant={a.status === "qualified" ? "default" : a.status === "disqualified" ? "destructive" : "secondary"} className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5">
+                            {a.status}
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )
+        ) : (
+          /* Redesigned Premium Table list view (Table Mode) */
+          <Card className="border border-border/50 shadow-md bg-card/60 backdrop-blur-md overflow-hidden">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs sm:text-sm min-w-[500px]">
+                  <thead>
+                    <tr className="border-b border-border/60 bg-muted/40 text-muted-foreground">
+                      <th className="py-3 px-4 text-left font-bold uppercase tracking-wider text-[10px]">Candidate Details</th>
+                      <th className="py-3 px-2 text-left font-bold uppercase tracking-wider text-[10px] hidden sm:table-cell">Gender</th>
+                      <th className="py-3 px-2 text-left font-bold uppercase tracking-wider text-[10px] hidden xl:table-cell">Target Position</th>
+                      <th className="py-3 px-2 text-center font-bold uppercase tracking-wider text-[10px]">Smt</th>
+                      <th className="py-3 px-2 text-center font-bold uppercase tracking-wider text-[10px]">Cnf</th>
+                      <th className="py-3 px-2 text-center font-bold uppercase tracking-wider text-[10px]">Q.A</th>
+                      <th className="py-3 px-3 text-center font-bold uppercase tracking-wider text-[10px] text-primary">Total</th>
+                      <th className="py-3 px-3 text-left font-bold uppercase tracking-wider text-[10px] hidden xl:table-cell">Evaluator Comment</th>
+                      <th className="py-3 px-4 text-center font-bold uppercase tracking-wider text-[10px]">Status</th>
+                      <th className="py-3 px-4 text-right font-bold uppercase tracking-wider text-[10px]">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    {loading ? (
+                      <tr><td colSpan={10} className="py-12 text-center text-muted-foreground font-semibold">Loading Candidates...</td></tr>
+                    ) : filteredApplicants.length === 0 ? (
+                      <tr><td colSpan={10} className="py-12 text-center text-muted-foreground font-semibold">No candidates match the active filters.</td></tr>
+                    ) : filteredApplicants.map((a) => (
+                      <tr key={a.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-white text-[10px] font-bold bg-gradient-to-br ${getGradient(a.applicant_name || "")}`}>
+                              {getInitials(a.applicant_name || "")}
+                            </div>
+                            <div>
+                              <span className="font-bold text-foreground block">{a.applicant_name}</span>
+                              <div className="flex gap-1.5 mt-0.5">
+                                <span className="text-[9px] font-semibold text-muted-foreground">{a.applicant_class}</span>
+                                {a.stream && <span className="text-[9px] font-semibold text-muted-foreground">• {a.stream}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-2 capitalize text-muted-foreground hidden sm:table-cell">{a.gender}</td>
+                        <td className="py-3 px-2 text-muted-foreground font-semibold hidden xl:table-cell">{a.position}</td>
+                        <td className="py-3 px-2 text-center text-muted-foreground font-mono">{a.smart_score || 0}</td>
+                        <td className="py-3 px-2 text-center text-muted-foreground font-mono">{a.conf_score || 0}</td>
+                        <td className="py-3 px-2 text-center text-muted-foreground font-mono">{a.qapp_score || 0}</td>
+                        <td className="py-3 px-3 text-center">
+                          <span className={`font-extrabold font-mono text-sm ${a.average_score >= minAverage ? "text-primary" : "text-destructive"}`}>
+                            {a.average_score}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 hidden xl:table-cell text-muted-foreground italic text-[11px] max-w-[200px] truncate" title={a.comment || ""}>
+                          {a.comment ? `"${a.comment}"` : "—"}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <Badge variant={a.status === "qualified" ? "default" : a.status === "disqualified" ? "destructive" : "secondary"} className="text-[10px] uppercase font-bold tracking-wider py-0.5 px-2">
+                            {a.status}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex justify-end items-center gap-1">
+                            {isTopHead && !isCandidateLocked(a) ? (
+                              <>
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-semibold" onClick={() => updateStatus(a.id, a.status === "qualified" ? "disqualified" : "qualified")}>
+                                  {a.status === "qualified" ? "Disqualify" : "Qualify"}
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEditModal(a)}>
+                                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDeleteCandidate(a.id)}>
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            ) : isCandidateLocked(a) ? (
+                              <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-[9px] uppercase tracking-tighter">Locked</Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">None</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Export Options Toolbar */}
+      <Card className="border border-border/40 bg-card/40 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <h4 className="text-xs font-bold text-foreground uppercase tracking-wide">Report & Transfer Center</h4>
+          <p className="text-[10px] text-muted-foreground leading-normal">
+            Generate printable ballot papers, qualify reports, or sync screened candidates directly to the e-voting database.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center justify-end w-full sm:w-auto">
+          <Button variant="outline" size="sm" className="h-9 text-xs font-semibold" onClick={() => { setExportType("qualified"); setIsExportOpen(true); }}>
+            <FileText className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Qualified List
+          </Button>
+          <Button variant="outline" size="sm" className="h-9 text-xs font-semibold" onClick={() => { setExportType("ballot"); setIsExportOpen(true); }}>
+            <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Generate Ballot
+          </Button>
+          <Button variant="outline" size="sm" className="h-9 text-xs font-semibold" onClick={() => { setExportType("screening"); setIsExportOpen(true); }}>
+            <FileText className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Full Screening
+          </Button>
+          {isTopHead && (
+            <Button variant="default" size="sm" className="h-9 text-xs font-bold bg-primary hover:bg-primary/95 text-primary-foreground shadow-sm" onClick={openTransferModal}>
+              <Send className="mr-1.5 h-3.5 w-3.5" /> Transfer to E-Voting
+            </Button>
+          )}
+        </div>
+      </Card>
+
+      {/* Modals & Dialogs */}
       <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -995,6 +1589,68 @@ export default function ElectionsPage() {
               else if (exportType === "screening") generateScreeningReportPDF();
               else if (exportType === "criteria") generateCriteriaPDF();
             }}>View Preview</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Transfer Qualified Candidates to E-Voting</DialogTitle>
+            <DialogDescription>
+              Select the target e-voting election type and category.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Voting Type (Election)</Label>
+              <Select value={selectedVotingTypeId} onValueChange={setSelectedVotingTypeId}>
+                <SelectTrigger><SelectValue placeholder="Select Election" /></SelectTrigger>
+                <SelectContent>
+                  {votingTypes.map((vt) => (
+                    <SelectItem key={vt.id} value={vt.id}>{vt.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label>Target Voting Category</Label>
+              {isNewCategory ? (
+                <div className="flex gap-2 mt-1">
+                  <Input 
+                    value={newCategoryName} 
+                    onChange={e => setNewCategoryName(e.target.value)} 
+                    placeholder="Enter new category name (e.g. S.4A Class Monitor)" 
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={() => setIsNewCategory(false)}>Select Existing</Button>
+                </div>
+              ) : (
+                <Select value={selectedCategoryId} onValueChange={(val) => {
+                  if (val === "new") {
+                    setIsNewCategory(true);
+                    setNewCategoryName("");
+                  } else {
+                    setSelectedCategoryId(val);
+                  }
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Select existing or create new" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Automatic (By Candidate's Position)</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                    ))}
+                    <SelectItem value="new" className="text-primary font-medium">+ Create New Category...</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTransferModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleTransferToEvote} disabled={isTransferring}>
+              {isTransferring ? "Transferring..." : "Start Transfer"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1047,273 +1703,47 @@ export default function ElectionsPage() {
               <div><Label>Conf /10</Label><Input type="number" min={0} max={10} value={editConf} onChange={e => setEditConf(e.target.value)} /></div>
               <div><Label>Q.App /10</Label><Input type="number" min={0} max={10} value={editQapp} onChange={e => setEditQapp(e.target.value)} /></div>
             </div>
-            <div><Label>Position *</Label><Input value={editPosition} onChange={e => setEditPosition(e.target.value)} /></div>
+            <div className="space-y-1">
+              <Label>Position *</Label>
+              {isEditCustomPosition ? (
+                <div className="flex gap-2">
+                  <Input value={editCustomPosition} onChange={e => setEditCustomPosition(e.target.value)} placeholder="Enter custom position" />
+                  <Button type="button" variant="outline" size="sm" onClick={() => { setIsEditCustomPosition(false); if(roles.length > 0) setEditPosition(roles[0].role); }}>Select</Button>
+                </div>
+              ) : (
+                <Select value={editPosition} onValueChange={(val) => {
+                  if (val === "custom") {
+                    setIsEditCustomPosition(true);
+                    setEditCustomPosition("");
+                  } else {
+                    setEditPosition(val);
+                  }
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Select Position" /></SelectTrigger>
+                  <SelectContent>
+                    {roles.map((r) => (
+                      <SelectItem key={r.role} value={r.role}>
+                        {r.role.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="custom" className="text-primary font-medium">+ Custom Position...</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
             <div><Label>Comment</Label><Input value={editComment} onChange={e => setEditComment(e.target.value)} /></div>
             <DialogFooter className="mt-4">
-              <Button onClick={saveEditCandidate} className="w-full">Save Changes</Button>
+              <Button onClick={saveEditCandidate} className="w-full font-bold">Save Changes</Button>
             </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Filters */}
-      <Card className="bg-muted/30 border-primary/10">
-        <CardContent className="p-3 sm:p-4 grid gap-3 sm:grid-cols-4 items-end">
-          <div className="space-y-1">
-            <Label className="text-xs">Search Name</Label>
-            <Input size={1} placeholder="e.g. John" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Class</Label>
-            <Select value={filterClass} onValueChange={setFilterClass}>
-              <SelectTrigger><SelectValue placeholder="All Classes" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Classes</SelectItem>
-                {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Stream</Label>
-            <Select value={filterStream} onValueChange={setFilterStream}>
-              <SelectTrigger><SelectValue placeholder="All Streams" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Streams</SelectItem>
-                {streams.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Gender</Label>
-            <Select value={filterGender} onValueChange={setFilterGender}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Genders</SelectItem>
-                <SelectItem value="male">Male</SelectItem>
-                <SelectItem value="female">Female</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="sm:col-span-4 flex justify-between items-center border-t border-primary/10 pt-3 mt-1">
-             <div className="text-sm font-medium text-muted-foreground italic">
-               Filtered for focus. Total candidates: {filteredApplicants.length}
-             </div>
-          </div>
-
-          {isTopHead && (
-            <div className="mt-4 pt-4 border-t border-stone-200">
-              <Label className="text-[10px] font-bold text-stone-500 uppercase">Document Branding</Label>
-              <div className="mt-1.5 flex gap-2">
-                <Input 
-                  value={orgName} 
-                  onChange={e => setOrgName(e.target.value)} 
-                  placeholder="e.g. VINE STUDENTS' COUNCIL"
-                  className="h-8 text-xs bg-stone-50 border-stone-300"
-                />
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Filter Statistics Dashboard + Settings — shown only when Settings is toggled */}
-      {showSettings && (
-        <>
-          <div className="bg-[#f2ebe9] dark:bg-stone-900 p-4 sm:p-6 rounded-2xl border border-stone-200 shadow-sm space-y-4 animate-in slide-in-from-top-2 fade-in duration-300">
-            <div className="flex items-center gap-2 text-stone-700 dark:text-stone-300">
-              <Settings2 className="h-5 w-5" />
-              <h3 className="font-bold text-sm uppercase tracking-wide">
-                Filter Statistics — Class: {filterClass.toUpperCase()} • Stream: {filterStream.toUpperCase()} • Gender: {filterGender.toUpperCase()}
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              {[
-                { label: "Total Candidates", value: filteredApplicants.length },
-                { label: "Avg Total /30", value: avgTotal.toFixed(1) },
-                { label: "Avg Percentage", value: `${avgPerc.toFixed(1)}%` },
-                { label: "Highest", value: highest },
-                { label: "Lowest", value: lowest },
-                { label: "Qualified", value: `${qualified}/${filteredApplicants.length}` }
-              ].map((stat, i) => (
-                <div key={i} className="bg-white dark:bg-stone-800 p-3 flex flex-col items-center justify-center rounded-xl border border-stone-100 shadow-sm hover:shadow-md transition-shadow">
-                  <p className="text-xl font-bold text-stone-900 dark:text-white">{stat.value}</p>
-                  <p className="text-[10px] text-stone-500 uppercase font-medium mt-1">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap items-end justify-between gap-4 pt-2 border-t border-stone-200/50">
-              <div className="space-y-3">
-                <p className="text-xs text-stone-500 font-medium tracking-tight">Set threshold based on average</p>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    className="bg-[#d4a035] hover:bg-[#c08e2a] text-white border-none text-xs" 
-                    onClick={handleSetThresholdFromAvg}
-                  >
-                    Use Average ({avgPerc.toFixed(0)}%)
-                  </Button>
-                  <div className="w-20">
-                    <Input 
-                      type="number" 
-                      className="bg-white dark:bg-stone-800 border-stone-200 h-9 text-xs font-bold text-center" 
-                      value={minAverage} 
-                      onChange={e => setMinAverage(Number(e.target.value))} 
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                {isLocked ? (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-1.5 text-destructive font-bold animate-pulse text-[10px] uppercase tracking-tighter">
-                      <Lock className="h-3 w-3" /> System Locked (Official Use Only)
-                    </div>
-                    {canUnlock && (
-                      <Button variant="outline" size="sm" className="h-7 text-[10px] border-destructive/30 text-destructive hover:bg-destructive/5" onClick={unlockFilter}>
-                        Unlock Configuration
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <Button size="sm" className="h-7 text-[10px]" onClick={lockFilter} disabled={!isTopHead}>
-                    <Lock className="mr-1 h-3 w-3" /> Lock Criteria
-                  </Button>
-                )}
-                  <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={() => { setExportType("criteria"); setIsExportOpen(true); }}>
-                    <FileText className="mr-1 h-3 w-3" /> Log Criteria
-                  </Button>
-                <Button 
-                  variant="outline" 
-                  className="border-stone-300 text-xs px-6 font-bold hover:bg-white" 
-                  onClick={handleAutoScreen}
-                  disabled={isLocked}
-                >
-                  Auto-Screen with {((minAverage / 30) * 100).toFixed(0)}%
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Screening & Access Settings */}
-          {isTopHead && (
-            <Card className="border-primary/30 bg-primary/5 animate-in slide-in-from-top-2 fade-in duration-300">
-              <CardContent className="p-4 space-y-4">
-                <h3 className="font-semibold text-sm flex items-center gap-2"><Settings2 className="h-4 w-4 text-primary" /> Screening & Access Settings</h3>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Min Screening Total (/30)</Label>
-                    <Input type="number" min={0} max={30} value={minAverage} onChange={e => setMinAverage(Number(e.target.value))} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Election Title</Label>
-                    <Input value={electionTitle} onChange={e => setElectionTitle(e.target.value)} />
-                  </div>
-                </div>
-                <Button size="sm" onClick={handleAutoScreen} disabled={isLocked}><UserCheck className="mr-1 h-4 w-4" /> Auto-Screen All</Button>
-
-              </CardContent>
-            </Card>
-          )}
-        </>
-      )}
-
-
-      {/* Applicants */}
-      <Card>
-        <CardHeader className="pb-2 px-3 sm:px-6">
-          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-            <Vote className="h-4 w-4 text-primary" />
-            Candidates (Min: {minAverage}/30)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-0 sm:px-6">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs sm:text-sm min-w-[480px]">
-              <thead>
-                <tr className="border-b">
-                  <th className="py-2 px-2 text-left font-medium text-muted-foreground">Name</th>
-                  <th className="py-2 px-2 text-left font-medium text-muted-foreground">Class</th>
-                  <th className="py-2 px-2 text-left font-medium text-muted-foreground hidden sm:table-cell">Stream</th>
-                  <th className="py-2 px-2 text-left font-medium text-muted-foreground hidden lg:table-cell">Gender</th>
-                  <th className="py-2 px-2 text-left font-medium text-muted-foreground hidden xl:table-cell">Position</th>
-                  <th className="py-2 px-2 text-left font-medium text-muted-foreground" title="Smartness">Smt</th>
-                  <th className="py-2 px-2 text-left font-medium text-muted-foreground" title="Confidence">Cnf</th>
-                  <th className="py-2 px-2 text-left font-medium text-muted-foreground" title="Quick at Application">Q.A</th>
-                  <th className="py-2 px-2 text-left font-medium text-muted-foreground text-primary">Tot /30</th>
-                  <th className="py-2 px-2 text-left font-medium text-muted-foreground hidden 2xl:table-cell">Comment</th>
-                  <th className="py-2 px-2 text-left font-medium text-muted-foreground">Status</th>
-                  <th className="py-2 px-2 text-left font-medium text-muted-foreground">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">Loading…</td></tr>
-                ) : filteredApplicants.length === 0 ? (
-                  <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">No candidates match filters.</td></tr>
-                ) : filteredApplicants.map((a) => (
-                  <tr key={a.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
-                    <td className="py-2 px-2 font-medium">{a.applicant_name}</td>
-                    <td className="py-2 px-2 text-muted-foreground">{a.applicant_class}</td>
-                    <td className="py-2 px-2 text-muted-foreground hidden lg:table-cell">{(a as any).stream || "—"}</td>
-                    <td className="py-2 px-2 capitalize text-muted-foreground hidden sm:table-cell">{a.gender}</td>
-                    <td className="py-2 px-2 text-muted-foreground hidden xl:table-cell">{a.position}</td>
-                    <td className="py-2 px-2 text-muted-foreground">{a.smart_score || "—"}</td>
-                    <td className="py-2 px-2 text-muted-foreground">{a.conf_score || "—"}</td>
-                    <td className="py-2 px-2 text-muted-foreground">{a.qapp_score || "—"}</td>
-                    <td className="py-2 px-2">
-                      <span className={`font-bold ${a.average_score >= minAverage ? "text-primary" : "text-destructive"}`}>
-                        {a.average_score}
-                      </span>
-                    </td>
-                    <td className="py-2 px-2 hidden 2xl:table-cell">
-                      {a.comment ? <span className="text-[10px] text-muted-foreground truncate max-w-[150px] block" title={a.comment}>{a.comment}</span> : "—"}
-                    </td>
-                    <td className="py-2 px-2">
-                      <Badge variant={a.status === "qualified" ? "default" : a.status === "disqualified" ? "destructive" : "secondary"} className="text-[10px] sm:text-xs">
-                        {a.status}
-                      </Badge>
-                    </td>
-                    <td className="py-2 px-2 flex flex-wrap gap-1 min-w-[140px]">
-                      {isTopHead && !isCandidateLocked(a) && (
-                        <>
-                          {a.status === "pending" ? (
-                            <>
-                              <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] sm:text-xs text-primary hover:bg-primary/10" onClick={() => updateStatus(a.id, "qualified")}>
-                                Qualify
-                              </Button>
-                              <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] sm:text-xs text-destructive hover:bg-destructive/10" onClick={() => updateStatus(a.id, "disqualified")}>
-                                Disqualify
-                              </Button>
-                            </>
-                          ) : (
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] sm:text-xs" onClick={() => updateStatus(a.id, a.status === "qualified" ? "disqualified" : "qualified")}>
-                              {a.status === "qualified" ? "Disqualify" : "Qualify"}
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Edit" onClick={() => openEditModal(a)}>
-                            <Pencil className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive" title="Delete" onClick={() => handleDeleteCandidate(a.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                      {isCandidateLocked(a) && <Badge variant="outline" className="text-[10px] bg-destructive/10 text-destructive border-destructive/20 h-6">Locked</Badge>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
       <DocumentViewer 
         isOpen={!!previewUrl} 
         onClose={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} 
         fileUrl={previewUrl} 
-        title={`Election Document Preview`} 
+        title="Election Document Preview" 
         type="pdf"
       />
     </div>

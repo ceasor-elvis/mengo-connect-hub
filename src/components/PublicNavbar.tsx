@@ -21,17 +21,25 @@ export function PublicNavbar() {
   const { user } = useAuth();
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-md">
+    <nav className="relative z-50 border-b border-border/40 bg-background/80 backdrop-blur-md">
       <div className="container mx-auto flex h-20 items-center justify-between px-6">
         
         {/* Brand Group */}
         <Link to="/" className="flex items-center gap-3 group">
-          <div className="relative">
-            <img src={mengoBadge} alt="Mengo crest" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full object-cover border border-gold/30 group-hover:border-gold transition-colors" />
+          <div className="relative flex-shrink-0">
+            <img 
+              src={mengoBadge} 
+              alt="Mengo crest" 
+              className="h-10 w-10 sm:h-11 sm:w-11 rounded-full object-cover border border-gold/30 group-hover:border-gold transition-colors" 
+            />
           </div>
-          <div className="flex flex-col text-left">
-            <span className="text-[9px] font-bold tracking-[0.2em] text-muted-foreground uppercase leading-none">Mengo Senior School</span>
-            <span className="font-serif text-base sm:text-lg font-black text-primary leading-tight mt-0.5">Student Council</span>
+          <div className="flex flex-col text-left justify-center">
+            <span className="text-[9px] font-bold tracking-[0.2em] text-muted-foreground uppercase leading-none">
+              Mengo Senior School
+            </span>
+            <span className="text-base sm:text-lg font-serif font-black text-primary leading-tight mt-0.5">
+              Student Council
+            </span>
           </div>
         </Link>
 
@@ -59,7 +67,7 @@ export function PublicNavbar() {
         {/* Portal CTA Action Button */}
         <div className="hidden lg:flex items-center gap-3">
           {user && (
-            <Button size="sm" className="bg-primary hover:bg-primary/95 text-white font-bold uppercase tracking-widest text-[9px] px-5 py-4 rounded-lg shadow-md" asChild>
+            <Button size="sm" className="bg-primary hover:bg-primary/95 text-white font-bold uppercase tracking-widest text-[9px] px-5 py-4 rounded-lg shadow-md transition-colors" asChild>
               <Link to="/portal">Dashboard</Link>
             </Button>
           )}
@@ -70,13 +78,13 @@ export function PublicNavbar() {
           className="lg:hidden p-2 text-muted-foreground hover:text-foreground focus:outline-none" 
           onClick={() => setOpen(!open)}
         >
-          {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
       {/* Mobile Navigation Dropdown */}
       {open && (
-        <div className="lg:hidden border-t border-border/40 bg-background px-6 py-4 space-y-3">
+        <div className="lg:hidden border-t border-border/40 bg-background px-6 py-4 space-y-3 shadow-lg absolute w-full left-0">
           <div className="flex flex-col gap-3">
             {navLinks.map((l) => {
               const isActive = location.pathname === l.path;

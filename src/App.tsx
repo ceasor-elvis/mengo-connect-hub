@@ -24,6 +24,7 @@ import RotaPage from "@/pages/portal/RotaPage";
 import DocumentsPage from "@/pages/portal/DocumentsPage";
 import RequisitionsPage from "@/pages/portal/RequisitionsPage";
 import ElectionsPage from "@/pages/portal/ElectionsPage";
+import ElectionControlPage from "@/pages/portal/ElectionControlPage";
 import StudentVoicesPage from "@/pages/portal/StudentVoicesPage";
 import HierarchyPage from "@/pages/portal/HierarchyPage";
 import ActivityLogsPage from "@/pages/portal/ActivityLogsPage";
@@ -39,6 +40,17 @@ import PermissionManagementPage from "@/pages/portal/PermissionManagementPage";
 import IncomePage from "@/pages/portal/IncomePage";
 import ReportsPage from "@/pages/portal/ReportsPage";
 import NotFound from "./pages/NotFound.tsx";
+import EvoteLayout from "@/layouts/EvoteLayout";
+import EvoteLoginPage from "@/pages/portal/evote/LoginPage";
+import EvoteConfirmPage from "@/pages/portal/evote/ConfirmPage";
+import EvoteVotePage from "@/pages/portal/evote/VotePage";
+import EvoteAdminLoginPage from "@/pages/portal/evote/AdminLoginPage";
+import EvoteAdminDashboard from "@/pages/portal/evote/AdminDashboard";
+import EvoteAdminManage from "@/pages/portal/evote/AdminManage";
+import EvoteAdminReports from "@/pages/portal/evote/AdminReports";
+import EvoteAdminTimingPage from "@/pages/portal/evote/AdminTimingPage";
+import EvoteAdminCodes from "@/pages/portal/evote/AdminCodes";
+import EvoteNotFound from "@/pages/portal/evote/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -99,6 +111,9 @@ const App = () => (
                 <Route element={<RoleGuard allowedPermission="view_elections" />}>
                   <Route path="elections" element={<ElectionsPage />} />
                 </Route>
+                <Route element={<RoleGuard allowedPermission="manage_elections" />}>
+                  <Route path="elections/control" element={<ElectionControlPage />} />
+                </Route>
 
                 {/* Activity Logs – leadership & EC */}
                 <Route element={<RoleGuard allowedPermission="view_logs" />}>
@@ -132,6 +147,20 @@ const App = () => (
                 <Route element={<RoleGuard allowedPermission="manage_permissions" />}>
                   <Route path="admin-absolute/features" element={<PermissionManagementPage />} />
                 </Route>
+              </Route>
+
+              {/* E-Voting routes wrapped in EvoteLayout */}
+              <Route path="/evote" element={<EvoteLayout />}>
+                <Route index element={<EvoteLoginPage />} />
+                <Route path="confirm" element={<EvoteConfirmPage />} />
+                <Route path="vote" element={<EvoteVotePage />} />
+                <Route path="admin/login" element={<EvoteAdminLoginPage />} />
+                <Route path="admin" element={<EvoteAdminDashboard />} />
+                <Route path="admin/manage" element={<EvoteAdminManage />} />
+                <Route path="admin/reports" element={<EvoteAdminReports />} />
+                <Route path="admin/timing" element={<EvoteAdminTimingPage />} />
+                <Route path="admin/codes" element={<EvoteAdminCodes />} />
+                <Route path="*" element={<EvoteNotFound />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
