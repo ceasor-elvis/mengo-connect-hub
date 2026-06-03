@@ -456,15 +456,25 @@ export default function BlogManagerPage() {
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {gallery.map((photo) => (
-                  <div key={photo.id} className="group relative aspect-square rounded-lg overflow-hidden border bg-muted">
+                  <div key={photo.id} className="group relative aspect-square rounded-lg overflow-hidden border bg-muted shadow-sm hover:shadow-md transition-shadow">
                     <img src={photo.url} alt={photo.caption} className="h-full w-full object-cover" />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-center">
-                      <p className="text-[10px] text-white line-clamp-2 mb-2">{photo.caption || "No caption"}</p>
+                    <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-3 text-center">
+                      <p className="text-[11px] font-semibold text-white line-clamp-2 mb-1.5">{photo.caption || "No caption"}</p>
+                      
+                      {/* Uploader additional information */}
+                      <div className="text-[9px] text-stone-300 font-mono space-y-0.5 mb-3">
+                        <p>Role: {photo.owner_role ? photo.owner_role.replace('_', ' ').toUpperCase() : "COUNCIL"}</p>
+                        {photo.owner_class && (
+                          <p>Class: {photo.owner_class} {photo.owner_stream || ""}</p>
+                        )}
+                        <p>Date: {photo.created_at ? new Date(photo.created_at).toLocaleDateString() : ""}</p>
+                      </div>
+
                       {canManageBlog && (
                         <Button 
                           variant="destructive" 
                           size="sm" 
-                          className="h-7 px-2 text-[10px]" 
+                          className="h-7 px-2.5 text-[10px] font-bold" 
                           onClick={() => handleDeletePhoto(photo.id)}
                         >
                           <X className="h-3 w-3 mr-1" /> Delete

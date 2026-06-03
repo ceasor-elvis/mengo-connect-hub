@@ -15,6 +15,7 @@ export default function SettingsPage() {
   const [username, setUsername] = useState(user?.username || "");
   const [profileBio, setProfileBio] = useState((profile as any)?.bio || "");
   const [profilePic, setProfilePic] = useState((profile as any)?.profile_pic || "");
+  const [newProfilePic, setNewProfilePic] = useState<string | null>(null); // only set when user picks a new file
   const [savingProfile, setSavingProfile] = useState(false);
 
   // Password change state
@@ -26,6 +27,11 @@ export default function SettingsPage() {
   // Council Config state
   const [orgName, setOrgName] = useState("");
   const [slogan, setSlogan] = useState("");
+  const [chairpersonName, setChairpersonName] = useState("");
+  const [chairpersonQuote, setChairpersonQuote] = useState("");
+  const [chairpersonTitle, setChairpersonTitle] = useState("");
+  const [chairpersonTenure, setChairpersonTenure] = useState("");
+  const [chairpersonInitials, setChairpersonInitials] = useState("");
   const [savingConfig, setSavingConfig] = useState(false);
 
   const { hasPermission } = useAuth();
@@ -36,7 +42,9 @@ export default function SettingsPage() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProfilePic(reader.result as string);
+        const dataUrl = reader.result as string;
+        setProfilePic(dataUrl);    // update preview
+        setNewProfilePic(dataUrl); // mark that a new image was selected
       };
       reader.readAsDataURL(file);
     }
@@ -45,11 +53,14 @@ export default function SettingsPage() {
   const handleSaveProfile = async () => {
     setSavingProfile(true);
     try {
-      await api.patch('/users/me/profile/', {
-        username,
-        bio: profileBio,
-        profile_pic: profilePic,
-      });
+      // Only send profile_pic if the user picked a new file (base64 data URI).
+      // Sending the existing URL back would fail Base64ImageField validation.
+      const payload: Record<string, any> = { username, bio: profileBio };
+      if (newProfilePic) {
+        payload.profile_pic = newProfilePic;
+      }
+      await api.patch('/users/me/profile/', payload);
+      setNewProfilePic(null); // reset after successful save
       toast.success("Profile updated! (Refresh to see header update)");
     } catch(e) {
       toast.error("Failed to update profile");
@@ -91,11 +102,16 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const fetchConfig = async () => {
-       try {
-         const { data } = await api.get('/council-config/');
-         setOrgName(data.org_name);
-         setSlogan(data.slogan);
-       } catch (err) { /* silent fail */ }
+        try {
+          const { data } = await api.get('/council-config/');
+          setOrgName(data.org_name || "");
+          setSlogan(data.slogan || "");
+          setChairpersonName(data.chairperson_name || "");
+          setChairpersonQuote(data.chairperson_quote || "");
+          setChairpersonTitle(data.chairperson_title || "");
+          setChairpersonTenure(data.chairperson_tenure || "");
+          setChairpersonInitials(data.chairperson_initials || "");
+        } catch (err) { /* silent fail */ }
     };
     fetchConfig();
   }, []);
@@ -103,7 +119,15 @@ export default function SettingsPage() {
   const handleSaveConfig = async () => {
     setSavingConfig(true);
     try {
-      await api.patch('/council-config/', { org_name: orgName, slogan });
+      await api.patch('/council-config/', { 
+        org_name: orgName, 
+        slogan,
+        chairperson_name: chairpersonName,
+        chairperson_quote: chairpersonQuote,
+        chairperson_title: chairpersonTitle,
+        chairperson_tenure: chairpersonTenure,
+        chairperson_initials: chairpersonInitials,
+      });
       toast.success("Council configuration updated!");
     } catch (e: any) {
       toast.error(e.response?.data?.detail || "Failed to update configuration");
@@ -269,7 +293,7 @@ export default function SettingsPage() {
               <Settings2 className="h-5 w-5" />
               Organization Settings
             </CardTitle>
-            <CardDescription>Setup the organization name and slogan for reports and documents.</CardDescription>
+            <CardDescription>Setup the organization name, slogan, and Homepage Chairperson Address.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -288,6 +312,59 @@ export default function SettingsPage() {
                 placeholder="e.g. ANOINTED TO BEAR FRUIT"
               />
             </div>
+
+            {/* Chairperson Address settings */}
+            <div className="border-t border-primary/20 pt-4 mt-4 space-y-4">
+              <h3 className="text-sm font-semibold text-primary">Chairperson's Address (Homepage)</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Chairperson Name</Label>
+                  <Input
+                    value={chairpersonName}
+                    onChange={e => setChairpersonName(e.target.value)}
+                    placeholder="e.g. Ssekandi Brian"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Initials</Label>
+                  <Input
+                    value={chairpersonInitials}
+                    onChange={e => setChairpersonInitials(e.target.value)}
+                    placeholder="e.g. SB"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Chairperson Title</Label>
+                <Input
+                  value={chairpersonTitle}
+                  onChange={e => setChairpersonTitle(e.target.value)}
+                  placeholder="e.g. Student Council Chairperson"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tenure / Subtext</Label>
+                <Input
+                  value={chairpersonTenure}
+                  onChange={e => setChairpersonTenure(e.target.value)}
+                  placeholder="e.g. Mengo Senior School · 2025/2026"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Chairperson Address / Quote</Label>
+                <Textarea
+                  value={chairpersonQuote}
+                  onChange={e => setChairpersonQuote(e.target.value)}
+                  rows={4}
+                  placeholder="Enter the official address or quote..."
+                />
+              </div>
+            </div>
+
             <Button onClick={handleSaveConfig} disabled={savingConfig} className="w-full">
               {savingConfig && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Update Council Settings
             </Button>

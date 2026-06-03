@@ -13,6 +13,10 @@ import HomePage from "@/pages/HomePage";
 import StudentVoicePage from "@/pages/StudentVoicePage";
 import LoginPage from "@/pages/LoginPage";
 import PublicBlogPage from "@/pages/PublicBlogPage";
+import CouncilBoardPage from "@/pages/CouncilBoardPage";
+import GalleryPage from "@/pages/GalleryPage";
+import CalendarPage from "@/pages/CalendarPage";
+import FeaturesPage from "@/pages/FeaturesPage";
 import DashboardPage from "@/pages/portal/DashboardPage";
 import IssuesPage from "@/pages/portal/IssuesPage";
 import ProgrammesPage from "@/pages/portal/ProgrammesPage";
@@ -51,6 +55,10 @@ const App = () => (
                 <Route path="/" element={<HomePage />} />
                 <Route path="/blog" element={<PublicBlogPage />} />
                 <Route path="/student-voice" element={<StudentVoicePage />} />
+                <Route path="/council-board" element={<CouncilBoardPage />} />
+                <Route path="/gallery" element={<GalleryPage />} />
+                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/features" element={<FeaturesPage />} />
                 <Route path="/login" element={<LoginPage />} />
               </Route>
 

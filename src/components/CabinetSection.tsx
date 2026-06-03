@@ -68,64 +68,78 @@ export function CabinetGrid() {
 export function WhoWeAre() {
   const values = [
     {
+      num: "01",
       title: "Integrity",
-      description: "Leading with honesty.",
-      icon: Shield,
-      color: "border-primary/20 bg-primary/5"
+      description: "Leading by example with transparency, honesty, and alignment with school values."
     },
     {
+      num: "02",
       title: "Representation",
-      description: "Every voice heard.",
-      icon: Users,
-      color: "border-gold/20 bg-gold/5"
+      description: "Providing a robust, democratic platform where every student's voice is welcomed and acted upon."
     },
     {
+      num: "03",
       title: "Excellence",
-      description: "Highest standards.",
-      icon: Award,
-      color: "border-primary/20 bg-primary/5"
+      description: "Striving for the highest standards in student leadership, academic support, and welfare projects."
     }
   ];
 
   return (
-    <section className="bg-muted/50 py-12 md:py-16 relative overflow-hidden">
-      <div className="absolute top-0 right-0 -mr-12 -mt-12 opacity-5 pointer-events-none">
-        <Landmark className="w-48 h-48 text-primary" />
+    <section className="bg-muted/30 py-16 md:py-24 relative overflow-hidden border-t border-border/30">
+      <div className="absolute top-0 right-0 -mr-20 -mt-20 opacity-5 pointer-events-none">
+        <Landmark className="w-64 h-64 text-primary" />
       </div>
       
-      <div className="container mx-auto px-4 relative z-10">
-        <motion.div 
-          initial={{ opacity: 0, y: 15 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mx-auto max-w-4xl text-center mb-8"
-        >
-          <img src={mengoBadge} alt="Badge" className="mx-auto mb-4 h-16 w-16 rounded-full border-2 border-gold object-cover shadow-lg sm:h-20 sm:w-20" />
-          <Badge className="bg-gold/10 text-gold border-none mb-2 text-[10px]">Mengo Senior School</Badge>
-          <h2 className="font-serif text-2xl md:text-3xl font-bold text-primary mb-3">Who We Are</h2>
-          <p className="mt-0.5 text-[8px] font-bold text-gold uppercase tracking-[0.2em] font-serif mb-4">"Akwana Akira Ayomba"</p>
-          <p className="text-sm leading-relaxed text-muted-foreground md:text-base font-light max-w-xl mx-auto">
-            The Mengo Senior School Student Council represents every student's voice, championing excellence.
-          </p>
-        </motion.div>
+      <div className="container mx-auto px-6 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+          
+          {/* Left Editorial Narrative */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="lg:col-span-6 text-left"
+          >
+            <span className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] block mb-3">Our Identity</span>
+            <h2 className="font-serif text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight leading-tight mb-6">
+              Championing Student Welfare & Leadership
+            </h2>
+            <div className="h-0.5 w-12 bg-gold mb-6" />
+            <p className="text-muted-foreground text-sm sm:text-base leading-relaxed font-light mb-6">
+              The Mengo Senior School Student Council is a democratically elected student government dedicated to serving the student body since the school's foundational years. We bridge the gap between students and administration, advocating for student welfare, organizing key school events, and fostering academic excellence.
+            </p>
+            <p className="text-muted-foreground text-sm leading-relaxed font-light">
+              Under our motto, <strong className="font-semibold text-foreground">"Akwana Akira Ayomba"</strong>, we promote cooperation, respect for human rights, and building resilient leaders for the future.
+            </p>
+          </motion.div>
 
-        <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6 max-w-4xl mx-auto">
-          {values.map((v, i) => (
-            <motion.div 
-              key={v.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className={`rounded-xl sm:rounded-2xl border ${v.color} p-3 sm:p-5 md:p-6 text-center backdrop-blur-sm group hover:scale-[1.02] transition-transform duration-500`}
-            >
-              <div className="mx-auto mb-2 sm:mb-4 flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-md sm:rounded-lg bg-white/50 shadow-inner group-hover:bg-white transition-colors duration-500">
-                <v.icon className="h-4 w-4 sm:h-5 sm:w-5 text-gold" />
-              </div>
-              <h3 className="font-serif text-[13px] sm:text-base md:text-lg font-bold text-foreground mb-1 sm:mb-2 leading-tight">{v.title}</h3>
-              <p className="text-[10px] sm:text-[13px] text-muted-foreground italic leading-tight hidden xs:block sm:block">"{v.description}"</p>
-            </motion.div>
-          ))}
+          {/* Right Core Pillars */}
+          <div className="lg:col-span-6 flex flex-col gap-6 text-left">
+            {values.map((v, i) => (
+              <motion.div 
+                key={v.title}
+                initial={{ opacity: 0, x: 25 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="flex items-start gap-4 p-5 rounded-2xl border border-border/40 bg-card/30 hover:bg-card/70 transition-all duration-300 group"
+              >
+                <span className="font-serif text-2xl font-black text-gold/40 group-hover:text-gold transition-colors duration-300">
+                  {v.num}
+                </span>
+                <div>
+                  <h3 className="font-serif text-base font-bold text-foreground mb-1 leading-tight">
+                    {v.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground font-light leading-relaxed">
+                    {v.description}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
         </div>
       </div>
     </section>

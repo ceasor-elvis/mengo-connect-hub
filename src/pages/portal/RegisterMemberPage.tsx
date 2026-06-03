@@ -31,7 +31,14 @@ const ROLE_LABELS: Record<string, string> = {
   electoral_commission: "Electoral Commission",
 };
 
-const APP_ROLES = Object.keys(ROLE_LABELS);
+const formatRoleLabel = (role: string) => {
+  if (!role) return "";
+  if (ROLE_LABELS[role]) return ROLE_LABELS[role];
+  return role
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
 
 
 export default function RegisterMemberPage() {
@@ -51,6 +58,7 @@ export default function RegisterMemberPage() {
 
   const [profiles, setProfiles] = useState<any[]>([]);
   const [streams, setStreams] = useState<any[]>([]);
+  const [backendRoles, setBackendRoles] = useState<string[]>([]);
   const [upgradeUserId, setUpgradeUserId] = useState("");
   const [upgradeRole, setUpgradeRole] = useState("");
   const [upgradeLoading, setUpgradeLoading] = useState(false);
@@ -74,6 +82,11 @@ export default function RegisterMemberPage() {
 
   const fetchProfiles = () => api.get("/users/all-profiles/").then(res => setProfiles(Array.isArray(res.data) ? res.data : (res.data.results || []))).catch(() => {});
   const fetchStreams = () => api.get("/streams/").then(res => setStreams(Array.isArray(res.data) ? res.data : (res.data.results || []))).catch(() => {});
+  const fetchBackendRoles = () => api.get("/users/all-roles/").then(res => {
+    const rolesData = Array.isArray(res.data) ? res.data : (res.data.results || []);
+    const roleNames = rolesData.map((r: any) => r.role);
+    setBackendRoles(roleNames);
+  }).catch(() => {});
   const [notifications, setNotifications] = useState<any[]>([]);
   const fetchNotifications = () => api.get("/notifications/").then(res => setNotifications(res.data)).catch(() => {});
   const fetchSystemUpdates = () => api.get("/system-updates/").then(res => setSystemUpdates(Array.isArray(res.data) ? res.data : (res.data.results || []))).catch(() => {});
@@ -82,6 +95,7 @@ export default function RegisterMemberPage() {
     fetchProfiles();
     fetchStreams();
     fetchNotifications();
+    fetchBackendRoles();
     if (canPostUpdates) fetchSystemUpdates();
   }, []);
 
@@ -345,14 +359,18 @@ export default function RegisterMemberPage() {
           <Label htmlFor="role">Position / Office *</Label>
           <Select value={selectedRole} onValueChange={setSelectedRole}>
             <SelectTrigger>
-              <SelectValue placeholder="Select a position" />
+              <SelectValue placeholder={backendRoles.length === 0 ? "No positions available" : "Select a position"} />
             </SelectTrigger>
             <SelectContent>
-              {APP_ROLES.map((role) => (
-                <SelectItem key={role} value={role}>
-                  {ROLE_LABELS[role]}
-                </SelectItem>
-              ))}
+              {backendRoles.length === 0 ? (
+                <SelectItem disabled value="none">No positions available</SelectItem>
+              ) : (
+                backendRoles.map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {ROLE_LABELS[role] || formatRoleLabel(role)}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -390,14 +408,18 @@ export default function RegisterMemberPage() {
               <Label>New Leadership Position</Label>
               <Select value={upgradeRole} onValueChange={setUpgradeRole}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select new role..." />
+                  <SelectValue placeholder={backendRoles.length === 0 ? "No positions available" : "Select new role..."} />
                 </SelectTrigger>
                 <SelectContent>
-                  {APP_ROLES.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {ROLE_LABELS[role]}
-                    </SelectItem>
-                  ))}
+                  {backendRoles.length === 0 ? (
+                    <SelectItem disabled value="none">No positions available</SelectItem>
+                  ) : (
+                    backendRoles.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {ROLE_LABELS[role] || formatRoleLabel(role)}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -432,7 +454,7 @@ export default function RegisterMemberPage() {
                 <div key={p.user_id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
                   <div>
                     <p className="font-medium">{p.full_name}</p>
-                    <p className="text-xs text-muted-foreground">@{p.username} • {p.student_class || "Staff"} • {p.role ? ROLE_LABELS[p.role] : "Councillor"}</p>
+                    <p className="text-xs text-muted-foreground">@{p.username} • {p.student_class || "Staff"} • {p.role ? (ROLE_LABELS[p.role] || formatRoleLabel(p.role)) : "Councillor"}</p>
                   </div>
                   {isAdminEdit && (
                     <div className="flex items-center gap-1">
@@ -627,9 +649,17 @@ export default function RegisterMemberPage() {
               <div className="space-y-2">
                 <Label>Position</Label>
                 <Select value={editingMember.role || "councillor"} onValueChange={v => setEditingMember({...editingMember, role: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={backendRoles.length === 0 ? "No positions available" : "Select position"} /></SelectTrigger>
                   <SelectContent>
-                    {APP_ROLES.map(r => <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>)}
+                    {backendRoles.length === 0 ? (
+                      <SelectItem disabled value="none">No positions available</SelectItem>
+                    ) : (
+                      backendRoles.map(r => (
+                        <SelectItem key={r} value={r}>
+                          {ROLE_LABELS[r] || formatRoleLabel(r)}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
