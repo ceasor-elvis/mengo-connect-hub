@@ -101,7 +101,9 @@ const App = () => (
                 {/* Blog Manager – Publicity & leadership */}
                 <Route element={<RoleGuard allowedPermission="view_blog" />}>
                   <Route path="blog" element={<BlogManagerPage />} />
-                  <Route path="gallery" element={<RoleGuard allowedPermission="manage_blog"><GalleryManagerPage /></RoleGuard>} />
+                </Route>
+                <Route element={<RoleGuard allowedPermission="manage_blog" />}>
+                  <Route path="gallery" element={<GalleryManagerPage />} />
                 </Route>
                 
                 {/* Disciplinary - DC & leadership */}
