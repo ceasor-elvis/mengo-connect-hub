@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import {
   CheckCircle, Search, XCircle, ExternalLink, Clock,
-  User, Calendar, Pencil, Save, X, Trash2, Send, ShieldCheck, FileText
+  User, Calendar, Pencil, Save, X, Trash2, Send, ShieldCheck, FileText,
+  MessageSquare, Sparkles, AlertTriangle, ShieldAlert
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -20,7 +21,8 @@ import mengoBadge from "@/assets/mengo-badge.jpg";
 import { unsaLogoB64 } from "@/assets/unsaBase64";
 import { format } from "date-fns";
 import DocumentViewer from "@/components/portal/DocumentViewer";
-import { notifyRole, notifyUser } from "@/hooks/useNotify";
+import { notifyRole } from "@/hooks/useNotify";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Voice {
   id: string; title: string; category: string; description: string;
@@ -55,6 +57,16 @@ function daysUntilDeletion(rejectedAt: string | null): number | null {
   const diff = Math.ceil((deleteOn.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
   return diff > 0 ? diff : 0;
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0, scale: 0.98 },
+  visible: { y: 0, opacity: 1, scale: 1, transition: { type: "spring", stiffness: 100, damping: 15 } }
+};
 
 export default function StudentVoicesPage() {
   const { user, roles, hasPermission } = useAuth();
@@ -313,357 +325,430 @@ export default function StudentVoicesPage() {
   });
 
   return (
-    <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="font-serif text-xl font-bold sm:text-2xl">Student Voices</h1>
-          <p className="text-sm text-muted-foreground">Review and evaluate submissions.</p>
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8 pb-12 relative"
+    >
+      <div className="absolute -top-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -z-10" />
+      <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -z-10" />
+
+      {/* Header Section */}
+      <section className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 relative">
+        <div className="space-y-1">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="inline-flex items-center gap-2 px-3 py-1 mb-3 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider"
+          >
+            <MessageSquare className="w-3 h-3" /> Voice Submissions
+          </motion.div>
+          <h1 className="font-serif text-4xl sm:text-5xl font-black tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/60">
+            Student Voices
+          </h1>
+          <p className="text-muted-foreground/80 mt-2 text-sm sm:text-base font-medium max-w-xl leading-relaxed">
+            Review, evaluate, and action on submissions from the student body. Ensure all concerns are addressed with clarity and precision.
+          </p>
         </div>
+        
         <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" disabled={filtered.length === 0}>
-              <FileText className="mr-2 h-4 w-4" /> Export Report
+            <Button className="rounded-2xl gap-2 font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-shadow" disabled={filtered.length === 0}>
+              <FileText className="h-4 w-4" /> Export Report
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md rounded-3xl border-border/40 bg-background/60 backdrop-blur-xl shadow-2xl">
             <DialogHeader>
-              <DialogTitle>Export Voices Report</DialogTitle>
+              <DialogTitle className="font-serif text-2xl">Export Voices Report</DialogTitle>
               <DialogDescription>Customize your report footer before downloading.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <label htmlFor="footerText" className="text-xs font-bold uppercase text-muted-foreground">Document Footer Slogan</label>
+                <label htmlFor="footerText" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Document Footer Slogan</label>
                 <Input 
                   id="footerText" 
+                  className="bg-muted/50 border-border/50 focus-visible:ring-primary/20 rounded-xl"
                   value={exportFooterText} 
                   onChange={e => setExportFooterText(e.target.value)} 
                   placeholder="e.g. ANOINTED TO BEAR FRUIT"
                 />
               </div>
             </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setIsExportOpen(false)}>Cancel</Button>
-                <Button onClick={generatePDFReport}>View Preview</Button>
-              </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-border/20">
+              <Button variant="outline" className="rounded-xl" onClick={() => setIsExportOpen(false)}>Cancel</Button>
+              <Button className="rounded-xl font-bold" onClick={generatePDFReport}>View Preview</Button>
+            </div>
           </DialogContent>
         </Dialog>
-      </div>
+      </section>
 
-      <div className="flex gap-1 flex-wrap">
-        {STATUS_FILTERS.map(f => (
-          <button
-            key={f}
-            onClick={() => setStatusFilter(f)}
-            className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors
-              ${statusFilter === f
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background text-muted-foreground hover:text-foreground border-border"
-              }`}
-          >
-            {f}
-            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold
-              ${statusFilter === f ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-              {counts[f]}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {!hasPermission("manage_home_layout") ? (
-        <div className="flex items-center gap-4 py-1.5 px-3 border border-dashed rounded-lg bg-muted/20">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Smart Tone:</span>
-          <div className="flex gap-2">
-            {TONE_FILTERS.map(f => (
-              <button
-                key={f}
-                onClick={() => setToneFilter(f)}
-                className={`text-[10px] font-semibold transition-opacity px-2 py-0.5 rounded
-                  ${toneFilter === f ? "bg-primary/10 text-primary" : "opacity-50 hover:opacity-100"}`}
-              >
-                {f}
-              </button>
-            ))}
+      {/* Filters & Search */}
+      <Card className="border-border/40 bg-card/40 backdrop-blur-xl shadow-lg rounded-3xl overflow-hidden">
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="bg-muted/50 p-1 rounded-2xl flex gap-1 border border-border/50">
+                {STATUS_FILTERS.map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setStatusFilter(f)}
+                    className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all
+                      ${statusFilter === f
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      }`}
+                  >
+                    {f}
+                    <span className={`rounded-lg px-2 py-0.5 text-[10px] font-black
+                      ${statusFilter === f ? "bg-primary/10 text-primary" : "bg-border/50 text-muted-foreground"}`}>
+                      {counts[f]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search voices..."
+                className="pl-9 bg-muted/30 border-border/50 rounded-2xl focus-visible:ring-primary/20"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
-      ) : null}
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search by title, category or student..."
-          className="pl-9"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-      </div>
+          {!hasPermission("manage_home_layout") && (
+            <div className="flex items-center gap-3 py-2.5 px-4 border border-indigo-500/20 rounded-2xl bg-indigo-500/5">
+              <Sparkles className="h-4 w-4 text-indigo-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Smart Tone Analysis:</span>
+              <div className="flex gap-1.5">
+                {TONE_FILTERS.map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setToneFilter(f)}
+                    className={`text-[10px] font-bold uppercase tracking-wider transition-all px-3 py-1 rounded-xl
+                      ${toneFilter === f ? "bg-indigo-500 text-white shadow-md shadow-indigo-500/20" : "bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20"}`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
+      {/* Grid */}
       {loading ? (
-        <p className="text-center py-8 text-muted-foreground animate-pulse">Loading...</p>
+        <div className="flex justify-center py-20">
+          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+            <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full drop-shadow-lg" />
+          </motion.div>
+        </div>
       ) : filtered.length === 0 ? (
-        <p className="text-center py-8 text-muted-foreground">No submissions found.</p>
+        <div className="text-center py-20 bg-muted/20 border border-border/40 rounded-3xl backdrop-blur-xl">
+          <MessageSquare className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+          <h3 className="font-serif text-xl font-bold text-foreground">No voices found</h3>
+          <p className="text-sm text-muted-foreground mt-1">Try adjusting your filters or search query.</p>
+        </div>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((v) => {
-            const days = daysUntilDeletion(v.rejected_at);
-            return (
-              <Card
-                key={v.id}
-                className="cursor-pointer transition-all hover:shadow-md hover:ring-1 hover:ring-border active:scale-[0.99]"
-                onClick={() => openModal(v)}
-              >
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                      <Badge variant="outline" className="text-[10px] shrink-0">{v.category}</Badge>
-                      <span className="text-sm font-medium truncate">{v.title}</span>
-                      {(() => {
-                        const { status, reason } = analyzeVoice(v.title, v.description);
-                        return (
-                          <Badge variant={status === "Safe" ? "secondary" : "destructive"} className="text-[9px] h-4 scale-90 px-1 border-none bg-stone-100 dark:bg-stone-800">
-                            {status === "Safe" ? <span className="text-green-600">● Safe</span> : <span title={reason || ""}>⚠ Flagged</span>}
+        <div className="grid gap-5 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+          <AnimatePresence>
+            {filtered.map((v) => {
+              const days = daysUntilDeletion(v.rejected_at);
+              const { status: toneStatus, reason } = analyzeVoice(v.title, v.description);
+              
+              return (
+                <motion.div key={v.id} variants={itemVariants} layout initial="hidden" animate="visible" exit={{ opacity: 0, scale: 0.9 }}>
+                  <Card
+                    className="h-full border-border/40 bg-card/40 backdrop-blur-xl hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer group rounded-3xl overflow-hidden relative flex flex-col"
+                    onClick={() => openModal(v)}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-background/40 to-background/10 group-hover:bg-transparent transition-colors z-0" />
+                    
+                    <CardContent className="p-6 relative z-10 flex flex-col flex-1">
+                      <div className="flex items-start justify-between gap-4 mb-4">
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          <Badge variant="outline" className="text-[9px] uppercase font-black tracking-widest bg-background/80 border-border/50 shadow-sm shrink-0">
+                            {v.category}
                           </Badge>
-                        );
-                      })()}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Badge variant={statusVariant(v.status) as any} className="text-[10px] flex items-center gap-1 shrink-0">
-                        {statusIcon(v.status)} {v.status}
-                      </Badge>
-                      {v.is_forwarded_to_patron && (
-                        <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] flex items-center gap-1 shrink-0">
-                          <ShieldCheck className="h-3 w-3" /> Forwarded
-                        </Badge>
-                      )}
-                      {v.pending_chairperson_approval && !v.is_forwarded_to_patron && (
-                        <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-[10px] flex items-center gap-1 shrink-0">
-                          <Clock className="h-3 w-3" /> Pending Approval
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{v.description}</p>
-                  <div className="flex items-center justify-between mt-1.5">
-                    <p className="text-[10px] text-muted-foreground flex items-center gap-1 flex-wrap">
-                      <User className="h-3 w-3" />
-                      {v.submitted_by || "Anonymous"}{v.submitted_class ? ` · ${v.submitted_class}` : ""}
-                      <span className="mx-0.5">·</span>
-                      <Calendar className="h-3 w-3" />
-                      {new Date(v.created_at).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" })}
-                    </p>
-                    {days !== null && (
-                      <span className={`text-[10px] font-medium ${days <= 7 ? "text-destructive" : "text-muted-foreground"}`}>
-                        🗑 Auto-deletes in {days}d
-                      </span>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                          {toneStatus === "Flagged" && (
+                            <Badge variant="destructive" className="text-[9px] uppercase font-black tracking-widest border-none shadow-sm gap-1 shrink-0 bg-rose-500">
+                              <ShieldAlert className="h-3 w-3" /> Flagged
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Badge 
+                            className={`text-[10px] uppercase font-black tracking-widest flex items-center gap-1 shadow-sm border-none ${
+                              v.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-600' :
+                              v.status === 'Rejected' ? 'bg-rose-500/10 text-rose-600' : 'bg-amber-500/10 text-amber-600'
+                            }`}
+                          >
+                            {statusIcon(v.status)} {v.status}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      <h3 className="text-lg font-serif font-bold text-foreground leading-tight group-hover:text-primary transition-colors mb-2 line-clamp-2">
+                        {v.title}
+                      </h3>
+                      
+                      <p className="text-sm text-muted-foreground/80 leading-relaxed line-clamp-3 mb-6 flex-1">
+                        {v.description}
+                      </p>
+                      
+                      <div className="mt-auto space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                            <User className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-foreground truncate">{v.submitted_by || "Anonymous"}</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                              <Calendar className="h-3 w-3" /> {new Date(v.created_at).toLocaleDateString("en-UG", { day: "numeric", month: "short" })}
+                              {v.submitted_class && ` • ${v.submitted_class}`}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {v.is_forwarded_to_patron && (
+                            <Badge className="bg-blue-500/10 text-blue-600 border-none text-[9px] uppercase font-black tracking-widest flex items-center gap-1">
+                              <ShieldCheck className="h-3 w-3" /> Forwarded
+                            </Badge>
+                          )}
+                          {v.pending_chairperson_approval && !v.is_forwarded_to_patron && (
+                            <Badge className="bg-indigo-500/10 text-indigo-600 border-none text-[9px] uppercase font-black tracking-widest flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> Pending Chair
+                            </Badge>
+                          )}
+                          {days !== null && (
+                            <span className={`text-[10px] font-bold uppercase tracking-widest ml-auto ${days <= 7 ? "text-rose-500" : "text-muted-foreground"}`}>
+                              Del in {days}d
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       )}
 
+      {/* Detail Modal */}
       <Dialog open={!!selected} onOpenChange={(open) => { if (!open) closeModal(); }}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border-border/40 bg-background/80 backdrop-blur-2xl shadow-2xl p-0">
           {selected && (
-            <>
-              <DialogHeader>
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <Badge variant="outline" className="text-[10px]">{selected.category}</Badge>
-                  <Badge variant={statusVariant(selected.status) as any} className="text-[10px] flex items-center gap-1">
-                    {statusIcon(selected.status)} {selected.status}
-                  </Badge>
-                  {selected.is_forwarded_to_patron && (
-                    <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] flex items-center gap-1">
-                      <ShieldCheck className="h-3 w-3" /> {roles.includes("patron") ? "Forwarded by Council" : "Forwarded to Patron"}
+            <div className="flex flex-col h-full">
+              <div className="p-6 border-b border-border/20 bg-muted/5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-5">
+                  <MessageSquare className="h-32 w-32" />
+                </div>
+                <div className="relative z-10 space-y-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-[10px] uppercase font-black tracking-widest bg-background/80">{selected.category}</Badge>
+                    <Badge 
+                      className={`text-[10px] uppercase font-black tracking-widest flex items-center gap-1 border-none ${
+                        selected.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-600' :
+                        selected.status === 'Rejected' ? 'bg-rose-500/10 text-rose-600' : 'bg-amber-500/10 text-amber-600'
+                      }`}
+                    >
+                      {statusIcon(selected.status)} {selected.status}
                     </Badge>
-                  )}
-                  {daysUntilDeletion(selected.rejected_at) !== null && (
-                    <span className={`text-[10px] font-medium ${(daysUntilDeletion(selected.rejected_at) ?? 31) <= 7 ? "text-destructive" : "text-muted-foreground"}`}>
-                      🗑 Auto-deletes in {daysUntilDeletion(selected.rejected_at)}d
-                    </span>
-                  )}
-                  {(() => {
-                    const { status, reason } = analyzeVoice(selected.title, selected.description);
-                    return status === "Flagged" && (
-                      <div className="w-full mt-1.5 p-2 bg-destructive/5 text-destructive border border-destructive/20 rounded-md flex items-center gap-2">
-                        <span className="text-xs font-bold uppercase">FLAGGED ISSUE:</span>
-                        <span className="text-xs">{reason}</span>
-                      </div>
-                    );
-                  })()}
-                </div>
-                <DialogTitle className="font-serif text-lg leading-snug">{selected.title}</DialogTitle>
-                <DialogDescription className="flex items-center gap-1 text-xs flex-wrap">
-                  <User className="h-3 w-3" />
-                  {selected.submitted_by || "Anonymous"}{selected.submitted_class ? ` · ${selected.submitted_class}` : ""}
-                  <span className="mx-0.5">·</span>
-                  <Calendar className="h-3 w-3" />
-                  {new Date(selected.created_at).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" })}
-                </DialogDescription>
-              </DialogHeader>
-
-              {!editing ? (
-                <div className="space-y-4 pt-1">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Description</p>
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{selected.description}</p>
+                    {selected.is_forwarded_to_patron && (
+                      <Badge className="bg-blue-500/10 text-blue-600 border-none text-[10px] uppercase font-black tracking-widest flex items-center gap-1">
+                        <ShieldCheck className="h-3 w-3" /> {roles.includes("patron") ? "Forwarded by Council" : "Forwarded to Patron"}
+                      </Badge>
+                    )}
                   </div>
-
-                  {(selected.file_url || selected.file) && (
-                    <a
-                      href={selected.file_url || selected.file || "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" /> View Attachment
-                    </a>
-                  )}
-
-                  {selected.comments && (
-                    <div className="rounded-md bg-muted px-3 py-2.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                        Council Comment
-                        {selected.evaluated_by_office && (
-                          <span className="ml-1 normal-case font-normal">
-                            — from{" "}
-                            <span className="font-semibold text-foreground">
-                              {selected.evaluated_by_office
-                                .split("_")
-                                .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-                                .join(" ")}
-                            </span>
-                          </span>
-                        )}
+                  
+                  <DialogTitle className="font-serif text-3xl font-black leading-tight text-foreground pr-8">
+                    {selected.title}
+                  </DialogTitle>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                      <User className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">{selected.submitted_by || "Anonymous"}</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                        <Calendar className="h-3 w-3" /> {new Date(selected.created_at).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" })}
+                        {selected.submitted_class && ` • ${selected.submitted_class}`}
                       </p>
-                      <p className="text-xs italic">{selected.comments}</p>
                     </div>
-                  )}
+                  </div>
+                </div>
+              </div>
 
-                    <div className="flex flex-col gap-3 border-t pt-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <Button variant="outline" size="sm" className="gap-1.5" onClick={startEdit} disabled={!canManage}>
-                        <Pencil className="h-3.5 w-3.5" /> Edit
+              <div className="p-6 space-y-6">
+                {(() => {
+                  const { status, reason } = analyzeVoice(selected.title, selected.description);
+                  return status === "Flagged" && (
+                    <div className="w-full p-4 bg-rose-500/10 text-rose-600 border border-rose-500/20 rounded-2xl flex items-start gap-3 shadow-inner">
+                      <ShieldAlert className="h-5 w-5 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-widest mb-1">Flagged Issue Detected</p>
+                        <p className="text-sm font-medium">{reason}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {!editing ? (
+                  <div className="space-y-6">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1"><FileText className="h-3 w-3"/> Description</p>
+                      <div className="p-4 rounded-2xl bg-muted/30 border border-border/50 text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                        {selected.description}
+                      </div>
+                    </div>
+
+                    {(selected.file_url || selected.file) && (
+                      <a
+                        href={selected.file_url || selected.file || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 font-bold text-xs transition-colors"
+                      >
+                        <ExternalLink className="h-4 w-4" /> View Attached Evidence
+                      </a>
+                    )}
+
+                    {selected.comments && (
+                      <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/5 border border-indigo-500/20">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400 mb-2 flex items-center gap-1.5">
+                          <CheckCircle className="h-3.5 w-3.5" /> Council Evaluation
+                          {selected.evaluated_by_office && (
+                            <span className="opacity-70 normal-case font-bold tracking-normal">— {selected.evaluated_by_office.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}</span>
+                          )}
+                        </p>
+                        <p className="text-sm italic font-medium text-indigo-950 dark:text-indigo-100">{selected.comments}</p>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-3 pt-2">
+                      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-muted/30 border border-border/50">
+                        <Button variant="outline" size="sm" className="gap-2 rounded-xl" onClick={startEdit} disabled={!canManage}>
+                          <Pencil className="h-4 w-4" /> Edit Record
+                        </Button>
+                        <div className="flex items-center gap-3">
+                          {confirmDelete && <span className="text-xs text-rose-500 font-bold uppercase tracking-wider animate-pulse">Confirm delete?</span>}
+                          <Button
+                            variant={confirmDelete ? "destructive" : "secondary"}
+                            size="sm"
+                            className="gap-2 rounded-xl"
+                            disabled={deleting || !canManage}
+                            onClick={handleDelete}
+                            onBlur={() => setConfirmDelete(false)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            {deleting ? "Deleting..." : confirmDelete ? "Yes, Delete" : "Delete"}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {canApproveForward && (
+                        <div className="space-y-2 mt-2">
+                          {selected.pending_chairperson_approval && !selected.is_forwarded_to_patron && (
+                            <div className="w-full p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                              <p className="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4" /> A councillor has requested this be forwarded to the Patron. Review required.
+                              </p>
+                            </div>
+                          )}
+                          {selected.is_forwarded_to_patron ? (
+                            <Button variant="destructive" className="w-full gap-2 rounded-xl py-5" onClick={handleRevokeForward}>
+                              <Send className="h-4 w-4" /> Revoke Forwarding to Patron
+                            </Button>
+                          ) : (
+                            <Button className="w-full gap-2 rounded-xl py-5 shadow-lg shadow-primary/20" onClick={handleApproveForward}>
+                              <Send className="h-4 w-4" /> Approve & Forward to Patron
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      {canRequestForward && !canApproveForward && (
+                        <div className="mt-2">
+                          {selected.is_forwarded_to_patron ? (
+                            <div className="w-full p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Forwarded to Patron by Chairperson</p>
+                            </div>
+                          ) : selected.pending_chairperson_approval ? (
+                            <div className="w-full p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                              <p className="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-2"><Clock className="h-4 w-4" /> Awaiting Chairperson approval to forward</p>
+                            </div>
+                          ) : (
+                            <Button variant="outline" className="w-full gap-2 rounded-xl py-5 border-blue-500/20 text-blue-600 hover:bg-blue-500/10" onClick={handleRequestForward}>
+                              <Send className="h-4 w-4" /> Request Forwarding to Patron
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {selected.status === "Pending" && (
+                      <div className="space-y-3 pt-6 border-t border-border/20">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1"><Pencil className="h-3 w-3"/> Evaluation</p>
+                        <Textarea
+                          placeholder="Add your council evaluation notes..."
+                          rows={3}
+                          className="text-sm bg-muted/30 border-border/50 focus-visible:ring-primary/20 rounded-xl resize-none"
+                          value={comment}
+                          onChange={e => setComment(e.target.value)}
+                        />
+                        <div className="flex gap-3">
+                          <Button className="flex-1 gap-2 rounded-xl py-5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20" disabled={evaluating} onClick={() => handleEvaluate("Approved")}>
+                            <CheckCircle className="h-4 w-4" /> {evaluating ? "Saving..." : "Approve"}
+                          </Button>
+                          <Button variant="outline" className="flex-1 gap-2 rounded-xl py-5 text-rose-600 border-rose-500/30 hover:bg-rose-500/10 hover:border-rose-500/50" disabled={evaluating} onClick={() => handleEvaluate("Rejected")}>
+                            <XCircle className="h-4 w-4" /> {evaluating ? "Saving..." : "Reject"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4 pt-2">
+                    <div className="p-4 rounded-2xl bg-muted/30 border border-border/50 space-y-4">
+                      <div className="space-y-2">
+                        <label htmlFor="voice-status" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</label>
+                        <select
+                          id="voice-status"
+                          className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none"
+                          value={editStatus}
+                          onChange={e => setEditStatus(e.target.value as "Pending" | "Approved" | "Rejected")}
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="Approved">Approved</option>
+                          <option value="Rejected">Rejected</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Council Comment</label>
+                        <Textarea className="bg-background rounded-xl" rows={3} placeholder="Optional notes..." value={editComments} onChange={e => setEditComments(e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                      <Button className="flex-1 gap-2 rounded-xl shadow-lg shadow-primary/20" disabled={saving} onClick={handleSaveEdit}>
+                        <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save Changes"}
                       </Button>
-                      <div className="flex items-center gap-2">
-                        {confirmDelete && (
-                          <span className="text-xs text-destructive font-medium">Confirm delete?</span>
-                        )}
-                        <Button
-                          variant={confirmDelete ? "destructive" : "outline"}
-                          size="sm"
-                          className="gap-1.5"
-                          disabled={deleting || !canManage}
-                          onClick={handleDelete}
-                          onBlur={() => setConfirmDelete(false)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          {deleting ? "Deleting..." : confirmDelete ? "Yes, Delete" : "Delete"}
-                        </Button>
-                      </div>
+                      <Button variant="outline" className="gap-2 rounded-xl" onClick={() => setEditing(false)}>
+                        <X className="h-4 w-4" /> Cancel
+                      </Button>
                     </div>
-
-                    {canApproveForward && (
-                      <>
-                        {selected.pending_chairperson_approval && !selected.is_forwarded_to_patron && (
-                          <div className="w-full p-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-md mb-1">
-                            <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">⏳ A councillor has requested this be forwarded to the Patron. Please review and approve.</p>
-                          </div>
-                        )}
-                        {selected.is_forwarded_to_patron ? (
-                          <Button variant="destructive" className="w-full gap-2" size="sm" onClick={handleRevokeForward}>
-                            <Send className="h-4 w-4" /> Revoke Forwarding to Patron
-                          </Button>
-                        ) : (
-                          <Button variant="default" className="w-full gap-2" size="sm" onClick={handleApproveForward}>
-                            <Send className="h-4 w-4" /> Approve & Forward to School Patron
-                          </Button>
-                        )}
-                      </>
-                    )}
-
-                    {canRequestForward && !canApproveForward && (
-                      <>
-                        {selected.is_forwarded_to_patron ? (
-                          <div className="w-full p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 rounded-md">
-                            <p className="text-xs text-amber-700 dark:text-amber-300 font-medium flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Already forwarded to Patron by Chairperson</p>
-                          </div>
-                        ) : selected.pending_chairperson_approval ? (
-                          <div className="w-full p-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-md">
-                            <p className="text-xs text-blue-700 dark:text-blue-300 font-medium flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Awaiting Chairperson approval to forward</p>
-                          </div>
-                        ) : (
-                          <Button variant="outline" className="w-full gap-2 border-blue-200 text-blue-700 hover:bg-blue-50" size="sm" onClick={handleRequestForward}>
-                            <Send className="h-4 w-4" /> Request Forwarding to Patron
-                          </Button>
-                        )}
-                      </>
-                    )}
                   </div>
-
-                  {selected.status === "Pending" && (
-                    <div className="space-y-2 border-t pt-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Evaluate</p>
-                      <Textarea
-                        placeholder="Add a comment (optional)..."
-                        rows={3}
-                        className="text-sm"
-                        value={comment}
-                        onChange={e => setComment(e.target.value)}
-                      />
-                      <div className="flex gap-2 pt-1">
-                        <Button
-                          className="flex-1 gap-1.5"
-                          disabled={evaluating}
-                          onClick={() => handleEvaluate("Approved")}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                          {evaluating ? "Saving..." : "Approve"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="flex-1 gap-1.5 text-destructive border-destructive/40 hover:bg-destructive/10"
-                          disabled={evaluating}
-                          onClick={() => handleEvaluate("Rejected")}
-                        >
-                          <XCircle className="h-4 w-4" />
-                          {evaluating ? "Saving..." : "Reject"}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-3 pt-1">
-                  <div className="space-y-1">
-                    <label htmlFor="voice-status" className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Status</label>
-                    <select
-                      id="voice-status"
-                      className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                      value={editStatus}
-                      onChange={e => setEditStatus(e.target.value as "Pending" | "Approved" | "Rejected")}
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="Approved">Approved</option>
-                      <option value="Rejected">Rejected</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Council Comment</label>
-                    <Textarea rows={3} placeholder="Optional..." value={editComments} onChange={e => setEditComments(e.target.value)} />
-                  </div>
-                  <div className="flex gap-2 pt-1 border-t">
-                    <Button className="flex-1 gap-1.5" disabled={saving} onClick={handleSaveEdit}>
-                      <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save Changes"}
-                    </Button>
-                    <Button variant="outline" className="gap-1.5" onClick={() => setEditing(false)}>
-                      <X className="h-4 w-4" /> Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
+                )}
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -674,6 +759,6 @@ export default function StudentVoicesPage() {
         title={`Student Voices Report`} 
         type="pdf"
       />
-    </div>
+    </motion.div>
   );
 }

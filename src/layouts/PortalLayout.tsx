@@ -20,6 +20,7 @@ import NotificationsBell from "@/components/portal/NotificationsBell";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import SystemUpdateModal from "@/components/portal/SystemUpdateModal";
+import ForcePasswordChange from "@/components/portal/ForcePasswordChange";
 
 type AppRole = string;
 
@@ -86,6 +87,7 @@ const sidebarGroups: NavGroup[] = [
       { label: "Register Patron", path: "/portal/register-patron", icon: Shield, permission: "register_patron" },
       { label: "Home Layout", path: "/portal/home-layout", icon: Settings, permission: "manage_home_layout" },
       { label: "Feature Controls", path: "/portal/admin-absolute/features", icon: ShieldCheck, permission: "manage_permissions" },
+      { label: "System Feedback", path: "/portal/feedback", icon: MessageSquare, permission: "view_dashboard" },
     ]
   },
 ];
@@ -283,10 +285,11 @@ export default function PortalLayout() {
 
   const roleLabel = roles.length > 0 ? ROLE_LABELS[roles[0]] : "Councillor";
 
-
   return (
     <div className="flex h-screen overflow-hidden">
       <SystemUpdateModal />
+      {profile?.requires_password_change && <ForcePasswordChange />}
+      
       {/* Desktop sidebar */}
       <aside className="hidden w-56 flex-col border-r bg-sidebar lg:flex">
         <div className="flex h-12 items-center gap-2 border-b border-sidebar-border px-3">

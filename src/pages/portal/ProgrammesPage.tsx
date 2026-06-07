@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Pencil, Clock } from "lucide-react";
+import { Plus, Trash2, Pencil, Clock, Calendar as CalendarIcon, Star, EyeOff, Globe } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -23,6 +23,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActivityLog } from "@/hooks/useActivityLog";
 import { notifyRole } from "@/hooks/useNotify";
 import { InteractiveCalendar } from "@/components/calendar/InteractiveCalendar";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Programme {
   id: string;
@@ -35,11 +36,23 @@ interface Programme {
   created_at: string;
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100, damping: 15 } }
+};
+
 export default function ProgrammesPage() {
   const { user, hasPermission } = useAuth();
   const { log } = useActivityLog();
   const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Create state
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -155,52 +168,6 @@ export default function ProgrammesPage() {
     return new Date(d).toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" });
   };
 
-  const ProgrammeCard = ({ p }: { p: Programme }) => (
-    <div className="flex items-start justify-between gap-3 p-4 rounded-xl border bg-card shadow-sm hover:shadow-md transition group">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="font-bold text-base leading-tight">{p.title}</h3>
-          {p.is_big_event && (
-            <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 bg-amber-500/15 text-amber-700 dark:text-amber-400 rounded-full border border-amber-500/30">
-              Major
-            </span>
-          )}
-          <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${p.visibility === 'private' ? 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'}`}>
-            {p.visibility}
-          </span>
-        </div>
-        <p className="text-xs text-muted-foreground mt-1">{formatDate(p.event_date)}</p>
-        {p.description && <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">{p.description}</p>}
-      </div>
-      {canAdd && (
-        <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openEditDialog(p)}>
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          {!p.is_big_event && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Programme?</AlertDialogTitle>
-                  <AlertDialogDescription>This will permanently remove "{p.title}". This cannot be undone.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => handleDelete(p.id, p.title)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
-        </div>
-      )}
-    </div>
-  );
-
   const calendarEvents = programmes.map((p) => ({
     id: p.id,
     title: p.title,
@@ -209,134 +176,319 @@ export default function ProgrammesPage() {
     resource: p,
   }));
 
+  const timelineEvents = programmes
+    .filter(p => p.is_big_event)
+    .sort((a, b) => new Date(a.event_date || a.created_at).getTime() - new Date(b.event_date || b.created_at).getTime());
+
   return (
-    <div className="space-y-10 pb-16 animate-in fade-in duration-500">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-12 pb-16 relative"
+    >
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl -z-10" />
+      <div className="absolute top-1/2 right-10 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl -z-10" />
+
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="font-serif text-xl font-bold text-foreground sm:text-2xl">Programmes & Events</h1>
-          <p className="text-sm text-muted-foreground">Upcoming and past council programmes.</p>
+      <section className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 relative">
+        <div className="space-y-1">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="inline-flex items-center gap-2 px-3 py-1 mb-3 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider"
+          >
+            <CalendarIcon className="w-3 h-3" /> Event Management
+          </motion.div>
+          <h1 className="font-serif text-4xl sm:text-5xl font-black tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/60">
+            Programmes & Schedule
+          </h1>
+          <p className="text-muted-foreground/80 mt-2 text-sm sm:text-base font-medium max-w-xl leading-relaxed">
+            Manage the council's event calendar, track major milestones, and keep the timeline updated for the student body.
+          </p>
         </div>
+
         {canAdd && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Add Programme</Button>
+              <Button className="rounded-2xl gap-2 font-bold shadow-lg shadow-indigo-500/20 bg-indigo-600 hover:bg-indigo-700 text-white h-12 px-6">
+                <Plus className="h-4 w-4" /> Schedule Event
+              </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader><DialogTitle>New Programme</DialogTitle></DialogHeader>
-              <div className="space-y-3">
-                <div><Label>Title *</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Career Day" /></div>
-                <div><Label>Event Date</Label><Input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} /></div>
-                <div><Label>Description</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Details..." /></div>
-                <div>
-                  <Label>Visibility</Label>
-                  <div className="flex gap-4 mt-1">
-                    <label className="flex items-center gap-1.5"><input type="radio" name="visibility" value="public" checked={visibility === "public"} onChange={() => setVisibility("public")} /> Public</label>
-                    <label className="flex items-center gap-1.5"><input type="radio" name="visibility" value="private" checked={visibility === "private"} onChange={() => setVisibility("private")} /> Councilor Private</label>
+            <DialogContent className="max-w-md rounded-3xl border-border/40 bg-background/80 backdrop-blur-2xl shadow-2xl p-0 overflow-hidden">
+              <div className="p-6 border-b border-border/20 bg-indigo-500/5">
+                <DialogTitle className="font-serif text-2xl font-black text-indigo-700 dark:text-indigo-400">New Event</DialogTitle>
+              </div>
+              <div className="p-6 space-y-5">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Title *</Label>
+                  <Input className="bg-muted/30 rounded-xl border-border/50 focus-visible:ring-indigo-500/20 h-11" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Career Day" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Event Date</Label>
+                  <Input type="date" className="bg-muted/30 rounded-xl border-border/50 focus-visible:ring-indigo-500/20 h-11" value={eventDate} onChange={e => setEventDate(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Description</Label>
+                  <Textarea className="bg-muted/30 rounded-xl border-border/50 focus-visible:ring-indigo-500/20 resize-none" value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Event details..." />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Visibility</Label>
+                  <div className="flex gap-4 p-1 bg-muted/30 rounded-xl border border-border/50">
+                    <button
+                      type="button"
+                      onClick={() => setVisibility("public")}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                        visibility === "public" ? "bg-background shadow text-indigo-600" : "text-muted-foreground hover:bg-muted/50"
+                      }`}
+                    >
+                      <Globe className="w-3.5 h-3.5" /> Public
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVisibility("private")}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                        visibility === "private" ? "bg-background shadow text-indigo-600" : "text-muted-foreground hover:bg-muted/50"
+                      }`}
+                    >
+                      <EyeOff className="w-3.5 h-3.5" /> Private
+                    </button>
                   </div>
                 </div>
                 <div>
-                  <label className="flex items-center gap-2 mt-2 cursor-pointer">
-                    <input type="checkbox" checked={isBigEvent} onChange={(e) => setIsBigEvent(e.target.checked)} className="rounded border-gray-300 w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium">Mark as Major Event (Show on Timeline)</span>
+                  <label className="flex items-center gap-3 p-4 rounded-xl border border-border/50 bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors">
+                    <input type="checkbox" checked={isBigEvent} onChange={(e) => setIsBigEvent(e.target.checked)} className="rounded border-border/50 w-5 h-5 text-indigo-600 focus:ring-indigo-500/20" />
+                    <div className="space-y-0.5">
+                      <span className="text-sm font-bold block leading-none">Major Event</span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Pin to the public timeline</span>
+                    </div>
                   </label>
                 </div>
-                <Button onClick={handleAdd} disabled={submitting} className="w-full">{submitting ? "Saving..." : "Add Programme"}</Button>
+                <div className="pt-2">
+                  <Button onClick={handleAdd} disabled={submitting} className="w-full h-12 rounded-xl font-bold shadow-lg shadow-indigo-500/20 bg-indigo-600 hover:bg-indigo-700 text-white transition-all">
+                    {submitting ? "Saving..." : "Add to Schedule"}
+                  </Button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>
         )}
-      </div>
 
-      {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Edit Programme</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Title *</Label><Input value={editTitle} onChange={e => setEditTitle(e.target.value)} /></div>
-            <div><Label>Event Date</Label><Input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} /></div>
-            <div><Label>Description</Label><Textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={3} /></div>
-            <div>
-              <Label>Visibility</Label>
-              <div className="flex gap-4 mt-1">
-                <label className="flex items-center gap-1.5"><input type="radio" name="edit-visibility" value="public" checked={editVisibility === "public"} onChange={() => setEditVisibility("public")} /> Public</label>
-                <label className="flex items-center gap-1.5"><input type="radio" name="edit-visibility" value="private" checked={editVisibility === "private"} onChange={() => setEditVisibility("private")} /> Councilor Private</label>
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="max-w-md rounded-3xl border-border/40 bg-background/80 backdrop-blur-2xl shadow-2xl p-0 overflow-hidden">
+            <div className="p-6 border-b border-border/20 bg-indigo-500/5">
+              <DialogTitle className="font-serif text-2xl font-black text-indigo-700 dark:text-indigo-400">Edit Event</DialogTitle>
+            </div>
+            <div className="p-6 space-y-5">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Title *</Label>
+                <Input className="bg-muted/30 rounded-xl border-border/50 focus-visible:ring-indigo-500/20 h-11" value={editTitle} onChange={e => setEditTitle(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Event Date</Label>
+                <Input type="date" className="bg-muted/30 rounded-xl border-border/50 focus-visible:ring-indigo-500/20 h-11" value={editDate} onChange={e => setEditDate(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Description</Label>
+                <Textarea className="bg-muted/30 rounded-xl border-border/50 focus-visible:ring-indigo-500/20 resize-none" value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={3} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Visibility</Label>
+                <div className="flex gap-4 p-1 bg-muted/30 rounded-xl border border-border/50">
+                  <button
+                    type="button"
+                    onClick={() => setEditVisibility("public")}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                      editVisibility === "public" ? "bg-background shadow text-indigo-600" : "text-muted-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    <Globe className="w-3.5 h-3.5" /> Public
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditVisibility("private")}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                      editVisibility === "private" ? "bg-background shadow text-indigo-600" : "text-muted-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    <EyeOff className="w-3.5 h-3.5" /> Private
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="flex items-center gap-3 p-4 rounded-xl border border-border/50 bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors">
+                  <input type="checkbox" checked={editIsBigEvent} onChange={(e) => setEditIsBigEvent(e.target.checked)} className="rounded border-border/50 w-5 h-5 text-indigo-600 focus:ring-indigo-500/20" />
+                  <div className="space-y-0.5">
+                    <span className="text-sm font-bold block leading-none">Major Event</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Pin to the public timeline</span>
+                  </div>
+                </label>
+              </div>
+              <div className="pt-2">
+                <Button onClick={handleEdit} disabled={editSubmitting} className="w-full h-12 rounded-xl font-bold shadow-lg shadow-indigo-500/20 bg-indigo-600 hover:bg-indigo-700 text-white transition-all">
+                  {editSubmitting ? "Saving..." : "Save Changes"}
+                </Button>
               </div>
             </div>
-            <div>
-              <label className="flex items-center gap-2 mt-2 cursor-pointer">
-                <input type="checkbox" checked={editIsBigEvent} onChange={(e) => setEditIsBigEvent(e.target.checked)} className="rounded border-gray-300 w-4 h-4 text-primary" />
-                <span className="text-sm font-medium">Major Event (Show on Timeline)</span>
-              </label>
-            </div>
-            <Button onClick={handleEdit} disabled={editSubmitting} className="w-full">{editSubmitting ? "Saving..." : "Save Changes"}</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      </section>
 
       {loading ? (
-        <p className="text-center py-8 text-muted-foreground">Loading...</p>
+        <div className="flex justify-center py-20">
+          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+            <div className="h-10 w-10 border-4 border-indigo-500 border-t-transparent rounded-full drop-shadow-lg" />
+          </motion.div>
+        </div>
       ) : (
         <>
           {/* Section 1: Interactive Calendar */}
-          <div>
-            <h2 className="text-lg font-serif font-bold text-foreground border-b pb-2 mb-4">Events Calendar</h2>
-            <Card className="p-4 sm:p-6 shadow-sm w-full bg-card">
-              <InteractiveCalendar events={calendarEvents} />
+          <motion.div variants={itemVariants} className="space-y-4">
+            <h2 className="font-serif text-2xl font-bold text-foreground">Interactive Calendar</h2>
+            <Card className="rounded-3xl border-border/40 bg-card/60 backdrop-blur-xl shadow-xl overflow-hidden">
+              <CardContent className="p-2 sm:p-6">
+                <div className="min-h-[500px] w-full rounded-2xl bg-background/50 border border-border/50 overflow-hidden">
+                  <InteractiveCalendar events={calendarEvents} />
+                </div>
+              </CardContent>
             </Card>
-          </div>
+          </motion.div>
 
-          {/* Section 2: Major Events Timeline */}
-          <div className="px-2 sm:px-8 max-w-4xl mx-auto">
-            <h2 className="text-lg font-serif font-bold text-foreground border-b pb-2 mb-8">Major Events Timeline</h2>
-            <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
-              {programmes
-                .filter(p => p.is_big_event)
-                .sort((a, b) => new Date(a.event_date || a.created_at).getTime() - new Date(b.event_date || b.created_at).getTime())
-                .map((p) => (
-                  <div key={p.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-background bg-primary text-primary-foreground shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
-                      <Clock className="w-4 h-4" />
-                    </div>
-                    <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border bg-card shadow-sm hover:shadow-md transition">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 sm:mb-1 gap-1">
-                        <h3 className="font-bold text-lg leading-tight">{p.title}</h3>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] sm:text-xs font-semibold px-2.5 py-0.5 bg-primary/10 text-primary rounded-full shrink-0 w-fit">
-                            {formatDate(p.event_date)}
-                          </span>
-                          {canAdd && (
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => openEditDialog(p)}>
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                          )}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            {/* Section 2: Major Events Timeline */}
+            <motion.div variants={itemVariants} className="xl:col-span-2 space-y-4">
+              <h2 className="font-serif text-2xl font-bold text-foreground flex items-center gap-2">
+                <Star className="h-5 w-5 text-amber-500" /> Timeline
+              </h2>
+              
+              <div className="p-6 rounded-3xl border border-border/40 bg-card/60 backdrop-blur-xl shadow-xl">
+                {timelineEvents.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground italic text-sm">No major events on the timeline yet.</div>
+                ) : (
+                  <div className="relative border-l-2 border-border/50 ml-4 space-y-8">
+                    {timelineEvents.map((p, idx) => (
+                      <div key={p.id} className="relative pl-8 group">
+                        <div className="absolute -left-[11px] top-1.5 h-5 w-5 rounded-full border-4 border-background bg-indigo-500 shadow-lg shadow-indigo-500/50 group-hover:scale-125 transition-transform" />
+                        
+                        <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all hover:border-indigo-500/30">
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-2">
+                            <div>
+                              <h3 className="font-serif text-xl font-bold text-foreground leading-tight group-hover:text-indigo-600 transition-colors">{p.title}</h3>
+                              <p className="text-xs font-black uppercase tracking-widest text-indigo-500 mt-1 flex items-center gap-1.5">
+                                <CalendarIcon className="h-3 w-3" /> {formatDate(p.event_date)}
+                              </p>
+                            </div>
+                            
+                            {canAdd && (
+                              <div className="flex gap-1 shrink-0 bg-muted/50 p-1 rounded-xl">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-indigo-600 hover:bg-background shadow-sm" onClick={() => openEditDialog(p)}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-rose-600 hover:bg-rose-50 shadow-sm">
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="rounded-3xl border-border/40 bg-background/80 backdrop-blur-xl shadow-2xl">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle className="font-serif text-2xl">Remove from Timeline?</AlertDialogTitle>
+                                      <AlertDialogDescription>This will permanently remove "{p.title}". This cannot be undone.</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel className="rounded-xl border-border/50">Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDelete(p.id, p.title)} className="rounded-xl font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-500/20">Delete</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {p.description && <p className="text-sm text-muted-foreground leading-relaxed">{p.description}</p>}
+                          
+                          <div className="mt-4 pt-3 border-t border-border/40 flex justify-end">
+                            <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg flex items-center gap-1.5 w-fit ${p.visibility === 'private' ? 'bg-indigo-500/10 text-indigo-600' : 'bg-emerald-500/10 text-emerald-600'}`}>
+                              {p.visibility === 'private' ? <EyeOff className="w-3 h-3" /> : <Globe className="w-3 h-3" />} {p.visibility}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      {p.description && <p className="text-muted-foreground text-sm">{p.description}</p>}
-                    </div>
+                    ))}
                   </div>
-                ))}
-              {programmes.filter(p => p.is_big_event).length === 0 && (
-                <div className="text-center text-muted-foreground py-12">No major events on the timeline yet.</div>
-              )}
-            </div>
-          </div>
+                )}
+              </div>
+            </motion.div>
 
-          {/* Section 3: All Programmes — visible to editors only */}
-          {canAdd && (
-            <div className="space-y-3">
-              <h2 className="text-lg font-serif font-bold text-foreground border-b pb-2">All Programmes</h2>
-              {programmes.length === 0 ? (
-                <p className="text-muted-foreground italic text-sm text-center py-4">No programmes yet.</p>
-              ) : (
-                programmes.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map(p => (
-                  <ProgrammeCard key={p.id} p={p} />
-                ))
-              )}
-            </div>
-          )}
+            {/* Section 3: All Programmes */}
+            {canAdd && (
+              <motion.div variants={itemVariants} className="space-y-4">
+                <h2 className="font-serif text-2xl font-bold text-foreground flex items-center gap-2">
+                   Directory
+                </h2>
+                
+                <div className="space-y-3">
+                  <AnimatePresence>
+                    {programmes.length === 0 ? (
+                      <p className="text-muted-foreground italic text-sm text-center py-12 bg-card/60 backdrop-blur-xl rounded-3xl border border-border/40">No programmes yet.</p>
+                    ) : (
+                      programmes.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map(p => (
+                        <motion.div key={p.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, height: 0 }}>
+                          <Card className="rounded-2xl border-border/40 bg-card/60 backdrop-blur-xl shadow-sm hover:shadow-md transition-all group overflow-hidden">
+                            <CardContent className="p-4 flex flex-col gap-3">
+                              <div className="flex justify-between items-start gap-2">
+                                <h3 className="font-bold text-base leading-tight group-hover:text-indigo-600 transition-colors">{p.title}</h3>
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background border border-border/50 rounded-lg p-0.5 shadow-sm shrink-0">
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md hover:bg-muted" onClick={() => openEditDialog(p)}>
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  {!p.is_big_event && (
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md hover:bg-rose-50 text-rose-500">
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent className="rounded-3xl border-border/40 bg-background/80 backdrop-blur-xl shadow-2xl">
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle className="font-serif text-2xl">Delete Event?</AlertDialogTitle>
+                                          <AlertDialogDescription>Permanently remove "{p.title}"?</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel className="rounded-xl border-border/50">Cancel</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDelete(p.id, p.title)} className="rounded-xl font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-500/20">Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-2 border-t border-border/40">
+                                <span className="flex items-center gap-1"><CalendarIcon className="w-3 h-3" /> {formatDate(p.event_date)}</span>
+                                <div className="flex gap-1.5">
+                                  {p.is_big_event && (
+                                    <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-amber-500/15 text-amber-700 dark:text-amber-400 rounded-md">
+                                      Major
+                                    </span>
+                                  )}
+                                  <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md ${p.visibility === 'private' ? 'bg-indigo-500/10 text-indigo-600' : 'bg-emerald-500/10 text-emerald-600'}`}>
+                                    {p.visibility}
+                                  </span>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))
+                    )}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+            )}
+          </div>
         </>
       )}
-    </div>
+    </motion.div>
   );
 }

@@ -1,11 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   AlertTriangle, Calendar, FileText, MessageSquare, DollarSign,
   TrendingUp, CheckCircle, Shield, Heart, Stethoscope,
   Megaphone, Accessibility, Users, Vote, Gavel, UserCheck, type LucideIcon,
-  ChevronRight, ArrowUpRight, BarChart3, PieChart as PieChartIcon
+  ChevronRight, ArrowUpRight, BarChart3, PieChart as PieChartIcon, Activity
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
@@ -25,6 +26,7 @@ interface DashboardStats {
   value: string;
   icon: LucideIcon;
   color: string;
+  bg: string;
   change: string;
   key: string;
   path: string;
@@ -35,7 +37,7 @@ interface RecentIssue { title: string; status: string; raised: string; }
 interface FinanceItem { v: string; l: string; raw?: number; }
 
 const ROLE_INFO: Record<string, RoleInfo> = {
-  adminabsolute: { title: "Admin Absolute", icon: Shield, color: "text-red-500", link: "/portal/admin-absolute/features", responsibilities: ["Full system access", "Bypass all restrictions", "Manage everything"] },
+  adminabsolute: { title: "Admin Absolute", icon: Shield, color: "text-rose-500", link: "/portal/admin-absolute/features", responsibilities: ["Full system access", "Bypass all restrictions", "Manage everything"] },
   patron: { title: "Patron", icon: Shield, color: "text-amber-500", link: "/portal/logs", responsibilities: ["Overall oversight and guidance", "Approve requisitions", "Mentor council leadership", "Liaise with administration"] },
   chairperson: { title: "Chairperson", icon: UserCheck, color: "text-indigo-500", link: "/portal/hierarchy", responsibilities: ["Lead the Student Council", "Oversee all offices", "Represent students", "Coordinate with Patron"] },
   vice_chairperson: { title: "Vice Chairperson", icon: UserCheck, color: "text-indigo-400", link: "/portal/hierarchy", responsibilities: ["Act as Chairperson when absent", "Assist in coordination", "Supervise delegated projects"] },
@@ -52,7 +54,7 @@ const ROLE_INFO: Record<string, RoleInfo> = {
   electoral_commission: { title: "Electoral Commission", icon: Vote, color: "text-slate-600", link: "/portal/elections", responsibilities: ["Organize elections", "Screen candidates", "Generate ballots", "Announce results"] },
 };
 
-const COLORS = ['#6366f1', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6'];
+const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#6366f1'];
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -60,14 +62,14 @@ const containerVariants = {
 };
 
 const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } }
+  hidden: { y: 20, opacity: 0, scale: 0.98 },
+  visible: { y: 0, opacity: 1, scale: 1, transition: { type: "spring", stiffness: 100, damping: 15 } }
 };
 
 export default function DashboardPage() {
   const { profile, roles } = useAuth();
   const navigate = useNavigate();
-  const primaryRole = roles[0];
+  const primaryRole = roles?.[0];
   const info = primaryRole ? ROLE_INFO[primaryRole] : null;
 
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -91,10 +93,10 @@ export default function DashboardPage() {
   const dashboardStats = useMemo(() => {
     if (!dashboardData?.stats) return [];
     const config = [
-      { key: "voices", path: "/portal/student-voices", label: "Voices", icon: MessageSquare, color: "text-indigo-600", bg: "bg-indigo-50", change: "submissions" },
-      { key: "issues", path: "/portal/issues", label: "Issues", icon: AlertTriangle, color: "text-amber-600", bg: "bg-amber-50", change: "recorded" },
-      { key: "events", path: "/portal/programmes", label: "Events", icon: Calendar, color: "text-emerald-600", bg: "bg-emerald-50", change: "scheduled" },
-      { key: "docs",   path: "/portal/documents", label: "Documents", icon: FileText, color: "text-blue-600",   bg: "bg-blue-50",   change: "uploaded" },
+      { key: "voices", path: "/portal/student-voices", label: "Voices", icon: MessageSquare, color: "text-indigo-500", bg: "from-indigo-500/20 to-indigo-500/5", change: "submissions" },
+      { key: "issues", path: "/portal/issues", label: "Issues", icon: AlertTriangle, color: "text-rose-500", bg: "from-rose-500/20 to-rose-500/5", change: "recorded" },
+      { key: "events", path: "/portal/programmes", label: "Events", icon: Calendar, color: "text-emerald-500", bg: "from-emerald-500/20 to-emerald-500/5", change: "scheduled" },
+      { key: "docs",   path: "/portal/documents", label: "Documents", icon: FileText, color: "text-cyan-500", bg: "from-cyan-500/20 to-cyan-500/5", change: "uploaded" },
     ];
     return config
       .filter(c => dashboardData.stats[c.key] !== undefined)
@@ -106,9 +108,9 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
-          <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+          <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full drop-shadow-lg" />
         </motion.div>
       </div>
     );
@@ -119,60 +121,81 @@ export default function DashboardPage() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6 pb-8"
+      className="space-y-8 pb-12"
     >
       {/* Header Section */}
-      <section className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-serif text-3xl font-bold tracking-tight text-foreground">
+      <section className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 relative">
+        <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl -z-10" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/10 rounded-full blur-3xl -z-10" />
+        
+        <div className="space-y-1">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="inline-flex items-center gap-2 px-3 py-1 mb-3 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider"
+          >
+            <Activity className="w-3 h-3" /> Live Command Center
+          </motion.div>
+          <h1 className="font-serif text-4xl sm:text-5xl font-black tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/60">
             Greetings{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm font-medium">
-            {info ? `${info.title} Center` : "Welcome to your executive dashboard."}
+          <p className="text-muted-foreground/80 mt-2 text-sm sm:text-base font-medium max-w-xl leading-relaxed">
+            {info ? `You are logged into the ${info.title} oversight portal. Monitor, manage, and evaluate student council activities with elite precision.` : "Welcome to your executive dashboard."}
           </p>
         </div>
+        
         {info && (
-          <div className="flex items-center gap-3 bg-card/40 backdrop-blur-md border border-primary/10 px-4 py-2 rounded-2xl shadow-sm">
-            <div className={`p-2 rounded-xl ${info.color.replace('text-', 'bg-').replace('-500', '-500/10')}`}>
-              <info.icon className={`h-5 w-5 ${info.color}`} />
+          <motion.div 
+            whileHover={{ scale: 1.02 }}
+            className="flex items-center gap-4 bg-background/60 backdrop-blur-xl border border-primary/20 px-6 py-4 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(255,255,255,0.02)]"
+          >
+            <div className={`p-3 rounded-2xl ${info.color.replace('text-', 'bg-').replace('-500', '-500/10')} shadow-inner`}>
+              <info.icon className={`h-6 w-6 ${info.color}`} />
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Active Oversight</p>
-              <p className="text-sm font-serif font-bold text-foreground">{info.title}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 mb-0.5">Active Role</p>
+              <p className="text-base font-serif font-black text-foreground">{info.title}</p>
             </div>
-          </div>
+          </motion.div>
         )}
       </section>
 
-      {/* Metrics Grid - Dynamically sized based on card count */}
-      <div className={`grid gap-4 ${
+      {/* Metrics Grid */}
+      <div className={`grid gap-5 ${
         dashboardStats.length === 1 ? "grid-cols-1" :
         dashboardStats.length === 2 ? "grid-cols-1 sm:grid-cols-2" :
         dashboardStats.length === 3 ? "grid-cols-1 sm:grid-cols-3" :
         "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
       }`}>
         {dashboardStats.map((s, idx) => (
-          <motion.div key={s.key} variants={itemVariants}>
+          <motion.div key={s.key} variants={itemVariants} whileHover={{ y: -5 }}>
             <Card 
-              className="border-border/50 bg-card/60 backdrop-blur-sm hover:shadow-md transition-all group overflow-hidden cursor-pointer"
+              className={`relative overflow-hidden border-border/40 bg-gradient-to-br ${s.bg} backdrop-blur-xl hover:shadow-2xl hover:shadow-${s.color.split('-')[1]}-500/10 transition-all duration-300 cursor-pointer group rounded-3xl`}
               onClick={() => navigate(s.path)}
             >
-              <CardContent className="p-5 relative">
-                <div className={`absolute -right-2 -top-2 h-16 w-16 opacity-5 transition-transform group-hover:scale-125 ${s.color}`}>
+              <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] group-hover:bg-background/40 transition-colors" />
+              <CardContent className="p-6 relative z-10">
+                <div className={`absolute -right-4 -top-4 h-24 w-24 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-500 group-hover:scale-110 group-hover:-rotate-12 ${s.color}`}>
                   <s.icon className="h-full w-full" />
                 </div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`p-2 rounded-lg ${s.bg}`}>
-                    <s.icon className={`h-4 w-4 ${s.color}`} />
+                
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`p-3 rounded-2xl bg-background/80 shadow-sm border border-border/50 group-hover:scale-110 transition-transform duration-300`}>
+                    <s.icon className={`h-5 w-5 ${s.color}`} />
                   </div>
-                  <Badge variant="outline" className="text-[10px] bg-white/50 border-primary/5">Live</Badge>
+                  <div className="flex flex-col items-end">
+                    <Badge variant="outline" className="text-[9px] uppercase font-black tracking-widest bg-background/80 border-border/50 shadow-sm">Live</Badge>
+                  </div>
                 </div>
-                <p className="text-3xl font-serif font-bold tracking-tight">{s.value}</p>
-                <div className="flex items-center justify-between mt-1">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">{s.label}</span>
-                  <span className="text-[10px] text-primary flex items-center gap-0.5 font-bold">
-                    <TrendingUp className="h-3 w-3" /> {s.change}
-                  </span>
+                
+                <div className="space-y-1">
+                  <p className="text-4xl font-black font-serif tracking-tight drop-shadow-sm">{s.value}</p>
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-xs font-bold text-foreground/70 uppercase tracking-widest">{s.label}</span>
+                    <span className={`text-[10px] flex items-center gap-1 font-black uppercase tracking-wider ${s.color}`}>
+                      <TrendingUp className="h-3 w-3" /> {s.change}
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -187,27 +210,39 @@ export default function DashboardPage() {
             variants={itemVariants} 
             className={dashboardData?.issueDist?.length > 0 ? "md:col-span-8" : "md:col-span-12"}
           >
-            <Card className="h-full border-border/50 bg-card/60 backdrop-blur-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
+            <Card className="h-full border-border/40 bg-card/40 backdrop-blur-xl shadow-lg rounded-3xl overflow-hidden group">
+              <CardHeader className="flex flex-row items-center justify-between border-b border-border/20 bg-muted/10 pb-4">
                 <div>
-                  <CardTitle className="text-lg font-serif">Interaction Trends</CardTitle>
-                  <p className="text-xs text-muted-foreground">Monthly Student Voice submissions</p>
+                  <CardTitle className="text-xl font-serif font-bold">Interaction Trends</CardTitle>
+                  <p className="text-xs font-medium text-muted-foreground mt-1">Monthly Voice Submissions</p>
                 </div>
-                <div className="h-8 w-8 rounded-full bg-indigo-50 flex items-center justify-center">
-                  <BarChart3 className="h-4 w-4 text-indigo-600" />
+                <div className="h-10 w-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 group-hover:bg-indigo-500/20 transition-colors">
+                  <BarChart3 className="h-5 w-5 text-indigo-500" />
                 </div>
               </CardHeader>
-              <CardContent className="h-[300px]">
+              <CardContent className="h-[320px] pt-6 px-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dashboardData.trends}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                  <BarChart data={dashboardData.trends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.4} />
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))', fontWeight: 600 }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))', fontWeight: 600 }} />
                     <Tooltip 
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                      cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }}
+                      contentStyle={{ borderRadius: '16px', border: '1px solid hsl(var(--border))', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', backgroundColor: 'hsl(var(--background))', fontWeight: 'bold' }}
+                      cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }}
                     />
-                    <Bar dataKey="voices" fill="#6366f1" radius={[6, 6, 0, 0]} barSize={40} />
+                    <Bar dataKey="voices" fill="#6366f1" radius={[8, 8, 8, 8]} barSize={36}>
+                      {dashboardData.trends.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={`url(#colorVoices${index})`} />
+                      ))}
+                    </Bar>
+                    <defs>
+                      {dashboardData.trends.map((_: any, index: number) => (
+                        <linearGradient key={`gradient-${index}`} id={`colorVoices${index}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.9}/>
+                          <stop offset="100%" stopColor={COLORS[index % COLORS.length]} stopOpacity={0.5}/>
+                        </linearGradient>
+                      ))}
+                    </defs>
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -221,37 +256,42 @@ export default function DashboardPage() {
             variants={itemVariants} 
             className={dashboardData?.trends?.length > 0 ? "md:col-span-4" : "md:col-span-12"}
           >
-            <Card className="h-full border-border/50 bg-card/60 backdrop-blur-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg font-serif">Issue Categories</CardTitle>
-                <div className="h-8 w-8 rounded-full bg-amber-50 flex items-center justify-center">
-                  <PieChartIcon className="h-4 w-4 text-amber-600" />
+            <Card className="h-full border-border/40 bg-card/40 backdrop-blur-xl shadow-lg rounded-3xl overflow-hidden group">
+              <CardHeader className="flex flex-row items-center justify-between border-b border-border/20 bg-muted/10 pb-4">
+                <CardTitle className="text-xl font-serif font-bold">Issue Distribution</CardTitle>
+                <div className="h-10 w-10 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 group-hover:bg-amber-500/20 transition-colors">
+                  <PieChartIcon className="h-5 w-5 text-amber-500" />
                 </div>
               </CardHeader>
-              <CardContent className="h-[300px] flex flex-col justify-center">
-                <ResponsiveContainer width="100%" height="100%">
+              <CardContent className="h-[320px] flex flex-col justify-center pt-6">
+                <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
                     <Pie
                       data={dashboardData.issueDist}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
+                      innerRadius={65}
+                      outerRadius={85}
+                      paddingAngle={6}
                       dataKey="value"
+                      stroke="none"
+                      cornerRadius={6}
                     >
                       {dashboardData.issueDist.map((_: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="drop-shadow-sm hover:opacity-80 transition-opacity outline-none" />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '12px', border: '1px solid hsl(var(--border))', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', backgroundColor: 'hsl(var(--background))', fontWeight: 'bold' }}
+                      itemStyle={{ color: 'hsl(var(--foreground))' }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="grid grid-cols-2 gap-2 mt-4">
+                <div className="grid grid-cols-2 gap-3 mt-6">
                   {dashboardData.issueDist.slice(0, 4).map((d: any, i: number) => (
-                    <div key={d.name} className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                      <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">{d.name}</span>
+                    <div key={d.name} className="flex items-center gap-2.5 p-2 rounded-xl bg-muted/30 border border-border/30 hover:border-border/60 transition-colors">
+                      <div className="h-3 w-3 rounded-full shadow-sm" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                      <span className="text-[11px] font-bold text-foreground/80 truncate">{d.name}</span>
                     </div>
                   ))}
                 </div>
@@ -269,77 +309,85 @@ export default function DashboardPage() {
             className={(dashboardData?.permissions?.finance) ? "md:col-span-8 flex flex-col gap-6" : "md:col-span-12 flex flex-col gap-6"}
           >
             {dashboardData?.permissions?.voices && (
-              <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
-                <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4 text-indigo-600" /> Critical Student Voices
+              <Card className="border-border/40 bg-card/40 backdrop-blur-xl shadow-lg rounded-3xl overflow-hidden">
+                <CardHeader className="pb-4 flex flex-row items-center justify-between border-b border-border/20 bg-muted/5">
+                  <CardTitle className="text-lg font-serif font-bold flex items-center gap-2.5">
+                    <div className="p-1.5 bg-indigo-500/10 rounded-lg"><MessageSquare className="h-4 w-4 text-indigo-500" /></div>
+                    Critical Student Voices
                   </CardTitle>
-                  <Badge 
-                    variant="secondary" 
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
                     onClick={() => navigate("/portal/student-voices")}
-                    className="bg-indigo-50 text-indigo-700 border-none hover:bg-indigo-100 cursor-pointer flex items-center gap-1"
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-500/10 h-8 px-3 rounded-xl"
                   >
-                    View All <ArrowUpRight className="h-3 w-3" />
-                  </Badge>
+                    View All <ArrowUpRight className="h-3 w-3 ml-1" />
+                  </Button>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {dashboardData.recentVoices.map((v: any, idx: number) => (
-                    <div key={idx} className="group flex items-center justify-between p-3 rounded-xl border border-border/30 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all cursor-default">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xs uppercase">
-                          {v.category.slice(0, 2)}
+                <CardContent className="p-0">
+                  <div className="divide-y divide-border/20">
+                    {(dashboardData.recentVoices || []).map((v: any, idx: number) => (
+                      <div key={idx} className="group flex items-center justify-between p-4 hover:bg-muted/20 transition-all cursor-pointer" onClick={() => navigate("/portal/student-voices")}>
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 font-black text-xs uppercase shadow-sm group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                            {v.category.slice(0, 2)}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-foreground/90 group-hover:text-indigo-600 transition-colors mb-0.5">{v.title}</p>
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                              {v.category} <span className="h-1 w-1 rounded-full bg-border" /> {v.date}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold group-hover:text-indigo-700 transition-colors">{v.title}</p>
-                          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            {v.category} <span className="h-1 w-1 rounded-full bg-slate-300" /> {v.date}
-                          </p>
-                        </div>
+                        <Badge className={`rounded-xl px-3 py-1 text-[10px] font-bold uppercase tracking-widest border-none shadow-sm ${
+                          v.status === 'approved' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'
+                        }`}>
+                          {v.status}
+                        </Badge>
                       </div>
-                      <Badge className={`rounded-full px-2.5 py-0.5 text-[10px] border-none shadow-none ${
-                        v.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                      }`}>
-                        {v.status}
-                      </Badge>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}
 
             {dashboardData?.permissions?.issues && (
-              <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
-                <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-600" /> Recent Issues Reported
+              <Card className="border-border/40 bg-card/40 backdrop-blur-xl shadow-lg rounded-3xl overflow-hidden">
+                <CardHeader className="pb-4 flex flex-row items-center justify-between border-b border-border/20 bg-muted/5">
+                  <CardTitle className="text-lg font-serif font-bold flex items-center gap-2.5">
+                    <div className="p-1.5 bg-rose-500/10 rounded-lg"><AlertTriangle className="h-4 w-4 text-rose-500" /></div>
+                    Recent Issues Reported
                   </CardTitle>
-                  <Badge 
-                    variant="secondary" 
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
                     onClick={() => navigate("/portal/issues")}
-                    className="bg-amber-50 text-amber-700 border-none hover:bg-amber-100 cursor-pointer flex items-center gap-1"
+                    className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 h-8 px-3 rounded-xl"
                   >
-                    Queue <ArrowUpRight className="h-3 w-3" />
-                  </Badge>
+                    Queue <ArrowUpRight className="h-3 w-3 ml-1" />
+                  </Button>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {dashboardData.recentIssues.map((i: any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-between p-3 rounded-xl border border-border/30">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-8 w-8 rounded-full bg-amber-50 flex items-center justify-center">
-                          <UserCheck className="h-4 w-4 text-amber-600" />
+                <CardContent className="p-0">
+                  <div className="divide-y divide-border/20">
+                    {(dashboardData.recentIssues || []).map((i: any, idx: number) => (
+                      <div key={idx} className="group flex items-center justify-between p-4 hover:bg-muted/20 transition-all cursor-pointer" onClick={() => navigate("/portal/issues")}>
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="h-10 w-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shadow-sm group-hover:bg-rose-500 transition-colors">
+                            <UserCheck className="h-4 w-4 text-rose-500 group-hover:text-white transition-colors" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-foreground/90 group-hover:text-rose-600 transition-colors truncate mb-0.5">{i.title}</p>
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Raised by {i.raised}</p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold truncate">{i.title}</p>
-                          <p className="text-[10px] text-muted-foreground">Raised by {i.raised}</p>
-                        </div>
+                        <Badge variant="outline" className={`rounded-xl px-3 py-1 text-[10px] font-bold uppercase tracking-widest border shadow-sm ${
+                          i.status === 'resolved' ? 'bg-emerald-500/5 text-emerald-600 border-emerald-500/20' : 'bg-rose-500/5 text-rose-600 border-rose-500/20'
+                        }`}>
+                          {i.status.replace("_", " ")}
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className={`text-[10px] capitalize ${
-                        i.status === 'resolved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
-                      }`}>
-                        {i.status.replace("_", " ")}
-                      </Badge>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -354,45 +402,48 @@ export default function DashboardPage() {
           >
             {dashboardData?.permissions?.finance && (
               <Card 
-                className="border-border/50 bg-card/60 backdrop-blur-sm overflow-hidden relative cursor-pointer group"
+                className="border-border/40 bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 backdrop-blur-xl shadow-lg rounded-3xl overflow-hidden relative cursor-pointer group hover:shadow-emerald-500/10 transition-all"
                 onClick={() => navigate("/portal/financial-summary")}
               >
-                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                  <DollarSign className="h-20 w-20" />
+                <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity group-hover:scale-110 group-hover:-rotate-12 duration-500">
+                  <DollarSign className="h-24 w-24 text-emerald-500" />
                 </div>
-                <CardHeader>
-                  <CardTitle className="text-lg font-serif">Financial Summary</CardTitle>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-serif font-bold flex items-center gap-2">
+                    <div className="p-1.5 bg-emerald-500/20 rounded-lg"><DollarSign className="h-4 w-4 text-emerald-600" /></div>
+                    Financial Summary
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs font-semibold">
+                <CardContent className="space-y-5 pt-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
                       <span className="text-muted-foreground">Budget Utilization</span>
-                      <span className="text-primary">
+                      <span className="text-emerald-600">
                         {(() => {
-                          const spent = dashboardData.finance.find((f: any) => f.l === "Spent")?.raw || 0;
-                          const budget = dashboardData.finance.find((f: any) => f.l === "Budget")?.raw || 0;
+                          const spent = (dashboardData.finance || []).find((f: any) => f.l === "Spent")?.raw || 0;
+                          const budget = (dashboardData.finance || []).find((f: any) => f.l === "Budget")?.raw || 0;
                           return budget > 0 ? Math.round((spent / budget) * 100) : 0;
                         })()}%
                       </span>
                     </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-indigo-500 rounded-full" 
-                        style={{ 
-                          width: (() => {
-                            const spent = dashboardData.finance.find((f: any) => f.l === "Spent")?.raw || 0;
-                            const budget = dashboardData.finance.find((f: any) => f.l === "Budget")?.raw || 0;
-                            return `${budget > 0 ? Math.min((spent / budget) * 100, 100) : 0}%`;
-                          })()
-                        }}
+                    <div className="h-2.5 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden shadow-inner">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: (() => {
+                          const spent = (dashboardData.finance || []).find((f: any) => f.l === "Spent")?.raw || 0;
+                          const budget = (dashboardData.finance || []).find((f: any) => f.l === "Budget")?.raw || 0;
+                          return `${budget > 0 ? Math.min((spent / budget) * 100, 100) : 0}%`;
+                        })() }}
+                        transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
+                        className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full" 
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 gap-2">
-                    {dashboardData.finance.map((f: FinanceItem) => (
-                      <div key={f.l} className="flex items-center justify-between p-3 rounded-xl bg-white/40 border border-border/20 group-hover:border-primary/20 transition-all">
-                        <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{f.l}</span>
-                        <span className="text-sm font-bold font-serif">{f.v}</span>
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {(dashboardData.finance || []).map((f: FinanceItem) => (
+                      <div key={f.l} className="flex items-center justify-between p-3.5 rounded-2xl bg-background/60 border border-border/40 group-hover:border-emerald-500/20 transition-all shadow-sm">
+                        <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{f.l}</span>
+                        <span className="text-base font-black font-serif text-foreground">{f.v}</span>
                       </div>
                     ))}
                   </div>
@@ -402,21 +453,24 @@ export default function DashboardPage() {
 
             {/* Context Card - Linked to Action Plan */}
             <Card 
-              className="border-indigo-500/20 bg-indigo-500/5 backdrop-blur-sm shadow-indigo-500/5 cursor-pointer hover:bg-indigo-500/10 transition-colors group"
+              className="border-indigo-500/20 bg-gradient-to-br from-indigo-500/10 to-purple-500/5 backdrop-blur-xl shadow-lg rounded-3xl cursor-pointer hover:shadow-indigo-500/10 transition-all group overflow-hidden relative"
               onClick={() => navigate("/portal/action-plan")}
             >
-              <CardContent className="p-5 relative">
-                <ArrowUpRight className="absolute top-4 right-4 h-4 w-4 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <h3 className="text-sm font-serif font-bold text-indigo-700 mb-2 flex items-center gap-2">
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/5 to-purple-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+              <CardContent className="p-6 relative z-10">
+                <div className="h-8 w-8 rounded-full bg-indigo-500/10 flex items-center justify-center absolute top-5 right-5 group-hover:bg-indigo-500 transition-colors">
+                  <ArrowUpRight className="h-4 w-4 text-indigo-500 group-hover:text-white transition-colors" />
+                </div>
+                <h3 className="text-base font-serif font-black text-indigo-700 dark:text-indigo-400 mb-3 flex items-center gap-2">
                   <Shield className="h-4 w-4" /> Oversight Guide
                 </h3>
-                <p className="text-[12px] text-indigo-600/80 leading-relaxed italic border-l-2 border-indigo-200 pl-3">
+                <p className="text-xs text-indigo-900/70 dark:text-indigo-200/70 leading-relaxed font-medium italic border-l-2 border-indigo-500/30 pl-3 py-1">
                   "Real-time analytics for the student council leadership. Manage votes, issues, and student welfare with transparency and elite precision."
                 </p>
-                <div className="mt-4 pt-4 border-t border-indigo-500/10 grid grid-cols-2 gap-2">
-                  {info?.responsibilities.slice(0, 2).map((r, i) => (
-                    <div key={i} className="flex items-start gap-1.5 text-[10px] text-indigo-900 font-medium">
-                      <CheckCircle className="h-2.5 w-2.5 text-indigo-600 mt-0.5" /> {r}
+                <div className="mt-5 pt-5 border-t border-indigo-500/10 grid grid-cols-1 gap-2.5">
+                  {info?.responsibilities.slice(0, 3).map((r, i) => (
+                    <div key={i} className="flex items-center gap-2.5 text-[11px] text-indigo-950 dark:text-indigo-100 font-bold uppercase tracking-wider">
+                      <div className="h-1.5 w-1.5 rounded-full bg-indigo-500" /> {r}
                     </div>
                   ))}
                 </div>
@@ -429,25 +483,25 @@ export default function DashboardPage() {
       {/* Offices Bar — if allowed */}
       {dashboardData?.permissions?.docs && (
         <motion.div variants={itemVariants}>
-          <Card className="border-border/50 bg-card/60 backdrop-blur-sm mb-4">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                <Users className="h-3 w-3" /> Governance Hub Navigation
+          <Card className="border-border/40 bg-card/40 backdrop-blur-xl shadow-lg rounded-3xl overflow-hidden mt-2">
+            <CardHeader className="pb-3 bg-muted/5 border-b border-border/20">
+              <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-foreground/60 flex items-center gap-2">
+                <Users className="h-4 w-4" /> Governance Hub Navigation
               </CardTitle>
             </CardHeader>
-            <CardContent>
-               <div className="flex flex-wrap gap-2">
+            <CardContent className="p-5">
+               <div className="flex flex-wrap gap-2.5">
                 {(Object.entries(ROLE_INFO) as [AppRole, RoleInfo][]).slice(0, 12).map(([key, ri]) => (
-                  <Badge 
-                    key={key} 
-                    variant="outline" 
-                    onClick={() => navigate(ri.link)}
-                    className="bg-white/40 border-border/30 hover:border-primary/30 transition-colors cursor-pointer py-1 px-3 rounded-lg flex items-center gap-2 text-[10px]"
-                  >
-                    <ri.icon className={`h-3 w-3 ${ri.color}`} />
-                    {ri.title}
-                    <ChevronRight className="h-2.5 w-2.5 text-muted-foreground/30" />
-                  </Badge>
+                  <motion.div key={key} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Badge 
+                      variant="outline" 
+                      onClick={() => navigate(ri.link)}
+                      className="bg-background/80 backdrop-blur-md border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer py-1.5 px-4 rounded-xl flex items-center gap-2 text-[11px] font-bold shadow-sm"
+                    >
+                      <ri.icon className={`h-3.5 w-3.5 ${ri.color}`} />
+                      {ri.title}
+                    </Badge>
+                  </motion.div>
                 ))}
               </div>
             </CardContent>

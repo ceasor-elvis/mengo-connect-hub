@@ -23,6 +23,7 @@ export interface Profile {
   profile_pic: string | null;   // from backend
   student_class: string | null; // from backend
   stream: string | null;        // from backend
+  requires_password_change?: boolean;
 }
 
 interface AuthContextType {

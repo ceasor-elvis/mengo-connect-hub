@@ -467,11 +467,7 @@ const VotePage = () => {
                           {candidate.name}
                         </h3>
                         
-                        {candidate.motto && (
-                          <p className="text-[11px] text-[#60523e] italic text-center font-serif mt-1 px-1 line-clamp-2">
-                            "{candidate.motto}"
-                          </p>
-                        )}
+                        
                         
                         {candidate.classLevel && (
                           <Badge variant="outline" className="text-[9px] font-bold border-[#e8dfcf] text-[#60523e] bg-[#faf8f5] mt-2 py-0 px-2 leading-tight">
@@ -579,9 +575,7 @@ const VotePage = () => {
                 )}
               </div>
               <h3 className="text-lg font-bold text-[#1c1105] font-serif leading-tight">{zoomedCandidate.name}</h3>
-              {zoomedCandidate.motto && (
-                <p className="text-xs text-[#60523e] italic mt-1 font-serif">"{zoomedCandidate.motto}"</p>
-              )}
+              
               {zoomedCandidate.classLevel && (
                 <Badge variant="outline" className="text-[9px] font-bold border-[#e8dfcf] text-[#60523e] bg-[#faf8f5] mt-2 py-0 px-2">
                   {zoomedCandidate.classLevel}{zoomedCandidate.stream ? ` - ${zoomedCandidate.stream}` : ""}

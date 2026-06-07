@@ -40,6 +40,7 @@ import HomeLayoutPage from "@/pages/portal/HomeLayoutPage";
 import PermissionManagementPage from "@/pages/portal/PermissionManagementPage";
 import IncomePage from "@/pages/portal/IncomePage";
 import ReportsPage from "@/pages/portal/ReportsPage";
+import SystemFeedbackPage from "@/pages/portal/SystemFeedbackPage";
 import NotFound from "./pages/NotFound.tsx";
 import EvoteLayout from "@/layouts/EvoteLayout";
 import EvoteLoginPage from "@/pages/portal/evote/LoginPage";
@@ -151,6 +152,9 @@ const App = () => (
                 <Route element={<RoleGuard allowedPermission="manage_permissions" />}>
                   <Route path="admin-absolute/features" element={<PermissionManagementPage />} />
                 </Route>
+
+                {/* System Feedback */}
+                <Route path="feedback" element={<SystemFeedbackPage />} />
               </Route>
 
               {/* E-Voting routes wrapped in EvoteLayout */}
