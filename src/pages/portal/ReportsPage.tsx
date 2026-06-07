@@ -9,6 +9,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ClipboardList, Lock, Plus, FileText, Send, Edit3, Trash2,
@@ -480,7 +491,6 @@ export default function ReportsPage() {
   };
 
   const handleDelete = async (r: any) => {
-    if (!confirm(`Delete report "${r.title}"?`)) return;
     try {
       await api.delete(`/reports/general/${r.id}/`);
       toast.success("Deleted."); loadGeneral();
@@ -826,9 +836,23 @@ export default function ReportsPage() {
                                             <Button size="sm" variant="ghost" className="h-9 w-9 p-0 rounded-lg" title="Edit" onClick={() => openEdit(r)}>
                                               <Edit3 className="h-4 w-4" />
                                             </Button>
-                                            <Button size="sm" variant="ghost" className="h-9 w-9 p-0 rounded-lg text-rose-500 hover:bg-rose-50" title="Delete" onClick={() => handleDelete(r)}>
-                                              <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            <AlertDialog>
+                                              <AlertDialogTrigger asChild>
+                                                <Button size="sm" variant="ghost" className="h-9 w-9 p-0 rounded-lg text-rose-500 hover:bg-rose-50" title="Delete">
+                                                  <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                              </AlertDialogTrigger>
+                                              <AlertDialogContent className="rounded-3xl border-border/40 backdrop-blur-xl">
+                                                <AlertDialogHeader>
+                                                  <AlertDialogTitle className="font-serif text-xl">Delete Report?</AlertDialogTitle>
+                                                  <AlertDialogDescription>Are you sure you want to delete report "{r.title}"?</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                  <AlertDialogCancel className="rounded-xl h-11 font-bold">Cancel</AlertDialogCancel>
+                                                  <AlertDialogAction onClick={() => handleDelete(r)} className="rounded-xl h-11 font-bold bg-rose-600 hover:bg-rose-700 text-white">Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                              </AlertDialogContent>
+                                            </AlertDialog>
                                           </div>
                                         )}
                                       </>

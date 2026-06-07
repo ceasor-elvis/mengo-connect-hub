@@ -8,10 +8,21 @@ import { Loader2, ArrowLeft, RotateCcw, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function ElectionControlPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [pendingResetType, setPendingResetType] = useState<"screening" | "evote" | null>(null);
 
   // Screening States
   const [clearApps, setClearApps] = useState(false);
@@ -51,9 +62,9 @@ export default function ElectionControlPage() {
     ? categories
     : categories.filter(c => c.voting_type_id === selectedVotingTypeId);
 
-  const handleReset = async (type: "screening" | "evote") => {
+  const handleResetRequest = (type: "screening" | "evote") => {
     const isScreening = type === "screening";
-    const hasSelections = isScreening 
+    const hasSelections = isScreening
       ? clearApps || clearStreams || clearLocks
       : clearEvoteResults || clearEvoteCodes || clearEvoteAll;
 
@@ -61,14 +72,12 @@ export default function ElectionControlPage() {
       toast.warning("Please select at least one option to clear.");
       return;
     }
+    setPendingResetType(type);
+  };
 
-    const confirmMsg = isScreening
-      ? "Are you absolutely sure you want to delete the selected screening data? This action is irreversible!"
-      : "Are you absolutely sure you want to delete the selected e-voting portal data? Votes and candidates will be lost permanently!";
-
-    if (!window.confirm(confirmMsg)) {
-      return;
-    }
+  const handleReset = async (type: "screening" | "evote") => {
+    const isScreening = type === "screening";
+    setPendingResetType(null);
 
     setLoading(true);
     try {
@@ -201,7 +210,7 @@ export default function ElectionControlPage() {
             <Button 
               variant="destructive" 
               className="w-full text-xs font-bold" 
-              onClick={() => handleReset("screening")}
+              onClick={() => handleResetRequest("screening")}
               disabled={loading}
             >
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-1.5 h-4 w-4" />}
@@ -352,7 +361,7 @@ export default function ElectionControlPage() {
             <Button 
               variant="destructive" 
               className="w-full text-xs font-bold" 
-              onClick={() => handleReset("evote")}
+              onClick={() => handleResetRequest("evote")}
               disabled={loading}
             >
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-1.5 h-4 w-4" />}
@@ -361,6 +370,29 @@ export default function ElectionControlPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Confirmation AlertDialog */}
+      <AlertDialog open={pendingResetType !== null} onOpenChange={(open) => { if (!open) setPendingResetType(null); }}>
+        <AlertDialogContent className="rounded-3xl border-border/40 backdrop-blur-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif text-xl text-rose-600">⚠️ Irreversible Action</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              {pendingResetType === "screening"
+                ? "Are you absolutely sure you want to delete the selected screening data? This action is irreversible!"
+                : "Are you absolutely sure you want to delete the selected e-voting portal data? Votes and candidates will be lost permanently!"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl h-11 font-bold">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-xl h-11 font-bold bg-rose-600 hover:bg-rose-700 text-white"
+              onClick={() => pendingResetType && handleReset(pendingResetType)}
+            >
+              Yes, Clear Data
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

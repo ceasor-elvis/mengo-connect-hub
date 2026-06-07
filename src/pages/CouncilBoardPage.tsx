@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { Crown, GraduationCap, School, BookOpen } from "lucide-react";
+import { GraduationCap, School, BookOpen } from "lucide-react";
 
 // ─── Role priority for display ordering ─────────────────────────────────────
 const ROLE_ORDER: Record<string, number> = {
@@ -128,11 +128,6 @@ function MemberCard({
             <span className="text-white text-[8px] font-bold uppercase tracking-wider">View</span>
           </div>
         </div>
-        {highlight && (
-          <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-gold text-black rounded-full p-1 shadow-lg shadow-gold/40 z-10">
-            <Crown className="w-3 h-3" />
-          </div>
-        )}
       </div>
       <div className="mt-2">
         <p className="font-serif font-bold text-white text-sm sm:text-base leading-tight group-hover:text-gold transition-colors">
@@ -197,11 +192,6 @@ function MemberCard({
                     </div>
                   )}
                 </div>
-                {highlight && (
-                  <div className="absolute -top-1 -right-1 bg-gold text-black rounded-full p-1.5 shadow-lg z-10">
-                    <Crown className="w-3.5 h-3.5" />
-                  </div>
-                )}
               </div>
               {/* Active badge */}
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
@@ -218,7 +208,6 @@ function MemberCard({
                   ? "bg-gold/20 text-yellow-700 dark:text-yellow-300 border border-gold/30"
                   : "bg-primary/10 text-primary border border-primary/20"
               }`}>
-                {highlight && <Crown className="w-3 h-3" />}
                 {label}
               </span>
             </div>

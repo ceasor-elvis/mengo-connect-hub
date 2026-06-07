@@ -5,6 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { PiggyBank, Plus, Search, Calendar as CalendarIcon, Trash2, TrendingUp, Settings2, Coins, Receipt } from "lucide-react";
@@ -133,7 +144,6 @@ export default function IncomePage() {
   };
 
   const handleDeleteIncome = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this income record?")) return;
     try {
       await api.delete(`/income/${id}/`);
       toast.success("Income record deleted");
@@ -435,15 +445,28 @@ export default function IncomePage() {
                           </TableCell>
                           {hasPermission("manage_income") && (
                             <TableCell className="px-6 py-4 text-right">
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-9 w-9 rounded-lg text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-all" 
-                                onClick={() => handleDeleteIncome(inc.id)}
-                                title="Delete Record"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-9 w-9 rounded-lg text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-all" 
+                                    title="Delete Record"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="rounded-3xl border-border/40 backdrop-blur-xl">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle className="font-serif text-xl">Delete Income Record?</AlertDialogTitle>
+                                    <AlertDialogDescription>Are you sure you want to delete this income record?</AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel className="rounded-xl h-11 font-bold">Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteIncome(inc.id)} className="rounded-xl h-11 font-bold bg-rose-600 hover:bg-rose-700 text-white">Delete</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </TableCell>
                           )}
                         </motion.tr>

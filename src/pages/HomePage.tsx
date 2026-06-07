@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, MessageSquare, CheckCircle2, Users, Rocket, Clock, Quote, Crown, GraduationCap, School, BookOpen } from "lucide-react";
+import { ArrowRight, MessageSquare, CheckCircle2, Users, Rocket, Clock, Quote, GraduationCap, School, BookOpen } from "lucide-react";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { WhoWeAre } from "@/components/CabinetSection";
 import { TimelineSection } from "@/components/home/TimelineSection";
@@ -334,11 +334,6 @@ function BoardMiniCard({ m, size = "md", delay = 0, highlight = false }: { m: an
             <span className="text-white text-[8px] font-bold uppercase tracking-wider">View</span>
           </div>
         </div>
-        {highlight && (
-          <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-gold text-black rounded-full p-1 shadow-lg shadow-gold/40 z-10">
-            <Crown className="w-3 h-3" />
-          </div>
-        )}
       </div>
       <div className="mt-2 space-y-0.5">
         <p className={`text-foreground leading-tight group-hover:text-primary transition-colors ${nameCls}`}>{m.full_name}</p>
@@ -367,18 +362,12 @@ function BoardMiniCard({ m, size = "md", delay = 0, highlight = false }: { m: an
           <div className="relative h-32 bg-gradient-to-br from-primary via-primary/80 to-maroon-dark overflow-hidden">
             <div className="absolute inset-0 bg-pattern opacity-10" />
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(212,175,55,0.3),transparent)]" />
-            {highlight && (
-              <div className="absolute top-4 right-4 bg-gold/20 border border-gold/40 text-gold text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full backdrop-blur-sm">
-                ★ Executive
-              </div>
-            )}
           </div>
 
           {/* Avatar overlapping banner */}
           <div className="relative px-6 pb-6">
             <div className="-mt-14 mb-4 flex items-end justify-between">
               <div className="relative">
-                {highlight && <div className="absolute inset-0 rounded-full bg-gold/40 blur-lg scale-110" />}
                 <div className={`relative w-24 h-24 rounded-full overflow-hidden border-4 ${
                   highlight ? "border-gold shadow-[0_0_20px_rgba(212,175,55,0.5)]" : "border-white"
                 } shadow-xl`}>
@@ -390,11 +379,6 @@ function BoardMiniCard({ m, size = "md", delay = 0, highlight = false }: { m: an
                     </div>
                   )}
                 </div>
-                {highlight && (
-                  <div className="absolute -top-1 -right-1 bg-gold text-black rounded-full p-1.5 shadow-lg z-10">
-                    <Crown className="w-3.5 h-3.5" />
-                  </div>
-                )}
               </div>
               {/* Active badge */}
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
@@ -411,7 +395,6 @@ function BoardMiniCard({ m, size = "md", delay = 0, highlight = false }: { m: an
                   ? "bg-gold/20 text-yellow-700 dark:text-yellow-300 border border-gold/30"
                   : "bg-primary/10 text-primary border border-primary/20"
               }`}>
-                {highlight && <Crown className="w-3 h-3" />}
                 {fmtRole(m.role)}
               </span>
             </div>

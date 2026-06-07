@@ -5,6 +5,17 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -132,7 +143,6 @@ export default function RegisterMemberPage() {
   };
 
   const handleDeleteUpdate = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this update?")) return;
     try {
       await api.delete(`/system-updates/${id}/`);
       toast.success("Update deleted");
@@ -182,7 +192,6 @@ export default function RegisterMemberPage() {
   };
 
   const handleDeleteMember = async (member: any) => {
-    if (!window.confirm(`Are you sure you want to permanently delete ${member.full_name}? This will remove them from the database and cannot be undone.`)) return;
     
     try {
       await api.delete(`/users/${member.user_id}/profile/admin/`);
@@ -545,14 +554,29 @@ export default function RegisterMemberPage() {
                           <Edit2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Edit</span>
                         </Button>
                         {isAdminAbsolute && (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => handleDeleteMember(p)}
-                            className="h-8 w-8 p-0 rounded-lg border-rose-500/20 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 w-8 p-0 rounded-lg border-rose-500/20 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="rounded-3xl border-border/40 backdrop-blur-xl">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="font-serif text-xl">Delete Member?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to permanently delete <strong>{p.full_name}</strong>? This will remove them from the database and cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="rounded-xl h-11 font-bold">Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteMember(p)} className="rounded-xl h-11 font-bold bg-rose-600 hover:bg-rose-700 text-white">Delete Member</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         )}
                       </div>
                     )}
@@ -699,14 +723,27 @@ export default function RegisterMemberPage() {
                                 )}
                               </div>
                             </div>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity border border-rose-500/20 text-rose-600 hover:bg-rose-50 hover:text-rose-700 shrink-0"
-                              onClick={() => handleDeleteUpdate(update.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity border border-rose-500/20 text-rose-600 hover:bg-rose-50 hover:text-rose-700 shrink-0"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="rounded-3xl border-border/40 backdrop-blur-xl">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle className="font-serif text-xl">Delete Update?</AlertDialogTitle>
+                                  <AlertDialogDescription>Are you sure you want to delete this system update?</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel className="rounded-xl h-11 font-bold">Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteUpdate(update.id)} className="rounded-xl h-11 font-bold bg-rose-600 hover:bg-rose-700 text-white">Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                           <p className="text-sm text-foreground/80 leading-relaxed font-medium">
                             {update.content}

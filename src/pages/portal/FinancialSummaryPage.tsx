@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Loader2, BarChart3, Activity, Wallet, TrendingUp, CreditCard, ArrowUpRight, PiggyBank, Receipt, DollarSign, PieChart as PieChartIcon } from "lucide-react";
+import { Search, Loader2, BarChart3, Activity, Wallet, TrendingUp, CreditCard, ArrowUpRight, PiggyBank, Receipt, DollarSign, PieChart as PieChartIcon, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
@@ -45,8 +45,16 @@ export default function FinancialSummaryPage() {
         api.get('/requisitions/'),
         api.get('/dashboard/stats/')
       ]);
-      const reqs = Array.isArray(reqsRes.data) ? reqsRes.data : reqsRes.data.results || [];
-      setRequisitions(reqs);
+      const reqsData = Array.isArray(reqsRes.data) ? reqsRes.data : reqsRes.data.results || [];
+      const parseJSON = (val: any) => {
+        try { return typeof val === 'string' ? JSON.parse(val || '[]') : val || []; }
+        catch (e) { return []; }
+      };
+      setRequisitions(reqsData.map((r: any) => ({
+        ...r,
+        liabilities: parseJSON(r.liabilities),
+        expenses: parseJSON(r.expenses)
+      })));
       
       const stats = statsRes.data;
       if (stats.financeAnalytics) {

@@ -34,8 +34,8 @@ const itemVariants = {
 };
 
 export default function SystemFeedbackPage() {
-  const { user, hasPermission } = useAuth();
-  const isAdmin = hasPermission("manage_system_updates") || user?.roles?.some(r => r === 'adminabsolute');
+  const { user, roles, hasPermission } = useAuth();
+  const isAdmin = hasPermission("manage_system_updates") || roles?.includes('adminabsolute');
   
   const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,14 +163,13 @@ export default function SystemFeedbackPage() {
           </p>
         </section>
 
-        {!isAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="h-12 rounded-xl font-bold shadow-lg shadow-indigo-500/20 bg-indigo-500 hover:bg-indigo-600 text-white shrink-0">
                 <MessageSquarePlus className="mr-2 h-5 w-5" /> Submit Feedback
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg rounded-3xl border-border/40 bg-background/95 backdrop-blur-2xl shadow-2xl p-0 overflow-hidden">
+            <DialogContent aria-describedby={undefined} className="max-w-lg rounded-3xl border-border/40 bg-background/95 backdrop-blur-2xl shadow-2xl p-0 overflow-hidden">
                <div className="p-6 border-b border-border/20 bg-indigo-500/5">
                  <DialogTitle className="font-serif text-2xl font-black text-indigo-600 flex items-center gap-2">
                    Submit System Feedback
@@ -225,12 +224,11 @@ export default function SystemFeedbackPage() {
                </div>
             </DialogContent>
           </Dialog>
-        )}
       </div>
 
       {/* Admin Action Dialog */}
       <Dialog open={!!selectedFeedback} onOpenChange={(open) => !open && setSelectedFeedback(null)}>
-         <DialogContent className="max-w-lg rounded-3xl border-border/40 bg-background/95 backdrop-blur-2xl shadow-2xl p-0 overflow-hidden">
+         <DialogContent aria-describedby={undefined} className="max-w-lg rounded-3xl border-border/40 bg-background/95 backdrop-blur-2xl shadow-2xl p-0 overflow-hidden">
             <div className="p-6 border-b border-border/20 bg-muted/10">
                <div className="flex items-start justify-between gap-4">
                   <div>

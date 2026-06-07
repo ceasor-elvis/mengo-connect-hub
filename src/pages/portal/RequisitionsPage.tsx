@@ -39,6 +39,7 @@ interface Requisition {
   expenses: LineItem[];
   status: string; // Pending, Pending Chairperson, Pending Patron, Approved, Rejected
   approved_by: string | null;
+  approved_by_name?: string | null;
   created_at: string;
 }
 
@@ -96,7 +97,16 @@ export default function RequisitionsPage() {
   const fetchReqs = async () => {
     try {
       const { data } = await api.get("/requisitions/");
-      setReqs(Array.isArray(data) ? data : data.results || []);
+      const reqsData = Array.isArray(data) ? data : data.results || [];
+      const parseJSON = (val: any) => {
+        try { return typeof val === 'string' ? JSON.parse(val || '[]') : val || []; }
+        catch (e) { return []; }
+      };
+      setReqs(reqsData.map((r: any) => ({
+        ...r,
+        liabilities: parseJSON(r.liabilities),
+        expenses: parseJSON(r.expenses)
+      })));
     } catch (error) {
       toast.error("Failed to load requisitions");
       console.error(error);
@@ -218,7 +228,7 @@ export default function RequisitionsPage() {
               <Plus className="mr-2 h-5 w-5" /> New Requisition
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border-border/40 bg-background/95 backdrop-blur-2xl shadow-2xl p-0">
+          <DialogContent aria-describedby={undefined} className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border-border/40 bg-background/95 backdrop-blur-2xl shadow-2xl p-0">
             <div className="p-6 border-b border-border/20 bg-amber-500/5 sticky top-0 z-20 backdrop-blur-xl">
               <DialogTitle className="font-serif text-2xl font-black text-amber-600 flex items-center gap-2">
                 <Coins className="h-6 w-6" /> File New Requisition
@@ -346,7 +356,7 @@ export default function RequisitionsPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="font-bold text-foreground text-base truncate flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground font-mono">#{req.id.substring(0,6)}</span>
+                          <span className="text-xs text-muted-foreground font-mono">#{String(req.id).substring(0,6)}</span>
                           <span className="text-muted-foreground/30">•</span>
                           {req.purpose || "Unknown Purpose"}
                         </p>
@@ -368,9 +378,16 @@ export default function RequisitionsPage() {
 
                     <div className="col-span-2 w-full md:w-auto flex flex-col md:block">
                       <span className="md:hidden text-[10px] text-muted-foreground font-black uppercase tracking-widest mb-1">Status</span>
-                      <Badge variant="outline" className={`text-[10px] uppercase font-black tracking-widest px-2.5 py-1 ${statusBadgeClasses(req.status)}`}>
-                        {statusIcon(req.status)} {req.status}
-                      </Badge>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge variant="outline" className={`text-[10px] uppercase font-black tracking-widest px-2.5 py-1 ${statusBadgeClasses(req.status)}`}>
+                          {statusIcon(req.status)} {req.status}
+                        </Badge>
+                        {req.status === 'Approved' && req.approved_by_name && (
+                          <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">
+                            By {req.approved_by_name}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="col-span-1 w-full flex flex-wrap justify-end gap-2 mt-2 md:mt-0">
@@ -381,7 +398,7 @@ export default function RequisitionsPage() {
                             View
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border-border/40 bg-background/95 backdrop-blur-2xl shadow-2xl p-0">
+                        <DialogContent aria-describedby={undefined} className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border-border/40 bg-background/95 backdrop-blur-2xl shadow-2xl p-0">
                           <div className="p-6 border-b border-border/20 bg-primary/5 sticky top-0 z-20 backdrop-blur-xl">
                             <DialogTitle className="font-serif text-2xl font-black text-primary flex items-center gap-2">
                               <Coins className="h-6 w-6" /> Requisition Details
@@ -391,6 +408,11 @@ export default function RequisitionsPage() {
                               <Badge variant="outline" className={`text-[10px] uppercase font-black tracking-widest bg-background/50 ${statusBadgeClasses(req.status)}`}>
                                 {req.status}
                               </Badge>
+                              {req.status === 'Approved' && req.approved_by_name && (
+                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600/80">
+                                  Approved by {req.approved_by_name}
+                                </span>
+                              )}
                             </div>
                           </div>
                           
@@ -447,22 +469,8 @@ export default function RequisitionsPage() {
 
                             {/* Action Buttons within Dialog */}
                             <div className="flex flex-wrap justify-end gap-3 pt-4 border-t border-border/40">
-                              {/* Step 1: Submit to Chairperson */}
-                              {req.status === "Pending" && (canForwardToChair || (req.initiator === (profile?.full_name || user?.username) && canManage)) && (
-                                <Button className="h-11 rounded-xl px-6 font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-lg" onClick={() => handleStatusUpdate(req.id, "Pending Chairperson", "Forwarded to Chairperson")}>
-                                  Forward to Chair <ArrowRight className="ml-2 h-4 w-4" />
-                                </Button>
-                              )}
-
-                              {/* Step 2: Forward to Patron */}
-                              {req.status === "Pending Chairperson" && canForwardToPatron && (
-                                <Button className="h-11 rounded-xl px-6 font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg" onClick={() => handleStatusUpdate(req.id, "Pending Patron", "Forwarded to Patron")}>
-                                  Forward to Patron <ArrowRight className="ml-2 h-4 w-4" />
-                                </Button>
-                              )}
-
-                              {/* Step 3: Patron Approval */}
-                              {req.status === "Pending Patron" && canApprove && (
+                              {/* Direct Approval / Rejection */}
+                              {req.status !== "Approved" && req.status !== "Rejected" && canApprove && (
                                 <>
                                   <Button variant="outline" className="h-11 rounded-xl px-6 font-bold border-rose-500/20 text-rose-600 hover:bg-rose-50" onClick={() => handleStatusUpdate(req.id, "Rejected", "Requisition Rejected")}>
                                     <XCircle className="mr-2 h-4 w-4" /> Reject

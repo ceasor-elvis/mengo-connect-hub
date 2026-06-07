@@ -6,6 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Users, Plus, Pencil, Trash2, Save, Printer, Calendar, Clock, UserCheck, Shield, Check, ChevronsUpDown } from "lucide-react";
@@ -365,7 +376,6 @@ export default function RotaPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this rota?")) return;
     try {
       await api.delete(`/rotas/${id}/`);
       toast.success("Rota deleted");
@@ -641,9 +651,23 @@ export default function RotaPage() {
                               <Button variant="ghost" size="sm" className="h-8 px-2 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => startEdit(rota)}>
                                 <Pencil className="h-4 w-4 mr-1.5" /> <span className="hidden sm:inline">Edit</span>
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(rota.id)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="rounded-3xl border-border/40 backdrop-blur-xl">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle className="font-serif text-xl">Delete Rota?</AlertDialogTitle>
+                                    <AlertDialogDescription>Are you sure you want to delete this rota?</AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel className="rounded-xl h-11 font-bold">Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(rota.id)} className="rounded-xl h-11 font-bold bg-rose-600 hover:bg-rose-700 text-white">Delete</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </>
                           ) : (
                             <>

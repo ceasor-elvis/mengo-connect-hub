@@ -7,6 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Plus, Download, ShieldCheck, Settings2, UserCheck, Vote, Trash2, Pencil, Lock, Upload, FileText, Send, RotateCcw, LayoutGrid, List, Award, TrendingUp, UserMinus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -513,7 +524,6 @@ export default function ElectionsPage() {
   };
 
   const handleDeleteCandidate = async (id: string) => {
-    if (!confirm("Are you sure you want to completely remove this candidate?")) return;
     try {
       await api.delete(`/applications/${id}/`);
       toast.success("Candidate removed");
@@ -1314,9 +1324,23 @@ export default function ElectionsPage() {
                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-muted" onClick={() => openEditModal(a)}>
                           <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-destructive/10 text-destructive" onClick={() => handleDeleteCandidate(a.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-destructive/10 text-destructive">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="rounded-3xl border-border/40 backdrop-blur-xl">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="font-serif text-xl">Remove Candidate?</AlertDialogTitle>
+                              <AlertDialogDescription>Are you sure you want to completely remove this candidate?</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel className="rounded-xl h-11 font-bold">Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteCandidate(a.id)} className="rounded-xl h-11 font-bold bg-rose-600 hover:bg-rose-700 text-white">Remove</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     )}
 
@@ -1516,9 +1540,23 @@ export default function ElectionsPage() {
                                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEditModal(a)}>
                                   <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                                 </Button>
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDeleteCandidate(a.id)}>
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive">
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="rounded-3xl border-border/40 backdrop-blur-xl">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle className="font-serif text-xl">Remove Candidate?</AlertDialogTitle>
+                                      <AlertDialogDescription>Are you sure you want to completely remove this candidate?</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel className="rounded-xl h-11 font-bold">Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDeleteCandidate(a.id)} className="rounded-xl h-11 font-bold bg-rose-600 hover:bg-rose-700 text-white">Remove</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               </>
                             ) : isCandidateLocked(a) ? (
                               <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-[9px] uppercase tracking-tighter">Locked</Badge>
