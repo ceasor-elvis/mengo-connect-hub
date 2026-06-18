@@ -52,18 +52,18 @@ export function TimelineSection() {
     fetchTimeline();
   }, []);
   return (
-    <section className="bg-[#0b0416] py-20 overflow-hidden relative border-t-4 border-gold">
+    <section className="bg-[#120608] py-20 overflow-hidden relative border-t-4 border-gold">
       {/* Decorative blurry gradients background */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 blur-[100px] rounded-full pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gold/5 blur-[80px] rounded-full pointer-events-none" />
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <Badge variant="outline" className="text-gold border-gold/30 mb-4 bg-gold/5">MCH 2026</Badge>
+          <Badge variant="outline" className="text-gold border-gold/30 mb-4 bg-gold/5">MSS-COUNCIL</Badge>
           <h2 className="font-serif text-3xl font-bold text-white sm:text-4xl md:text-5xl mb-4">
             Council Timeline
           </h2>
-          <p className="text-sm text-gray-400 sm:text-base">
+          <p className="text-sm text-white/60 sm:text-base">
             From elections to inaugurations, follow our journey through the year. 
             Mark these important dates on your calendar!
           </p>
@@ -98,14 +98,14 @@ export function TimelineSection() {
                     className={`relative flex flex-col md:flex-row items-center ${isEven ? 'md:justify-start' : 'md:justify-end'}`}
                   >
                     {/* Center Dot */}
-                    <div className="absolute left-4 md:left-1/2 w-4 h-4 rounded-full bg-gold transform -translate-x-1/2 border-4 border-[#0b0416] z-10 shadow-[0_0_10px_rgba(234,179,8,0.5)]"></div>
+                    <div className="absolute left-4 md:left-1/2 w-4 h-4 rounded-full bg-gold transform -translate-x-1/2 border-4 border-[#120608] z-10 shadow-[0_0_10px_rgba(234,179,8,0.5)]"></div>
 
                     {/* Card */}
                     <div className={`ml-12 md:ml-0 md:w-1/2 ${isEven ? 'md:pr-12' : 'md:pl-12'} w-full`}>
-                      <div className="bg-[#120822] border border-white/5 p-6 md:p-8 rounded-2xl shadow-xl hover:border-gold/20 transition-colors group">
+                      <div className="bg-[#1c0c0e] border border-white/5 p-6 md:p-8 rounded-2xl shadow-xl hover:border-gold/20 transition-colors group">
                         
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-                          <div className="flex items-center text-gray-400 text-sm">
+                          <div className="flex items-center text-white/50 text-sm">
                             <Clock className="w-4 h-4 mr-2" />
                             {event.date}
                           </div>
@@ -116,11 +116,11 @@ export function TimelineSection() {
                         </div>
 
                         <h3 className="text-xl font-bold text-white mb-3 group-hover:text-gold transition-colors">{event.title}</h3>
-                        <p className="text-gray-400 text-sm leading-relaxed mb-5">
+                        <p className="text-white/60 text-sm leading-relaxed mb-5">
                           {event.description}
                         </p>
 
-                        <div className="flex items-center text-gray-500 text-xs font-medium">
+                        <div className="flex items-center text-white/40 text-xs font-medium">
                           <MapPin className="w-3.5 h-3.5 mr-1.5 text-gold" />
                           {event.location}
                         </div>

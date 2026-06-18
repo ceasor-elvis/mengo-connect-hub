@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Scale, Plus, AlertCircle, FileText, CheckCircle2, Clock, Send, ShieldCheck } from "lucide-react";
+import { Scale, Plus, AlertCircle, FileText, CheckCircle2, Clock, Send, ShieldCheck, ShieldAlert, FileWarning, Search, Info } from "lucide-react";
 import DocumentViewer from "@/components/portal/DocumentViewer";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import jsPDF from "jspdf";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { unsaLogoB64 } from "@/assets/unsaBase64";
 import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface DCCase {
   id: string;
@@ -39,6 +40,16 @@ interface DCDocument {
   uploaded_by_name: string;
   created_at: string;
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0, scale: 0.98 },
+  visible: { y: 0, opacity: 1, scale: 1, transition: { type: "spring", stiffness: 100, damping: 15 } }
+};
 
 export default function DisciplinaryPage() {
   const { user, hasPermission } = useAuth();
@@ -129,7 +140,7 @@ export default function DisciplinaryPage() {
       formData.append("title", newDocTitle);
       formData.append("file", docFile);
       formData.append("category", "Disciplinary");
-      formData.append("access_level", "public"); // or based on user role
+      formData.append("access_level", "public");
       
       await api.post("/documents/", formData, {
         headers: { "Content-Type": "multipart/form-data" }
@@ -247,250 +258,347 @@ export default function DisciplinaryPage() {
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Pending': return <Clock className="h-4 w-4 text-yellow-500" />;
-      case 'Under Investigation': return <AlertCircle className="h-4 w-4 text-blue-500" />;
-      case 'Summoned': return <Scale className="h-4 w-4 text-purple-500" />;
-      case 'Closed': return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-      default: return null;
+    switch (status.toLowerCase()) {
+      case 'pending': return <Clock className="h-3.5 w-3.5" />;
+      case 'under investigation': return <Search className="h-3.5 w-3.5" />;
+      case 'summoned': return <Scale className="h-3.5 w-3.5" />;
+      case 'closed': 
+      case 'resolved': return <CheckCircle2 className="h-3.5 w-3.5" />;
+      case 'dismissed': return <Info className="h-3.5 w-3.5" />;
+      default: return <AlertCircle className="h-3.5 w-3.5" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'pending': return "bg-amber-500/10 text-amber-600 border-amber-500/20";
+      case 'under investigation': return "bg-blue-500/10 text-blue-600 border-blue-500/20";
+      case 'summoned': return "bg-purple-500/10 text-purple-600 border-purple-500/20";
+      case 'closed': 
+      case 'resolved': return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+      case 'dismissed': return "bg-slate-500/10 text-slate-600 border-slate-500/20";
+      default: return "bg-slate-500/10 text-slate-600 border-slate-500/20";
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-serif font-bold flex items-center gap-2">
-            <Scale className="h-6 w-6 text-primary" />
-            Disciplinary Committee (DC)
-          </h1>
-          <p className="text-muted-foreground text-sm">Case management and disciplinary records.</p>
-        </div>
-        <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm" disabled={cases.length === 0}>
-              <FileText className="mr-2 h-4 w-4" /> Export Report
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Export Disciplinary Report</DialogTitle>
-              <DialogDescription>Customize your report footer before downloading.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="footerText">Document Footer Slogan</Label>
-                <Input 
-                  id="footerText" 
-                  value={exportFooterText} 
-                  onChange={e => setExportFooterText(e.target.value)} 
-                  placeholder="e.g. ANOINTED TO BEAR FRUIT"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsExportOpen(false)}>Cancel</Button>
-              <Button onClick={generatePDFReport}>View Preview</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8 pb-12 relative"
+    >
+      <div className="absolute top-0 right-0 w-96 h-96 bg-red-500/10 rounded-full blur-3xl -z-10" />
+      <div className="absolute top-1/2 -left-20 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl -z-10" />
 
-      <Tabs defaultValue="active" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
-          <TabsTrigger value="active">Active Cases</TabsTrigger>
-          <TabsTrigger value="report">Report New Case</TabsTrigger>
-          <TabsTrigger value="docs">DC Documents</TabsTrigger>
+      {/* Header */}
+      <section className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 relative">
+        <div className="space-y-1">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="inline-flex items-center gap-2 px-3 py-1 mb-3 rounded-full bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-bold uppercase tracking-wider"
+          >
+            <ShieldAlert className="w-3 h-3" /> Law & Order
+          </motion.div>
+          <h1 className="font-serif text-4xl sm:text-5xl font-black tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/60">
+            Disciplinary Actions
+          </h1>
+          <p className="text-muted-foreground/80 mt-2 text-sm sm:text-base font-medium max-w-xl leading-relaxed">
+            Manage student council disciplinary records, track ongoing investigations, and escalate critical cases to the Patron.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
+            <DialogTrigger asChild>
+              <Button className="rounded-2xl gap-2 font-bold bg-background/50 backdrop-blur-md hover:bg-muted border border-border/50 h-12 px-6" disabled={cases.length === 0}>
+                <FileText className="h-4 w-4" /> Export Report
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md rounded-3xl border-border/40 bg-background/60 backdrop-blur-xl shadow-2xl">
+              <DialogHeader>
+                <DialogTitle className="font-serif text-2xl">Export Disciplinary Report</DialogTitle>
+                <DialogDescription>Customize your report footer before downloading.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="footerText" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Document Footer Slogan</Label>
+                  <Input 
+                    id="footerText" 
+                    className="bg-muted/50 border-border/50 focus-visible:ring-primary/20 rounded-xl"
+                    value={exportFooterText} 
+                    onChange={e => setExportFooterText(e.target.value)} 
+                    placeholder="e.g. ANOINTED TO BEAR FRUIT"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t border-border/20">
+                <Button variant="outline" className="rounded-xl" onClick={() => setIsExportOpen(false)}>Cancel</Button>
+                <Button className="rounded-xl font-bold bg-foreground text-background hover:bg-foreground/90" onClick={generatePDFReport}>View Preview</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </section>
+
+      <Tabs defaultValue="active" className="w-full space-y-6">
+        <TabsList className="bg-muted/40 backdrop-blur-md border border-border/40 p-1.5 rounded-2xl w-full max-w-xl grid grid-cols-3 mx-auto lg:mx-0 shadow-inner">
+          <TabsTrigger value="active" className="rounded-xl text-xs sm:text-sm font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Active Cases</TabsTrigger>
+          <TabsTrigger value="report" className="rounded-xl text-xs sm:text-sm font-bold data-[state=active]:bg-red-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-red-500/20">Report Case</TabsTrigger>
+          <TabsTrigger value="docs" className="rounded-xl text-xs sm:text-sm font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Documents</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="active">
+        <TabsContent value="active" className="outline-none">
           <div className="grid gap-4">
             {loading ? (
-              <p className="text-center py-8 animate-pulse">Loading cases...</p>
+              <div className="flex justify-center py-20">
+                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+                  <div className="h-10 w-10 border-4 border-red-500 border-t-transparent rounded-full drop-shadow-lg" />
+                </motion.div>
+              </div>
             ) : cases.length === 0 ? (
-              <Card><CardContent className="py-8 text-center text-muted-foreground">No active cases found.</CardContent></Card>
+              <div className="text-center py-20 bg-muted/20 border border-border/40 rounded-3xl backdrop-blur-xl">
+                <Scale className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                <h3 className="font-serif text-xl font-bold text-foreground">No active cases</h3>
+                <p className="text-sm text-muted-foreground mt-1">Disciplinary records are clear.</p>
+              </div>
             ) : (
-              cases.map((c) => (
-                <Card key={c.id} className="overflow-hidden border-l-4 border-l-primary">
-                  <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0">
-                    <CardTitle className="text-lg font-semibold">{c.offender_name}</CardTitle>
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      {getStatusIcon(c.status)} {c.status}
-                    </Badge>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{c.category}</Badge>
-                      <span className="text-[10px] text-muted-foreground">Reported: {new Date(c.created_at).toLocaleDateString()}</span>
-                    </div>
-                    <p className="text-sm text-balance leading-relaxed italic border-l-2 pl-3 border-muted">
-                      "{c.description}"
-                    </p>
-                    <div className="flex flex-wrap gap-2 pt-2 border-t mt-2">
-                      {canManageDC && (
-                        <>
-                          <Button variant="ghost" size="sm" className="text-xs" onClick={() => updateStatus(c.id, 'Under Investigation')}>Investigate</Button>
-                          <Button variant="ghost" size="sm" className="text-xs" onClick={() => updateStatus(c.id, 'Summoned')}>Summon</Button>
-                          <Button variant="ghost" size="sm" className="text-xs hover:text-green-600" onClick={() => updateStatus(c.id, 'Closed')}>Close Case</Button>
-                        </>
-                      )}
-                    </div>
-
-                    <div className="pt-2 border-t mt-2">
-                      {c.is_forwarded_to_patron && (
-                        <div className="flex items-center gap-1 mb-2">
-                          <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] flex items-center gap-1">
-                            <ShieldCheck className="h-3 w-3" /> Forwarded to Patron
-                          </Badge>
-                        </div>
-                      )}
-                      {c.pending_chairperson_approval && !c.is_forwarded_to_patron && (
-                        <div className="flex items-center gap-1 mb-2">
-                          <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-[10px] flex items-center gap-1">
-                            <Clock className="h-3 w-3" /> Pending Chairperson Approval
-                          </Badge>
-                        </div>
-                      )}
-
-                      {isChairperson && (
-                        <>
-                          {c.pending_chairperson_approval && !c.is_forwarded_to_patron && (
-                            <div className="w-full p-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-md mb-2">
-                              <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">⏳ A committee member has requested this case be forwarded to the Patron.</p>
+              <AnimatePresence>
+                {cases.map((c) => (
+                  <motion.div key={c.id} variants={itemVariants} layout initial="hidden" animate="visible" exit={{ opacity: 0, scale: 0.9 }}>
+                    <Card className="overflow-hidden rounded-3xl border-border/40 bg-card/60 backdrop-blur-xl hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative group border-l-4 border-l-red-500">
+                      <div className="absolute inset-0 bg-red-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                      <CardContent className="p-0">
+                        <div className="p-5 sm:p-6 pb-4 flex flex-col md:flex-row items-start justify-between gap-4 border-b border-border/40 bg-background/50">
+                          <div>
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="h-10 w-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-600 shrink-0 shadow-sm">
+                                <Scale className="h-5 w-5" />
+                              </div>
+                              <div>
+                                <h3 className="text-xl font-serif font-black tracking-tight text-foreground">{c.offender_name}</h3>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline" className="text-[10px] uppercase font-black tracking-widest bg-background/80 shadow-sm">{c.category}</Badge>
+                                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(c.created_at).toLocaleDateString()}</span>
+                                </div>
+                              </div>
                             </div>
-                          )}
-                          {c.is_forwarded_to_patron ? (
-                            <Button variant="destructive" size="sm" className="w-full gap-2 text-xs" onClick={() => handleRevokeForward(c.id)}>
-                              <Send className="h-3.5 w-3.5" /> Revoke Forwarding
-                            </Button>
-                          ) : (
-                            <Button variant="default" size="sm" className="w-full gap-2 text-xs" onClick={() => handleApproveForward(c.id)}>
-                              <Send className="h-3.5 w-3.5" /> Approve & Forward to Patron
-                            </Button>
-                          )}
-                        </>
-                      )}
+                          </div>
+                          
+                          <Badge className={`text-[10px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 shadow-sm border ${getStatusColor(c.status)}`}>
+                            {getStatusIcon(c.status)} {c.status}
+                          </Badge>
+                        </div>
+                        
+                        <div className="p-5 sm:p-6 space-y-4">
+                          <div className="bg-muted/30 rounded-2xl p-4 border border-border/50 relative overflow-hidden">
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-red-500/50 to-orange-500/50" />
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Incident Report</h4>
+                            <p className="text-sm text-foreground/90 leading-relaxed font-medium">"{c.description}"</p>
+                          </div>
+                          
+                          <div className="flex flex-col gap-3">
+                            <div className="flex flex-wrap gap-2">
+                              {canManageDC && (
+                                <>
+                                  <Button variant="outline" size="sm" className="rounded-xl h-9 text-xs font-bold border-blue-500/20 text-blue-600 hover:bg-blue-50" onClick={() => updateStatus(c.id, 'Under Investigation')}>
+                                    <Search className="w-3.5 h-3.5 mr-1.5" /> Investigate
+                                  </Button>
+                                  <Button variant="outline" size="sm" className="rounded-xl h-9 text-xs font-bold border-purple-500/20 text-purple-600 hover:bg-purple-50" onClick={() => updateStatus(c.id, 'Summoned')}>
+                                    <Scale className="w-3.5 h-3.5 mr-1.5" /> Summon
+                                  </Button>
+                                  <Button variant="outline" size="sm" className="rounded-xl h-9 text-xs font-bold border-emerald-500/20 text-emerald-600 hover:bg-emerald-50" onClick={() => updateStatus(c.id, 'Closed')}>
+                                    <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Close Case
+                                  </Button>
+                                </>
+                              )}
+                            </div>
 
-                      {hasPermission("manage_disciplinary") && !isChairperson && (
-                        <>
-                          {c.is_forwarded_to_patron ? (
-                            <p className="text-xs text-amber-700 font-medium flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Forwarded to Patron by Chairperson</p>
-                          ) : c.pending_chairperson_approval ? (
-                            <p className="text-xs text-blue-700 font-medium flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Awaiting Chairperson approval</p>
-                          ) : (
-                            <Button variant="outline" size="sm" className="w-full gap-2 text-xs border-blue-200 text-blue-700 hover:bg-blue-50" onClick={() => handleRequestForward(c.id)}>
-                              <Send className="h-3.5 w-3.5" /> Request Forwarding to Patron
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                            <div className="pt-3 border-t border-border/40">
+                              {c.is_forwarded_to_patron && (
+                                <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-2 flex items-start gap-2 text-amber-700 dark:text-amber-400">
+                                  <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" />
+                                  <div>
+                                    <span className="font-bold text-xs uppercase tracking-wider block">Escalated</span>
+                                    <span className="text-xs">Case has been forwarded to the Patron's office for executive review.</span>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {c.pending_chairperson_approval && !c.is_forwarded_to_patron && (
+                                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 mb-2 flex items-start gap-2 text-blue-700 dark:text-blue-400">
+                                  <Clock className="h-4 w-4 mt-0.5 shrink-0" />
+                                  <div>
+                                    <span className="font-bold text-xs uppercase tracking-wider block">Approval Required</span>
+                                    <span className="text-xs">Awaiting Chairperson approval for Patron escalation.</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {isChairperson && (
+                                <div className="mt-2 space-y-2">
+                                  {c.is_forwarded_to_patron ? (
+                                    <Button variant="destructive" size="sm" className="w-full h-10 rounded-xl gap-2 text-xs font-bold shadow-lg shadow-red-500/20" onClick={() => handleRevokeForward(c.id)}>
+                                      <Send className="h-3.5 w-3.5" /> Revoke Forwarding
+                                    </Button>
+                                  ) : (
+                                    <Button variant="default" size="sm" className="w-full h-10 rounded-xl gap-2 text-xs font-bold bg-foreground text-background hover:bg-foreground/90 shadow-lg" onClick={() => handleApproveForward(c.id)}>
+                                      <Send className="h-3.5 w-3.5" /> Approve & Forward to Patron
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+
+                              {hasPermission("manage_disciplinary") && !isChairperson && (
+                                <div className="mt-2">
+                                  {!c.is_forwarded_to_patron && !c.pending_chairperson_approval && (
+                                    <Button variant="outline" size="sm" className="w-full h-10 rounded-xl gap-2 text-xs font-bold border-border/50 shadow-sm" onClick={() => handleRequestForward(c.id)}>
+                                      <Send className="h-3.5 w-3.5" /> Request Escalation to Patron
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             )}
           </div>
         </TabsContent>
 
-        <TabsContent value="report">
-          <Card>
-            <CardHeader><CardTitle>Case Information Report</CardTitle></CardHeader>
-            <CardContent>
-              <form onSubmit={handleReport} className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="offender">Offender / Student Name *</Label>
-                  <Input id="offender" value={offender} onChange={(e) => setOffender(e.target.value)} placeholder="Full name of the student" required />
+        <TabsContent value="report" className="outline-none">
+          <Card className="rounded-3xl border-border/40 bg-card/60 backdrop-blur-xl shadow-2xl overflow-hidden max-w-2xl mx-auto">
+            <div className="p-6 border-b border-border/20 bg-red-500/5">
+              <CardTitle className="font-serif text-2xl font-black text-red-700 dark:text-red-400">File Disciplinary Report</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">Submit an official complaint to the Disciplinary Committee.</p>
+            </div>
+            <CardContent className="p-6 sm:p-8">
+              <form onSubmit={handleReport} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="offender" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Offender / Student Name *</Label>
+                  <Input id="offender" className="bg-muted/30 rounded-xl border-border/50 focus-visible:ring-red-500/20 h-12 px-4 font-bold" value={offender} onChange={(e) => setOffender(e.target.value)} placeholder="Full name of the student" required />
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label>Category *</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category *</Label>
                     <Select value={category} onValueChange={setCategory}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
+                      <SelectTrigger className="bg-muted/30 rounded-xl border-border/50 h-12 focus:ring-red-500/20"><SelectValue /></SelectTrigger>
+                      <SelectContent className="rounded-xl backdrop-blur-xl bg-background/90">
                         <SelectItem value="Insubordination">Insubordination</SelectItem>
                         <SelectItem value="Dress Code">Dress Code</SelectItem>
                         <SelectItem value="Theft">Theft</SelectItem>
                         <SelectItem value="Bullying">Bullying</SelectItem>
-                        <SelectItem value="Other">Other (Type below)</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   {category === "Other" && (
-                    <div className="grid gap-2">
-                      <Label htmlFor="custom">Custom Category *</Label>
-                      <Input id="custom" value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} placeholder="Enter category" />
+                    <div className="space-y-2">
+                      <Label htmlFor="custom" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Custom Category *</Label>
+                      <Input id="custom" className="bg-muted/30 rounded-xl border-border/50 focus-visible:ring-red-500/20 h-12" value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} placeholder="Enter specific category" required />
                     </div>
                   )}
                 </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="desc">Detailed Description *</Label>
-                  <Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Provide full context of the incident..." rows={4} required />
+                <div className="space-y-2">
+                  <Label htmlFor="desc" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Detailed Description *</Label>
+                  <Textarea id="desc" className="bg-muted/30 rounded-xl border-border/50 focus-visible:ring-red-500/20 resize-none p-4" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Provide full context of the incident. What happened? Who was involved? When and where?" rows={5} required />
                 </div>
 
-                <Button type="submit" disabled={submitting} className="w-full">
-                  {submitting ? "Submitting..." : "Submit Report to DC"}
-                </Button>
+                <div className="pt-4">
+                  <Button type="submit" disabled={submitting} className="w-full h-14 rounded-2xl font-bold text-lg shadow-lg shadow-red-500/20 bg-red-600 hover:bg-red-700 text-white transition-all">
+                    {submitting ? "Submitting..." : "Submit Official Report"}
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="docs">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Case Documentation</CardTitle>
+        <TabsContent value="docs" className="outline-none">
+          <Card className="rounded-3xl border-border/40 bg-card/60 backdrop-blur-xl shadow-xl overflow-hidden max-w-3xl mx-auto">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border/20 p-6">
+              <div>
+                <CardTitle className="font-serif text-2xl font-bold">Case Documentation</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">Official disciplinary guidelines and records.</p>
+              </div>
               {canManageDC && (
                 <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm" variant="outline"><Plus className="h-4 w-4 mr-1" /> Add Document</Button>
+                    <Button className="rounded-xl font-bold bg-foreground text-background hover:bg-foreground/90 shadow-lg">
+                      <Plus className="h-4 w-4 mr-2" /> Upload Document
+                    </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="sm:max-w-md rounded-3xl border-border/40 bg-background/80 backdrop-blur-2xl shadow-2xl">
                     <DialogHeader>
-                      <DialogTitle>Upload Disciplinary Document</DialogTitle>
-                      <DialogDescription>These documents will be accessible to authorized council members.</DialogDescription>
+                      <DialogTitle className="font-serif text-2xl">Upload File</DialogTitle>
+                      <DialogDescription>Add official DC documentation.</DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={handleUploadDocument} className="space-y-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="docTitle">Document Title</Label>
-                        <Input id="docTitle" value={newDocTitle} onChange={e => setNewDocTitle(e.target.value)} placeholder="e.g. DC Procedures 2026" required />
+                    <form onSubmit={handleUploadDocument} className="space-y-5 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="docTitle" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Document Title</Label>
+                        <Input id="docTitle" className="bg-muted/30 rounded-xl border-border/50 focus-visible:ring-primary/20 h-11" value={newDocTitle} onChange={e => setNewDocTitle(e.target.value)} placeholder="e.g. DC Procedures 2026" required />
                       </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="docFile">File</Label>
-                        <Input id="docFile" type="file" onChange={e => setDocFile(e.target.files?.[0] || null)} required />
+                      <div className="space-y-2">
+                        <Label htmlFor="docFile" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">File</Label>
+                        <Input id="docFile" type="file" className="bg-muted/30 rounded-xl border-border/50 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-bold file:px-4 file:py-1 h-11 pt-1.5" onChange={e => setDocFile(e.target.files?.[0] || null)} required />
                       </div>
-                      <DialogFooter>
-                        <Button type="submit" disabled={uploadLoading}>
-                          {uploadLoading ? "Uploading..." : "Upload Document"}
+                      <div className="pt-2 border-t border-border/20 flex justify-end">
+                        <Button type="submit" disabled={uploadLoading} className="rounded-xl font-bold bg-foreground text-background">
+                          {uploadLoading ? "Uploading..." : "Upload File"}
                         </Button>
-                      </DialogFooter>
+                      </div>
                     </form>
                   </DialogContent>
                 </Dialog>
               )}
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
+            <CardContent className="p-6">
+              <div className="space-y-3">
                 {docsLoading ? (
-                  <p className="text-center py-4 animate-pulse">Loading documents...</p>
+                  <div className="flex justify-center py-12">
+                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+                      <div className="h-8 w-8 border-4 border-muted-foreground border-t-transparent rounded-full drop-shadow-sm" />
+                    </motion.div>
+                  </div>
                 ) : documents.length === 0 ? (
-                  <p className="text-center py-4 text-muted-foreground text-sm">No disciplinary documents uploaded yet.</p>
+                  <div className="text-center py-12 border border-dashed border-border/60 rounded-2xl bg-muted/10">
+                    <FileWarning className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-muted-foreground text-sm font-medium">No disciplinary documents uploaded yet.</p>
+                  </div>
                 ) : (
-                  documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-primary" />
-                        <div>
-                          <p className="text-sm font-medium">{doc.title}</p>
-                          <p className="text-[10px] text-muted-foreground">Uploaded by {doc.uploaded_by_name} on {new Date(doc.created_at).toLocaleDateString()}</p>
+                  <AnimatePresence>
+                    {documents.map((doc) => (
+                      <motion.div key={doc.id} variants={itemVariants} initial="hidden" animate="visible" exit={{ opacity: 0 }}>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4 border border-border/40 rounded-2xl bg-background/50 hover:bg-muted/50 hover:border-primary/30 transition-all group shadow-sm hover:shadow-md">
+                          <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 text-primary">
+                              <FileText className="h-6 w-6" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-foreground group-hover:text-primary transition-colors">{doc.title}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">By {doc.uploaded_by_name}</span>
+                                <span className="text-muted-foreground/40">•</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{new Date(doc.created_at).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <a href={doc.file} target="_blank" rel="noopener noreferrer" className="shrink-0 w-full sm:w-auto">
+                            <Button variant="outline" size="sm" className="w-full sm:w-auto rounded-xl font-bold bg-background shadow-sm hover:bg-primary hover:text-white hover:border-primary transition-colors">
+                              View File
+                            </Button>
+                          </a>
                         </div>
-                      </div>
-                      <a href={doc.file} target="_blank" rel="noopener noreferrer">
-                        <Badge variant="outline" className="cursor-pointer hover:bg-primary hover:text-white">View / Download</Badge>
-                      </a>
-                    </div>
-                  ))
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 )}
               </div>
             </CardContent>
@@ -504,6 +612,6 @@ export default function DisciplinaryPage() {
         title={`DC Case Report`} 
         type="pdf"
       />
-    </div>
+    </motion.div>
   );
 }

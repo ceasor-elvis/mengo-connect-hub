@@ -8,6 +8,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { UserPlus, Shield, Loader2, Briefcase, MapPin, Hash, Trash2, Edit2, X } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function RegisterPatronPage() {
   const { hasPermission } = useAuth();
@@ -116,8 +127,6 @@ export default function RegisterPatronPage() {
   };
 
   const handleDelete = async () => {
-    if (!existingPatron) return;
-    if (!window.confirm(`Are you sure you want to remove ${existingPatron.full_name}? This will securely wipe their system information and demote their role permanently.`)) return;
 
     setLoading(true);
     try {
@@ -186,9 +195,25 @@ export default function RegisterPatronPage() {
                   <Edit2 className="h-4 w-4 mr-2" /> Edit Details
                 </Button>
                 {isAdminAbsolute && (
-                  <Button variant="destructive" size="sm" onClick={handleDelete}>
-                    <Trash2 className="h-4 w-4 mr-2" /> Remove
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        <Trash2 className="h-4 w-4 mr-2" /> Remove
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="rounded-3xl border-border/40 backdrop-blur-xl">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="font-serif text-xl">Remove Patron?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to remove <strong>{existingPatron?.full_name}</strong>? This will securely wipe their system information and demote their role permanently.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="rounded-xl h-11 font-bold">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="rounded-xl h-11 font-bold bg-rose-600 hover:bg-rose-700 text-white">Remove Patron</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
               </div>
             </div>

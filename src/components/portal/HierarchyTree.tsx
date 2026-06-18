@@ -1,193 +1,176 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useEffect, useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
-import { useHierarchy, RoleNode, AppRole, ICON_MAP } from "@/hooks/useHierarchy";
-import { Plus, Minus, Users, User, GraduationCap, School, Info } from "lucide-react";
+import { useHierarchy, RoleNode, ICON_MAP } from "@/hooks/useHierarchy";
+import { Users, User, GraduationCap, School, Info, ChevronDown, ChevronRight } from "lucide-react";
 import { api } from "@/lib/api";
 
-interface ProfileMap { 
-  [userId: string]: { 
-    full_name: string; 
-    profile_pic_url: string | null;
-    student_class?: string;
-    stream?: string;
-    gender?: string;
-    bio?: string;
-  } 
+interface Profile {
+  full_name: string;
+  profile_pic_url: string | null;
+  student_class?: string;
+  stream?: string;
+  gender?: string;
+  bio?: string;
 }
+interface ProfileMap { [userId: string]: Profile }
 interface RoleMap { [role: string]: string }
 
-function NodeCard({
-  node, roleMap, profileMap, isExpanded, onToggle, hasChildren
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function getInitial(name: string) {
+  return name ? name.charAt(0).toUpperCase() : "?";
+}
+
+// ─── Single circular photo card — CouncilBoardPage style ─────────────────────
+function PhotoCard({
+  node,
+  profile,
+  depth,
 }: {
-  node: RoleNode; roleMap: RoleMap; profileMap: ProfileMap;
-  isExpanded: boolean; onToggle: () => void; hasChildren: boolean;
+  node: RoleNode;
+  profile: Profile | null;
+  depth: number;
 }) {
-  const userId = roleMap[node.role];
-  const profile = userId ? profileMap[userId] : null;
   const Icon = ICON_MAP[node.iconName] || User;
-  const isMultipleRole = node.role === "class_coordinators" || node.role === "councillors";
 
-  const cardContent = (
+  const photoSize =
+    depth === 0 ? "w-36 h-36 sm:w-40 sm:h-40" :
+    depth === 1 ? "w-24 h-24 sm:w-28 sm:h-28" :
+    depth === 2 ? "w-20 h-20 sm:w-24 sm:h-24" :
+    "w-16 h-16";
+
+  const nameSize =
+    depth === 0 ? "text-sm sm:text-base font-bold" :
+    depth === 1 ? "text-[13px] font-bold" :
+    "text-[11px] font-semibold";
+
+  const roleSize = depth === 0 ? "text-[11px]" : "text-[9px]";
+
+  const highlight = depth === 0;
+
+  const pic = profile?.profile_pic_url || (profile as any)?.profile_pic;
+
+  const card = (
     <motion.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, scale: 1.02 }}
-      className={`
-        relative group flex flex-col items-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-xs font-medium
-        shadow-lg border backdrop-blur-xl transition-all duration-500
-        ${!isMultipleRole && profile ? 'cursor-pointer' : 'cursor-default'}
-        ${node.color || 'bg-card text-card-foreground'}
-        w-[95px] sm:w-[140px]
-        border-white/10 hover:border-white/30
-        ${!profile && !isMultipleRole ? 'opacity-60 grayscale-[0.5]' : ''}
-      `}
-      onClick={(e) => { 
-        if (hasChildren && (!profile || isMultipleRole)) { 
-          e.stopPropagation(); 
-          onToggle(); 
-        } 
-      }}
+      whileHover={{ y: -4, scale: 1.04 }}
+      transition={{ type: "spring", stiffness: 280, damping: 22 }}
+      className="flex flex-col items-center text-center group cursor-pointer select-none"
     >
-      {hasChildren && (
-        <div 
-          className="absolute -right-1.5 -top-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-background/80 backdrop-blur-md shadow-xl flex items-center justify-center text-primary z-20 border border-primary/20 group-hover:scale-125 transition-all duration-500 overflow-hidden cursor-pointer hover:bg-primary/10"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
+      <div className="relative">
+        {highlight && (
+          <div className="absolute inset-0 rounded-full bg-primary/40 blur-xl scale-125 animate-pulse pointer-events-none" />
+        )}
+        <div
+          className={`relative ${photoSize} rounded-full overflow-hidden border-4 ${highlight ? "border-primary shadow-[0_0_24px_rgba(var(--primary),.35)] ring-4 ring-primary/30" : "border-white/20"} shadow-xl mx-auto flex-shrink-0 bg-muted`}
         >
-          <motion.div animate={isExpanded ? { rotate: 0 } : { rotate: 180 }} className="flex items-center justify-center">
-            {isExpanded ? <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
-          </motion.div>
-          {!isExpanded && <div className="absolute inset-0 rounded-full animate-ping bg-primary/10 -z-10" />}
+          {pic ? (
+            <img
+              src={pic}
+              alt={profile!.full_name}
+              className="w-full h-full object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              {profile ? (
+                <span className="text-white font-bold font-serif text-2xl opacity-80">
+                  {getInitial(profile.full_name)}
+                </span>
+              ) : (
+                <Icon className="h-1/2 w-1/2 text-white/30" />
+              )}
+            </div>
+          )}
         </div>
-      )}
-
-      <div className="shrink-0 relative">
-        {!isMultipleRole && profile && (profile.profile_pic_url || (profile as any).profile_pic) ? (
-          <div className="relative p-0.5 sm:p-1">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-gold to-transparent opacity-50 blur-sm" />
-            <Avatar className="h-8 w-8 sm:h-12 sm:w-12 border-2 border-white shadow-xl relative z-10">
-              <AvatarImage src={profile.profile_pic_url || (profile as any).profile_pic || ""} alt={profile.full_name} />
-              <AvatarFallback className="bg-primary/5 text-primary text-[10px] sm:text-xs font-bold">{profile.full_name.slice(0, 2).toUpperCase()}</AvatarFallback>
-            </Avatar>
-          </div>
-        ) : (
-          <div className={`h-8 w-8 sm:h-12 sm:w-12 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20 shadow-inner ${profile ? 'bg-white/20' : 'bg-black/5'}`}>
-            <Icon className={`h-4 w-4 sm:h-6 sm:w-6 ${profile ? 'text-current' : 'text-current/40'}`} />
+        {/* hover overlay */}
+        {profile && (
+          <div className="absolute inset-0 bg-black/25 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+            <span className="text-white text-[8px] font-bold uppercase tracking-wider">View</span>
           </div>
         )}
       </div>
 
-      <div className="text-center leading-tight w-full space-y-0.5 sm:space-y-1">
-        <p className={`font-bold text-[8px] sm:text-[11px] break-words uppercase tracking-wider sm:tracking-widest leading-[1.1] ${!profile && !isMultipleRole ? 'text-current/60' : ''}`}>{node.label}</p>
-        <div className="h-[1px] w-4 sm:w-6 mx-auto bg-current/20 rounded-full" />
-        {isMultipleRole ? (
-          <p className="text-[7.5px] sm:text-[9px] opacity-70 font-semibold italic tracking-tight">Multiple Members</p>
-        ) : profile ? (
-          <p className="text-[7.5px] sm:text-[9px] opacity-90 font-bold truncate w-full px-1">{profile.full_name}</p>
+      <div className="mt-2.5 space-y-0.5 max-w-[120px]">
+        {profile ? (
+          <p className={`${nameSize} text-white leading-tight group-hover:text-primary/80 transition-colors`}>
+            {profile.full_name}
+          </p>
         ) : (
-          <p className="text-[7px] sm:text-[8px] opacity-40 italic uppercase tracking-wider sm:tracking-widest font-light">Vacant</p>
+          <p className="text-[10px] text-white/30 italic">Vacant</p>
         )}
+        {profile?.student_class && (
+          <p className="text-[9px] text-white/50 font-medium">
+            {profile.student_class} · {profile.stream}
+          </p>
+        )}
+        <div
+          className={`mt-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider inline-block ${
+            highlight ? "bg-primary text-primary-foreground" : "bg-white/10 text-white/80"
+          }`}
+        >
+          {node.label}
+        </div>
       </div>
-
-      <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-white/20 via-transparent to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-      <div className="absolute -inset-[1px] rounded-xl sm:rounded-2xl bg-gradient-to-b from-white/20 to-transparent pointer-events-none -z-10" />
     </motion.div>
   );
 
-  if (isMultipleRole || !profile) return cardContent;
+  if (!profile) return card;
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        {cardContent}
-      </DialogTrigger>
-      <DialogContent className="max-w-xl p-0 overflow-hidden bg-background/40 backdrop-blur-3xl border-white/20 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] rounded-[2.5rem]">
-        <motion.div 
-          initial={{ scale: 0.95, opacity: 0 }} 
-          animate={{ scale: 1, opacity: 1 }} 
-          className="relative"
+      <DialogTrigger asChild>{card}</DialogTrigger>
+      <DialogContent className="max-w-lg p-0 overflow-hidden border-0 shadow-2xl rounded-3xl bg-background/95 backdrop-blur-2xl">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
         >
-          {/* Header Background Pattern */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-background -z-10" />
-          <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-primary/5 to-transparent -z-10" />
-          
-          <div className="p-8 sm:p-10">
-            <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
-              {/* Profile Image Section */}
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gold blur-[40px] opacity-20 group-hover:opacity-40 transition-opacity animate-pulse" />
-                <Avatar className="h-40 w-40 sm:h-52 sm:w-52 border-8 border-white shadow-2xl relative z-10 transition-transform duration-700 group-hover:scale-[1.02]">
-                  <AvatarImage src={profile.profile_pic_url || (profile as any).profile_pic || ""} alt={profile.full_name} className="object-cover" />
-                  <AvatarFallback className="bg-muted text-5xl font-serif">{profile.full_name.slice(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                
-                {/* Status Badge */}
-                <div className="absolute -bottom-2 -right-2 bg-gold text-white text-[10px] font-black uppercase tracking-tighter px-4 py-1.5 rounded-full shadow-lg z-20 border-2 border-white">
-                  Active Officer
-                </div>
+          {/* Hero banner */}
+          <div className="relative h-32 bg-gradient-to-br from-primary via-primary/80 to-primary/40 overflow-hidden">
+            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_white,transparent)]" />
+          </div>
+          {/* Avatar overlapping */}
+          <div className="relative px-6 pb-6">
+            <div className="-mt-14 mb-4 flex items-end justify-between">
+              <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-xl">
+                {pic ? (
+                  <img src={pic} alt={profile.full_name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold font-serif text-3xl">
+                    {getInitial(profile.full_name)}
+                  </div>
+                )}
               </div>
-
-              {/* Basic Info Section */}
-              <div className="flex-1 text-center md:text-left space-y-4">
-                <div>
-                  <h2 className="font-serif text-3xl sm:text-4xl font-black text-primary leading-tight tracking-tight mb-1">
-                    {profile.full_name}
-                  </h2>
-                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/5 border border-primary/10 text-primary">
-                    <Icon className="h-4 w-4" />
-                    <span className="text-xs font-bold uppercase tracking-widest leading-none">{node.label}</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white/40 border border-white/60 p-3 rounded-2xl">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                      <GraduationCap className="h-3.5 w-3.5" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider">Class</span>
-                    </div>
-                    <p className="text-sm font-bold text-primary">{profile.student_class || 'N/A'}</p>
-                  </div>
-                  <div className="bg-white/40 border border-white/60 p-3 rounded-2xl">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                      <School className="h-3.5 w-3.5" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider">Stream</span>
-                    </div>
-                    <p className="text-sm font-bold text-primary">{profile.stream || 'N/A'}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4 pt-2">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-primary/60">
-                      <Info className="h-4 w-4" />
-                      <span className="text-xs font-black uppercase tracking-widest">About Member</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed italic line-clamp-4">
-                      {profile.bio || "No biography provided for this council member. They are dedicated to serving the students of Mengo Senior School."}
-                    </p>
-                  </div>
-                </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest">
+                <Icon className="h-3.5 w-3.5" /> {node.label}
               </div>
             </div>
-
-            {/* Footer / Meta Data */}
-            <div className="mt-10 pt-6 border-t border-primary/5 flex flex-wrap justify-between items-center gap-4">
-              <div className="flex gap-4">
-                <div className="flex items-center gap-1.5">
-                  <div className="h-2 w-2 rounded-full bg-green-500" />
-                  <span className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">Certified Council Official</span>
+            <h2 className="font-serif text-2xl font-black text-foreground leading-tight">{profile.full_name}</h2>
+            <div className="flex flex-wrap gap-3 mt-3">
+              {profile.student_class && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <GraduationCap className="h-4 w-4" />
+                  <span className="text-sm">{profile.student_class}</span>
                 </div>
-              </div>
-              <p className="text-[10px] font-medium text-muted-foreground/40 italic">
-                Ref: MSS-COUNCIL-{profile.full_name.split(' ').join('-').toUpperCase()}
-              </p>
+              )}
+              {profile.stream && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <School className="h-4 w-4" />
+                  <span className="text-sm">{profile.stream}</span>
+                </div>
+              )}
             </div>
+            {profile.bio && (
+              <div className="mt-4 pt-4 border-t border-border/40">
+                <div className="flex items-center gap-2 text-primary/60 mb-2">
+                  <Info className="h-4 w-4" />
+                  <span className="text-xs font-black uppercase tracking-widest">About</span>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed italic line-clamp-4">{profile.bio}</p>
+              </div>
+            )}
           </div>
         </motion.div>
       </DialogContent>
@@ -195,61 +178,77 @@ function NodeCard({
   );
 }
 
-function TreeBranch({
-  role, tree, roleMap, profileMap, level = 0, defaultExpanded = true, isDesktop
+// ─── Section divider label ────────────────────────────────────────────────────
+function SectionLabel({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-4 py-3">
+      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">{label}</span>
+      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+    </div>
+  );
+}
+
+// ─── Collapsible Branch Group ─────────────────────────────────────────────────
+function BranchGroup({
+  role, tree, roleMap, profileMap, depth,
 }: {
-  role: AppRole; tree: RoleNode[]; roleMap: RoleMap; profileMap: ProfileMap;
-  level?: number; defaultExpanded?: boolean; isDesktop: boolean;
+  role: string; tree: RoleNode[]; roleMap: RoleMap; profileMap: ProfileMap; depth: number;
 }) {
   const node = tree.find((n) => n.role === role);
-  const [isExpanded, setIsExpanded] = useState(level < 2 || defaultExpanded);
+  const [expanded, setExpanded] = useState(depth < 3);
 
   if (!node) return null;
 
+  const userId = roleMap[node.role];
+  const profile = userId ? profileMap[userId] : null;
   const children = node.children || [];
-  // On mobile: always vertical. On desktop: horizontal at top 2 levels only.
-  const isVerticalBranch = !isDesktop || level >= 2;
+  const isMulti = node.role === "class_coordinators" || node.role === "councillors";
 
   return (
-    <div className={`flex flex-col ${isVerticalBranch ? 'items-start w-full' : 'items-center'} relative`}>
+    <div className="w-full">
       <div className="flex flex-col items-center">
-        <NodeCard
-          node={node} roleMap={roleMap} profileMap={profileMap}
-          isExpanded={isExpanded} onToggle={() => setIsExpanded(!isExpanded)} hasChildren={children.length > 0}
-        />
-        {children.length > 0 && !isVerticalBranch && isExpanded && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 32, opacity: 1 }}
-            className="w-px bg-gradient-to-b from-primary/30 via-primary/50 to-primary/10 shrink-0" />
+        <PhotoCard node={node} profile={profile} depth={depth} />
+
+        {children.length > 0 && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="mt-3 flex items-center gap-1 text-[9px] text-white/40 hover:text-white/70 uppercase tracking-widest font-bold transition-colors"
+          >
+            {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+            {expanded ? "Collapse" : `Show ${children.length}`}
+          </button>
         )}
       </div>
 
       <AnimatePresence>
-        {isExpanded && children.length > 0 && (
+        {expanded && children.length > 0 && !isMulti && (
           <motion.div
-            initial={{ opacity: 0, y: -10, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: "auto" }}
-            exit={{ opacity: 0, y: -10, height: 0 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className={`flex overflow-hidden ${isVerticalBranch
-              ? 'flex-col items-start ml-[48px] sm:ml-[70px] border-l-2 border-dashed border-primary/20 pl-6 sm:pl-8 py-4 gap-6 w-full'
-              : 'flex-row justify-center items-start'}`}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
           >
-            {children.map((c, index) => (
-              <div key={c} className={`relative flex flex-col ${isVerticalBranch ? 'items-start w-full' : 'items-center px-4 md:px-8'}`}>
-                {!isVerticalBranch && children.length > 1 && (
-                  <>
-                    {index > 0 && <div className="absolute top-0 left-0 w-1/2 h-px bg-gradient-to-r from-transparent to-primary/20" />}
-                    {index < children.length - 1 && <div className="absolute top-0 right-0 w-1/2 h-px bg-gradient-to-l from-transparent to-primary/20" />}
-                  </>
-                )}
-                {!isVerticalBranch && <div className="w-px h-8 bg-gradient-to-b from-primary/20 to-primary/40 shrink-0" />}
-                {isVerticalBranch && <div className="absolute left-[-24px] sm:left-[-34px] top-[30px] w-6 sm:w-8 h-px bg-gradient-to-r from-primary/20 to-primary/40" />}
-                <TreeBranch
-                  role={c} tree={tree} roleMap={roleMap} profileMap={profileMap}
-                  level={level + 1} defaultExpanded={false} isDesktop={isDesktop}
-                />
-              </div>
-            ))}
+            {/* connector line */}
+            <div className="flex justify-center">
+              <div className="w-px h-8 bg-gradient-to-b from-white/30 to-white/10" />
+            </div>
+            <div className="flex flex-wrap justify-center gap-6 sm:gap-10 mt-2">
+              {children.map((c, i) => (
+                <motion.div
+                  key={c}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.06 }}
+                >
+                  <BranchGroup
+                    role={c} tree={tree} roleMap={roleMap} profileMap={profileMap}
+                    depth={depth + 1}
+                  />
+                </motion.div>
+              ))}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -257,66 +256,67 @@ function TreeBranch({
   );
 }
 
+// ─── Root export ──────────────────────────────────────────────────────────────
 export default function HierarchyTree({ refreshKey }: { refreshKey?: number }) {
   const [roleMap, setRoleMap] = useState<RoleMap>({});
   const [profileMap, setProfileMap] = useState<ProfileMap>({});
   const { tree } = useHierarchy(refreshKey);
-  const [isDesktop, setIsDesktop] = useState(typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [rolesRes, profilesRes] = await Promise.all([
         api.get("/users/all-roles/").catch(() => ({ data: [] })),
         api.get("/users/all-profiles/").catch(() => ({ data: [] })),
       ]);
-      const rolesData = rolesRes.data;
-      const profilesData = profilesRes.data;
-      if (rolesData) {
-        const rm: RoleMap = {};
-        const roles = Array.isArray(rolesData) ? rolesData : (rolesData.results || []);
-        roles.forEach((r: any) => { if (r.role) rm[r.role] = r.user_id; });
-        setRoleMap(rm);
-      }
-      if (profilesData) {
-        const pm: ProfileMap = {};
-        const profiles = Array.isArray(profilesData) ? profilesData : profilesData.results || [];
-        profiles.forEach((p: any) => {
-          pm[p.user_id] = { 
-            full_name: p.full_name, 
-            profile_pic_url: p.profile_pic_url || p.profile_pic || null,
-            student_class: p.student_class,
-            stream: p.stream,
-            gender: p.gender,
-            bio: p.bio
-          };
-        });
-        setProfileMap(pm);
-      }
+      const roles = Array.isArray(rolesRes.data) ? rolesRes.data : rolesRes.data?.results || [];
+      const rm: RoleMap = {};
+      roles.forEach((r: any) => { if (r.role) rm[r.role] = r.user_id; });
+      setRoleMap(rm);
+
+      const profiles = Array.isArray(profilesRes.data) ? profilesRes.data : profilesRes.data?.results || [];
+      const pm: ProfileMap = {};
+      profiles.forEach((p: any) => {
+        pm[p.user_id] = {
+          full_name: p.full_name,
+          profile_pic_url: p.profile_pic_url || p.profile_pic || null,
+          student_class: p.student_class,
+          stream: p.stream,
+          gender: p.gender,
+          bio: p.bio,
+        };
+      });
+      setProfileMap(pm);
     } catch (e) {
       console.error("Failed to fetch hierarchy details", e);
     }
-  };
-
-  useEffect(() => {
-    fetchData();
-    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
   }, [refreshKey]);
 
-  const allChildren = new Set(tree.flatMap(n => n.children));
-  const rootNodes = tree.filter(n => !allChildren.has(n.role));
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const allChildren = new Set(tree.flatMap((n) => n.children));
+  const rootNodes = tree.filter((n) => !allChildren.has(n.role));
   const rootRole = rootNodes.length > 0 ? rootNodes[0].role : tree[0]?.role;
 
   return (
-    <div className="w-full overflow-x-hidden pb-16 selection:bg-gold/20">
-      <div className="w-full flex justify-center py-8 md:py-12 px-4">
+    <div className="w-full min-h-[480px] bg-gradient-to-b from-primary/90 via-primary/70 to-primary/50 rounded-2xl overflow-hidden">
+      {/* subtle radial glow */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.08),transparent_60%)] pointer-events-none rounded-2xl" />
+
+      <div className="relative w-full flex flex-col items-center px-6 py-10 gap-8">
         {rootRole ? (
-          <TreeBranch role={rootRole} tree={tree} roleMap={roleMap} profileMap={profileMap} isDesktop={isDesktop} />
+          <BranchGroup
+            role={rootRole}
+            tree={tree}
+            roleMap={roleMap}
+            profileMap={profileMap}
+            depth={0}
+          />
         ) : (
-          <div className="text-center py-20 px-12 rounded-[3rem] border-2 border-dashed border-primary/10 bg-gradient-to-b from-primary/[0.02] to-transparent max-w-md mx-auto">
-            <Users className="w-12 h-12 text-primary/10 mx-auto mb-4" />
-            <p className="text-primary/40 font-medium italic tracking-tight">Council structure is being prepared...</p>
+          <div className="text-center py-20 px-12">
+            <Users className="w-12 h-12 text-white/10 mx-auto mb-4" />
+            <p className="text-white/30 font-medium italic tracking-tight text-sm">
+              Council structure is being prepared…
+            </p>
           </div>
         )}
       </div>

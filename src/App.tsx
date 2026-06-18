@@ -13,6 +13,10 @@ import HomePage from "@/pages/HomePage";
 import StudentVoicePage from "@/pages/StudentVoicePage";
 import LoginPage from "@/pages/LoginPage";
 import PublicBlogPage from "@/pages/PublicBlogPage";
+import CouncilBoardPage from "@/pages/CouncilBoardPage";
+import GalleryPage from "@/pages/GalleryPage";
+import CalendarPage from "@/pages/CalendarPage";
+
 import DashboardPage from "@/pages/portal/DashboardPage";
 import IssuesPage from "@/pages/portal/IssuesPage";
 import ProgrammesPage from "@/pages/portal/ProgrammesPage";
@@ -20,12 +24,14 @@ import RotaPage from "@/pages/portal/RotaPage";
 import DocumentsPage from "@/pages/portal/DocumentsPage";
 import RequisitionsPage from "@/pages/portal/RequisitionsPage";
 import ElectionsPage from "@/pages/portal/ElectionsPage";
+import ElectionControlPage from "@/pages/portal/ElectionControlPage";
 import StudentVoicesPage from "@/pages/portal/StudentVoicesPage";
 import HierarchyPage from "@/pages/portal/HierarchyPage";
 import ActivityLogsPage from "@/pages/portal/ActivityLogsPage";
 import RegisterMemberPage from "@/pages/portal/RegisterMemberPage";
 import RegisterPatronPage from "./pages/portal/RegisterPatronPage";
 import BlogManagerPage from "@/pages/portal/BlogManagerPage";
+import GalleryManagerPage from "@/pages/portal/GalleryManagerPage";
 import DisciplinaryPage from "@/pages/portal/DisciplinaryPage";
 import ActionPlanPage from "@/pages/portal/ActionPlanPage";
 import SettingsPage from "@/pages/portal/SettingsPage";
@@ -34,7 +40,19 @@ import HomeLayoutPage from "@/pages/portal/HomeLayoutPage";
 import PermissionManagementPage from "@/pages/portal/PermissionManagementPage";
 import IncomePage from "@/pages/portal/IncomePage";
 import ReportsPage from "@/pages/portal/ReportsPage";
+import SystemFeedbackPage from "@/pages/portal/SystemFeedbackPage";
 import NotFound from "./pages/NotFound.tsx";
+import EvoteLayout from "@/layouts/EvoteLayout";
+import EvoteLoginPage from "@/pages/portal/evote/LoginPage";
+import EvoteConfirmPage from "@/pages/portal/evote/ConfirmPage";
+import EvoteVotePage from "@/pages/portal/evote/VotePage";
+import EvoteAdminLoginPage from "@/pages/portal/evote/AdminLoginPage";
+import EvoteAdminDashboard from "@/pages/portal/evote/AdminDashboard";
+import EvoteAdminManage from "@/pages/portal/evote/AdminManage";
+import EvoteAdminReports from "@/pages/portal/evote/AdminReports";
+import EvoteAdminTimingPage from "@/pages/portal/evote/AdminTimingPage";
+import EvoteAdminCodes from "@/pages/portal/evote/AdminCodes";
+import EvoteNotFound from "@/pages/portal/evote/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -51,6 +69,10 @@ const App = () => (
                 <Route path="/" element={<HomePage />} />
                 <Route path="/blog" element={<PublicBlogPage />} />
                 <Route path="/student-voice" element={<StudentVoicePage />} />
+                <Route path="/council-board" element={<CouncilBoardPage />} />
+                <Route path="/gallery" element={<GalleryPage />} />
+                <Route path="/calendar" element={<CalendarPage />} />
+
                 <Route path="/login" element={<LoginPage />} />
               </Route>
 
@@ -81,6 +103,9 @@ const App = () => (
                 <Route element={<RoleGuard allowedPermission="view_blog" />}>
                   <Route path="blog" element={<BlogManagerPage />} />
                 </Route>
+                <Route element={<RoleGuard allowedPermission="manage_blog" />}>
+                  <Route path="gallery" element={<GalleryManagerPage />} />
+                </Route>
                 
                 {/* Disciplinary - DC & leadership */}
                 <Route element={<RoleGuard allowedPermission="view_disciplinary" />}>
@@ -90,6 +115,9 @@ const App = () => (
                 {/* Elections – leadership & EC */}
                 <Route element={<RoleGuard allowedPermission="view_elections" />}>
                   <Route path="elections" element={<ElectionsPage />} />
+                </Route>
+                <Route element={<RoleGuard allowedPermission="manage_elections" />}>
+                  <Route path="elections/control" element={<ElectionControlPage />} />
                 </Route>
 
                 {/* Activity Logs – leadership & EC */}
@@ -124,6 +152,23 @@ const App = () => (
                 <Route element={<RoleGuard allowedPermission="manage_permissions" />}>
                   <Route path="admin-absolute/features" element={<PermissionManagementPage />} />
                 </Route>
+
+                {/* System Feedback */}
+                <Route path="feedback" element={<SystemFeedbackPage />} />
+              </Route>
+
+              {/* E-Voting routes wrapped in EvoteLayout */}
+              <Route path="/evote" element={<EvoteLayout />}>
+                <Route index element={<EvoteLoginPage />} />
+                <Route path="confirm" element={<EvoteConfirmPage />} />
+                <Route path="vote" element={<EvoteVotePage />} />
+                <Route path="admin/login" element={<EvoteAdminLoginPage />} />
+                <Route path="admin" element={<EvoteAdminDashboard />} />
+                <Route path="admin/manage" element={<EvoteAdminManage />} />
+                <Route path="admin/reports" element={<EvoteAdminReports />} />
+                <Route path="admin/timing" element={<EvoteAdminTimingPage />} />
+                <Route path="admin/codes" element={<EvoteAdminCodes />} />
+                <Route path="*" element={<EvoteNotFound />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

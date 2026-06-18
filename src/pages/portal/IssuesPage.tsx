@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertTriangle, Plus, MoreHorizontal, FileText } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertTriangle, Plus, MoreHorizontal, FileText, User, Calendar, AlertOctagon, Info, Flag } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import DocumentViewer from "@/components/portal/DocumentViewer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,7 @@ import jsPDF from "jspdf";
 import mengoBadge from "@/assets/mengo-badge.jpg";
 import { unsaLogoB64 } from "@/assets/unsaBase64";
 import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Issue {
   id: string; title: string; description: string; status: string;
@@ -26,7 +27,38 @@ interface Issue {
   category: string; priority: string;
 }
 
-const statusColor = (s: string) => s === "resolved" ? "default" : s === "in_progress" ? "secondary" : "outline";
+const statusColor = (s: string) => {
+  const normalized = s.toLowerCase();
+  if (normalized === "resolved") return "bg-emerald-500/10 text-emerald-600 border-none";
+  if (normalized === "in_progress") return "bg-blue-500/10 text-blue-600 border-none";
+  return "bg-amber-500/10 text-amber-600 border-none";
+};
+
+const priorityColor = (p: string) => {
+  const norm = p.toLowerCase();
+  if (norm === "critical") return "bg-rose-500 text-white border-none shadow-md shadow-rose-500/20";
+  if (norm === "high") return "bg-orange-500/20 text-orange-700 border-none";
+  if (norm === "medium") return "bg-amber-500/10 text-amber-600 border-none";
+  return "bg-slate-500/10 text-slate-600 border-none";
+};
+
+const priorityIcon = (p: string) => {
+  const norm = p.toLowerCase();
+  if (norm === "critical") return <AlertOctagon className="h-3 w-3" />;
+  if (norm === "high") return <AlertTriangle className="h-3 w-3" />;
+  if (norm === "medium") return <Flag className="h-3 w-3" />;
+  return <Info className="h-3 w-3" />;
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0, scale: 0.98 },
+  visible: { y: 0, opacity: 1, scale: 1, transition: { type: "spring", stiffness: 100, damping: 15 } }
+};
 
 export default function IssuesPage() {
   const { user, hasPermission } = useAuth();
@@ -184,57 +216,90 @@ export default function IssuesPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="font-serif text-xl font-bold text-foreground sm:text-2xl">Issues at Hand</h1>
-          <p className="text-sm text-muted-foreground">Track issues raised by councillors.</p>
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8 pb-12 relative"
+    >
+      <div className="absolute -top-24 -right-24 w-64 h-64 bg-rose-500/10 rounded-full blur-3xl -z-10" />
+      <div className="absolute top-32 -left-24 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -z-10" />
+
+      {/* Header Section */}
+      <section className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 relative">
+        <div className="space-y-1">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="inline-flex items-center gap-2 px-3 py-1 mb-3 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold uppercase tracking-wider"
+          >
+            <AlertTriangle className="w-3 h-3" /> Grievances & Challenges
+          </motion.div>
+          <h1 className="font-serif text-4xl sm:text-5xl font-black tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/60">
+            Issues at Hand
+          </h1>
+          <p className="text-muted-foreground/80 mt-2 text-sm sm:text-base font-medium max-w-xl leading-relaxed">
+            Track and resolve operational, academic, or welfare issues raised by the council. Prioritize and act swiftly.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        
+        <div className="flex items-center gap-3">
           <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" disabled={filteredIssues.length === 0}>
-                <FileText className="mr-1 h-4 w-4" /> Export Report
+              <Button variant="outline" className="rounded-2xl gap-2 font-bold bg-background/50 backdrop-blur-md" disabled={filteredIssues.length === 0}>
+                <FileText className="h-4 w-4" /> Export Report
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md rounded-3xl border-border/40 bg-background/60 backdrop-blur-xl shadow-2xl">
               <DialogHeader>
-                <DialogTitle>Export Issues Report</DialogTitle>
+                <DialogTitle className="font-serif text-2xl">Export Issues Report</DialogTitle>
                 <DialogDescription>Customize your report footer before downloading.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="footerText">Document Footer Slogan</Label>
+                  <Label htmlFor="footerText" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Document Footer Slogan</Label>
                   <Input 
                     id="footerText" 
+                    className="bg-muted/50 border-border/50 focus-visible:ring-primary/20 rounded-xl"
                     value={exportFooterText} 
                     onChange={e => setExportFooterText(e.target.value)} 
                     placeholder="e.g. ANOINTED TO BEAR FRUIT"
                   />
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsExportOpen(false)}>Cancel</Button>
-                <Button onClick={generatePDFReport}>View Preview</Button>
-              </DialogFooter>
+              <div className="flex justify-end gap-3 pt-4 border-t border-border/20">
+                <Button variant="outline" className="rounded-xl" onClick={() => setIsExportOpen(false)}>Cancel</Button>
+                <Button className="rounded-xl font-bold" onClick={generatePDFReport}>View Preview</Button>
+              </div>
             </DialogContent>
           </Dialog>
+
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Raise Issue</Button>
+              <Button className="rounded-2xl gap-2 font-bold shadow-lg shadow-rose-500/20 bg-rose-600 hover:bg-rose-700 text-white">
+                <Plus className="h-4 w-4" /> Raise Issue
+              </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader><DialogTitle>Raise New Issue</DialogTitle></DialogHeader>
-              <div className="space-y-3">
-                <div><Label>Title *</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Broken lab equipment" /></div>
-                <div><Label>Description *</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Describe the issue..." /></div>
+            <DialogContent className="max-w-md rounded-3xl border-border/40 bg-background/80 backdrop-blur-2xl shadow-2xl p-0 overflow-hidden">
+              <div className="p-6 border-b border-border/20 bg-rose-500/5">
+                <DialogTitle className="font-serif text-2xl font-black text-rose-700 dark:text-rose-400">Raise New Issue</DialogTitle>
+              </div>
+              <div className="p-6 space-y-5">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Title *</Label>
+                  <Input className="bg-muted/30 rounded-xl border-border/50 focus-visible:ring-rose-500/20" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Broken lab equipment" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Description *</Label>
+                  <Textarea className="bg-muted/30 rounded-xl border-border/50 focus-visible:ring-rose-500/20 resize-none" value={description} onChange={e => setDescription(e.target.value)} rows={4} placeholder="Describe the issue in detail..." />
+                </div>
                 
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label>Category *</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category *</Label>
                     <Select value={category} onValueChange={setCategory}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
+                      <SelectTrigger className="bg-muted/30 rounded-xl border-border/50"><SelectValue /></SelectTrigger>
+                      <SelectContent className="rounded-xl backdrop-blur-xl bg-background/80">
                         <SelectItem value="Infrastructure">Infrastructure</SelectItem>
                         <SelectItem value="Academic">Academic</SelectItem>
                         <SelectItem value="Welfare">Welfare</SelectItem>
@@ -242,11 +307,11 @@ export default function IssuesPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label>Priority *</Label>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Priority *</Label>
                     <Select value={priority} onValueChange={setPriority}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
+                      <SelectTrigger className="bg-muted/30 rounded-xl border-border/50"><SelectValue /></SelectTrigger>
+                      <SelectContent className="rounded-xl backdrop-blur-xl bg-background/80">
                         <SelectItem value="Low">Low</SelectItem>
                         <SelectItem value="Medium">Medium</SelectItem>
                         <SelectItem value="High">High</SelectItem>
@@ -256,92 +321,161 @@ export default function IssuesPage() {
                   </div>
                 </div>
 
-                <Button onClick={handleAdd} disabled={submitting} className="w-full">{submitting ? "Saving..." : "Raise Issue"}</Button>
+                <div className="pt-2">
+                  <Button onClick={handleAdd} disabled={submitting} className="w-full rounded-xl py-6 font-bold shadow-lg shadow-rose-500/20 bg-rose-600 hover:bg-rose-700 text-white">
+                    {submitting ? "Saving..." : "Submit Issue"}
+                  </Button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>
         </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="All">All Statuses</SelectItem>
-            <SelectItem value="Open">Open</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="resolved">Resolved</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="All">All Categories</SelectItem>
-            <SelectItem value="Infrastructure">Infrastructure</SelectItem>
-            <SelectItem value="Academic">Academic</SelectItem>
-            <SelectItem value="Welfare">Welfare</SelectItem>
-            <SelectItem value="Other">Other</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger><SelectValue placeholder="Priority" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="All">All Priorities</SelectItem>
-            <SelectItem value="Low">Low</SelectItem>
-            <SelectItem value="Medium">Medium</SelectItem>
-            <SelectItem value="High">High</SelectItem>
-            <SelectItem value="Critical">Critical</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Filters */}
+      <Card className="border-border/40 bg-card/40 backdrop-blur-xl shadow-lg rounded-3xl overflow-hidden">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Status</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="bg-muted/30 border-border/50 rounded-2xl h-11 focus:ring-primary/20"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent className="rounded-xl backdrop-blur-xl bg-background/90">
+                  <SelectItem value="All">All Statuses</SelectItem>
+                  <SelectItem value="Open">Open</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="resolved">Resolved</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Category</label>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="bg-muted/30 border-border/50 rounded-2xl h-11 focus:ring-primary/20"><SelectValue placeholder="Category" /></SelectTrigger>
+                <SelectContent className="rounded-xl backdrop-blur-xl bg-background/90">
+                  <SelectItem value="All">All Categories</SelectItem>
+                  <SelectItem value="Infrastructure">Infrastructure</SelectItem>
+                  <SelectItem value="Academic">Academic</SelectItem>
+                  <SelectItem value="Welfare">Welfare</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Priority</label>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger className="bg-muted/30 border-border/50 rounded-2xl h-11 focus:ring-primary/20"><SelectValue placeholder="Priority" /></SelectTrigger>
+                <SelectContent className="rounded-xl backdrop-blur-xl bg-background/90">
+                  <SelectItem value="All">All Priorities</SelectItem>
+                  <SelectItem value="Low">Low</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="High">High</SelectItem>
+                  <SelectItem value="Critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
+      {/* Grid */}
       {loading ? (
-        <p className="text-center py-8 text-muted-foreground">Loading...</p>
+        <div className="flex justify-center py-20">
+          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+            <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full drop-shadow-lg" />
+          </motion.div>
+        </div>
       ) : issues.length === 0 ? (
-        <p className="text-center py-8 text-muted-foreground">No issues raised yet.</p>
+        <div className="text-center py-20 bg-muted/20 border border-border/40 rounded-3xl backdrop-blur-xl">
+          <AlertTriangle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+          <h3 className="font-serif text-xl font-bold text-foreground">No issues raised yet</h3>
+          <p className="text-sm text-muted-foreground mt-1">Everything is running smoothly.</p>
+        </div>
       ) : filteredIssues.length === 0 ? (
-        <p className="text-center py-8 text-muted-foreground">No issues found matching your filters.</p>
+        <div className="text-center py-20 bg-muted/20 border border-border/40 rounded-3xl backdrop-blur-xl">
+          <Search className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+          <h3 className="font-serif text-xl font-bold text-foreground">No issues found</h3>
+          <p className="text-sm text-muted-foreground mt-1">Try adjusting your filters to find what you're looking for.</p>
+        </div>
       ) : (
-        <div className="space-y-2">
-          {filteredIssues.map((issue) => (
-            <Card key={issue.id}>
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-2 min-w-0 flex-1">
-                    <AlertTriangle className={`h-4 w-4 mt-0.5 shrink-0 ${issue.status === "resolved" ? "text-primary" : "text-gold"}`} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{issue.title}</p>
-                      <div className="flex flex-wrap items-center gap-2 mt-1 mb-1">
-                        <Badge variant="outline" className="text-[10px]">{issue.category}</Badge>
-                        <Badge variant="secondary" className="text-[10px]">{issue.priority}</Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{issue.description}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">
-                        Raised by <span className="font-semibold text-foreground">{issue.reporter_name || "Unknown"}</span> • {new Date(issue.created_at).toLocaleDateString("en-UG", { day: "numeric", month: "short" })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Badge variant={statusColor(issue.status) as any} className="text-[10px]">{issue.status.replace("_", " ")}</Badge>
-                    {canManage && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-6 w-6"><MoreHorizontal className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleStatusUpdate(issue.id, "Open")}>Open</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleStatusUpdate(issue.id, "in_progress")}>In Progress</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleStatusUpdate(issue.id, "resolved")}>Resolved</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <AnimatePresence>
+            {filteredIssues.map((issue) => {
+              const isCritical = issue.priority.toLowerCase() === "critical" && issue.status.toLowerCase() !== "resolved";
+              
+              return (
+                <motion.div key={issue.id} variants={itemVariants} layout initial="hidden" animate="visible" exit={{ opacity: 0, scale: 0.9 }}>
+                  <Card className={`h-full bg-card/40 backdrop-blur-xl hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group rounded-3xl overflow-hidden relative flex flex-col ${
+                    isCritical ? 'border-rose-500/50 shadow-rose-500/10' : 'border-border/40 hover:shadow-primary/5'
+                  }`}>
+                    {isCritical && (
+                      <div className="absolute inset-0 bg-rose-500/5 animate-pulse z-0" />
                     )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    <CardContent className="p-5 sm:p-6 relative z-10 flex flex-col flex-1">
+                      <div className="flex items-start justify-between gap-4 mb-3">
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                          <div className={`mt-0.5 h-10 w-10 shrink-0 rounded-2xl flex items-center justify-center border shadow-sm ${
+                            issue.status.toLowerCase() === "resolved" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" :
+                            isCritical ? "bg-rose-500 text-white border-rose-600 shadow-rose-500/30" : "bg-amber-500/10 border-amber-500/20 text-amber-600"
+                          }`}>
+                            {issue.status.toLowerCase() === "resolved" ? <CheckCircle className="h-5 w-5" /> : 
+                             isCritical ? <AlertOctagon className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="text-lg font-serif font-bold truncate group-hover:text-primary transition-colors leading-tight mb-1.5">{issue.title}</h3>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge variant="outline" className="text-[9px] uppercase font-black tracking-widest bg-background/80 border-border/50 shadow-sm">{issue.category}</Badge>
+                              <Badge className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1 shadow-sm ${priorityColor(issue.priority)}`}>
+                                {priorityIcon(issue.priority)} {issue.priority}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge className={`text-[10px] uppercase font-black tracking-widest flex items-center gap-1 shadow-sm ${statusColor(issue.status)}`}>
+                            {issue.status.replace("_", " ")}
+                          </Badge>
+                          {canManage && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-background/50 hover:bg-muted border border-border/50 shadow-sm"><MoreHorizontal className="h-4 w-4" /></Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="rounded-xl border-border/50 bg-background/90 backdrop-blur-xl">
+                                <DropdownMenuItem className="text-xs font-bold" onClick={() => handleStatusUpdate(issue.id, "Open")}>Mark as Open</DropdownMenuItem>
+                                <DropdownMenuItem className="text-xs font-bold text-blue-600" onClick={() => handleStatusUpdate(issue.id, "in_progress")}>Mark In Progress</DropdownMenuItem>
+                                <DropdownMenuItem className="text-xs font-bold text-emerald-600" onClick={() => handleStatusUpdate(issue.id, "resolved")}>Mark Resolved</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground/90 leading-relaxed mb-6 line-clamp-2 flex-1 pl-13">
+                        {issue.description}
+                      </p>
+                      
+                      <div className="mt-auto pt-4 border-t border-border/20 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="h-3 w-3 text-primary" />
+                          </div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            <span className="text-foreground">{issue.reporter_name || "Unknown"}</span>
+                          </p>
+                        </div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                          <Calendar className="h-3 w-3" /> {new Date(issue.created_at).toLocaleDateString("en-UG", { day: "numeric", month: "short" })}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       )}
+      
       <DocumentViewer 
         isOpen={!!previewUrl} 
         onClose={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} 
@@ -349,6 +483,6 @@ export default function IssuesPage() {
         title={`Council Issues Report`} 
         type="pdf"
       />
-    </div>
+    </motion.div>
   );
 }

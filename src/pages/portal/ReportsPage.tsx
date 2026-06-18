@@ -7,12 +7,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ClipboardList, Lock, Plus, FileText, Send, Edit3, Trash2,
   Download, CheckCircle, Clock, ChevronDown, ChevronRight, Eye, Settings2, Star, Search,
-  Bell, AlertCircle
+  Bell, AlertCircle, LayoutDashboard, FileSpreadsheet, CheckSquare
 } from "lucide-react";
 import MonthlyReportForm from "@/components/portal/MonthlyReportForm";
 import DocumentViewer from "@/components/portal/DocumentViewer";
@@ -24,6 +36,7 @@ import { useCreateBlockNote } from "@blocknote/react";
 import "@blocknote/mantine/style.css";
 import "@blocknote/core/fonts/inter.css";
 import { BlockNoteRenderer } from "@/components/blog/BlockNoteRenderer";
+import { motion, AnimatePresence } from "framer-motion";
 
 const MONTH_NAMES = [
   "January","February","March","April","May","June",
@@ -204,6 +217,16 @@ const generateReportPDF = async (report: any, roleLabel: string): Promise<Blob> 
     doc.text("ANOINTED TO BEAR FRUIT", pageW / 2, 285, { align: "center" });
 
     return doc.output("blob");
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0, scale: 0.95 },
+  visible: { y: 0, opacity: 1, scale: 1, transition: { type: "spring", stiffness: 100, damping: 15 } }
 };
 
 export default function ReportsPage() {
@@ -398,7 +421,6 @@ export default function ReportsPage() {
 
   const sortedArchiveYears = Object.keys(combinedReports).map(Number).sort((a,b) => b-a);
 
-
   const handleDownload = async (report: any) => {
     try {
       const blob = await generateReportPDF(report, roleLabel);
@@ -468,9 +490,7 @@ export default function ReportsPage() {
     setCreateOpen(true);
   };
 
-
   const handleDelete = async (r: any) => {
-    if (!confirm(`Delete report "${r.title}"?`)) return;
     try {
       await api.delete(`/reports/general/${r.id}/`);
       toast.success("Deleted."); loadGeneral();
@@ -502,119 +522,144 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="max-w-5xl mx-auto space-y-8 pb-12 relative min-h-screen"
+    >
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-sky-500/10 rounded-full blur-3xl -z-10" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-500/10 rounded-full blur-3xl -z-10" />
+
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <ClipboardList className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold">Reports</h1>
-          <p className="text-xs text-muted-foreground">Submit monthly council reports &amp; manage general reports</p>
-        </div>
-      </div>
+      <section className="flex flex-col gap-2 relative">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-600 dark:text-sky-400 text-xs font-bold uppercase tracking-wider w-fit"
+        >
+          <ClipboardList className="w-3 h-3" /> System Reports
+        </motion.div>
+        <h1 className="font-serif text-4xl sm:text-5xl font-black tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/60">
+          Council Reports
+        </h1>
+        <p className="text-muted-foreground/80 mt-1 text-sm sm:text-base font-medium max-w-xl leading-relaxed">
+          Submit monthly council reports, track general performance, and review the archive.
+        </p>
+      </section>
 
       {/* Tab Bar */}
-      <div className="flex gap-1 border rounded-lg p-1 bg-muted/30 w-fit">
+      <div className="flex gap-2 bg-card/60 backdrop-blur-xl border border-border/40 p-1.5 rounded-2xl w-fit shadow-lg relative z-10">
         {hasClassAndStream && (
           <button onClick={() => setTab("monthly")}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${tab === "monthly" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            My Class Report
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all uppercase tracking-wider ${tab === "monthly" ? "bg-sky-500 text-white shadow-md shadow-sky-500/20" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}>
+            <LayoutDashboard className="w-4 h-4" /> My Class Report
           </button>
         )}
         {canManage && (
           <button onClick={() => setTab("general")}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${tab === "general" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            Reports Archive
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all uppercase tracking-wider ${tab === "general" ? "bg-background text-foreground shadow-sm border border-border/50" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}>
+            <FileSpreadsheet className="w-4 h-4" /> Reports Archive
           </button>
         )}
         {canManage && (
           <button onClick={() => setTab("tracker")}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${tab === "tracker" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            Submission Tracker
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all uppercase tracking-wider ${tab === "tracker" ? "bg-background text-foreground shadow-sm border border-border/50" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}>
+            <CheckSquare className="w-4 h-4" /> Submission Tracker
           </button>
         )}
       </div>
 
       {/* ─────────────────────────── MONTHLY REPORT TAB ─────────────────────────── */}
       {tab === "monthly" && (
-        <div className="space-y-5">
+        <motion.div variants={itemVariants} className="space-y-6">
           {/* Status Banner */}
-          <div className={`flex items-center gap-3 p-4 rounded-xl border ${currentMonthReport
-            ? "bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800"
-            : "bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800"}`}>
-            {currentMonthReport ? <Lock className="h-5 w-5 text-amber-600 shrink-0" /> : <Clock className="h-5 w-5 text-blue-600 shrink-0" />}
+          <div className={`flex items-start gap-4 p-5 rounded-3xl border shadow-lg backdrop-blur-md ${currentMonthReport
+            ? "bg-emerald-500/10 border-emerald-500/20"
+            : "bg-amber-500/10 border-amber-500/20"}`}>
+            <div className={`mt-0.5 h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${currentMonthReport ? "bg-emerald-500/20 text-emerald-600" : "bg-amber-500/20 text-amber-600"}`}>
+              {currentMonthReport ? <Lock className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
+            </div>
             <div>
-              <p className={`text-sm font-semibold ${currentMonthReport ? "text-amber-800 dark:text-amber-400" : "text-blue-800 dark:text-blue-400"}`}>
+              <p className={`text-base font-bold ${currentMonthReport ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}>
                 {currentMonthReport
-                  ? `Report submitted for ${MONTH_NAMES[currentMonth - 1]} ${currentYear} — locked until next month`
-                  : `No report yet for ${MONTH_NAMES[currentMonth - 1]} ${currentYear}`}
+                  ? `Report submitted for ${MONTH_NAMES[currentMonth - 1]} ${currentYear} — Locked until next month.`
+                  : `Action Required: No report submitted yet for ${MONTH_NAMES[currentMonth - 1]} ${currentYear}.`}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {currentMonthReport ? "Download your submitted report below." : "Fill in the template sections and submit."}
+              <p className="text-sm text-foreground/70 mt-1 font-medium">
+                {currentMonthReport ? "You have completed your reporting requirements for this period. Download your submission below." : "Please fill in the template sections and submit your monthly class report."}
               </p>
             </div>
           </div>
 
           {currentMonthReport && (
-            <div className="flex flex-col items-center justify-center p-12 border rounded-xl bg-card border-dashed space-y-4">
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                 <FileText className="h-8 w-8 text-primary" />
-              </div>
-              <div className="text-center">
-                <h3 className="font-bold">{currentMonthReport.title}</h3>
-                <p className="text-xs text-muted-foreground">Submitted on {new Date(currentMonthReport.created_at).toLocaleDateString()} at {new Date(currentMonthReport.created_at).toLocaleTimeString()}</p>
-              </div>
-              <Button onClick={() => handleDownload(currentMonthReport)} className="gap-2">
-                <Download className="h-4 w-4" /> Download My Report (PDF)
-              </Button>
-            </div>
+            <Card className="rounded-3xl border-border/40 bg-card/60 backdrop-blur-xl shadow-xl overflow-hidden">
+              <CardContent className="p-12 flex flex-col items-center justify-center text-center space-y-6">
+                <div className="h-24 w-24 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center relative">
+                  <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full"></div>
+                  <FileText className="h-10 w-10 text-primary relative z-10" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-2xl font-black">{currentMonthReport.title}</h3>
+                  <p className="text-sm font-medium text-muted-foreground mt-2">
+                    Submitted on {new Date(currentMonthReport.created_at).toLocaleDateString()} at {new Date(currentMonthReport.created_at).toLocaleTimeString()}
+                  </p>
+                </div>
+                <Button onClick={() => handleDownload(currentMonthReport)} className="h-12 px-6 rounded-xl font-bold gap-2 text-base shadow-lg shadow-primary/20">
+                  <Download className="h-5 w-5" /> Download PDF Copy
+                </Button>
+              </CardContent>
+            </Card>
           )}
 
-          {/* Template form (only when no current month report AND user has a class) */}
           {!currentMonthReport && hasClassAndStream && (
-            <div className="border rounded-xl bg-card overflow-hidden">
-
-               <MonthlyReportForm 
-                  submitTarget="reports" 
-                  onSuccess={() => loadMonthly()} 
-               />
-            </div>
+            <Card className="rounded-3xl border-border/40 bg-card/60 backdrop-blur-xl shadow-2xl overflow-hidden max-w-4xl">
+              <div className="p-6 border-b border-border/20 bg-primary/5">
+                 <CardTitle className="font-serif text-2xl font-black text-primary flex items-center gap-2">
+                   <FileText className="h-6 w-6" /> Class Monthly Report
+                 </CardTitle>
+              </div>
+              <CardContent className="p-6 sm:p-8">
+                 <MonthlyReportForm 
+                    submitTarget="reports" 
+                    onSuccess={() => loadMonthly()} 
+                 />
+              </CardContent>
+            </Card>
           )}
-        </div>
+        </motion.div>
       )}
 
       {/* ─────────────────────────── GENERAL REPORTS ARCHIVE TAB ─────────────────────────── */}
       {tab === "general" && canManage && (
-        <div className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-3 justify-between items-start md:items-center bg-muted/20 p-3 rounded-lg border">
-            <div className="flex flex-wrap items-center gap-2 flex-1">
-              <div className="relative w-full max-w-xs">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <motion.div variants={itemVariants} className="space-y-6">
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-card/60 backdrop-blur-xl p-4 rounded-3xl border border-border/40 shadow-sm">
+            <div className="flex flex-wrap items-center gap-3 flex-1 w-full">
+              <div className="relative w-full max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  className="pl-9 h-9 text-sm bg-background"
-                  placeholder="Search reports..."
+                  className="pl-10 h-11 text-sm bg-background/50 border-border/50 rounded-xl focus-visible:ring-primary/20"
+                  placeholder="Search reports by title, author, or role..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <Select value={filterYear} onValueChange={setFilterYear}>
-                <SelectTrigger className="w-[110px] h-9 bg-background"><SelectValue placeholder="Year" /></SelectTrigger>
-                <SelectContent>
+                <SelectTrigger className="w-[120px] h-11 bg-background/50 border-border/50 rounded-xl font-medium"><SelectValue placeholder="Year" /></SelectTrigger>
+                <SelectContent className="rounded-xl backdrop-blur-xl bg-background/95">
                   <SelectItem value="All">All Years</SelectItem>
                   {[currentYear, currentYear - 1, currentYear - 2].map((y) => (<SelectItem key={y} value={String(y)}>{y}</SelectItem>))}
                 </SelectContent>
               </Select>
               <Select value={filterMonth} onValueChange={setFilterMonth}>
-                <SelectTrigger className="w-[120px] h-9 bg-background"><SelectValue placeholder="Month" /></SelectTrigger>
-                <SelectContent>
+                <SelectTrigger className="w-[140px] h-11 bg-background/50 border-border/50 rounded-xl font-medium"><SelectValue placeholder="Month" /></SelectTrigger>
+                <SelectContent className="rounded-xl backdrop-blur-xl bg-background/95 max-h-[300px]">
                   <SelectItem value="All">All Months</SelectItem>
                   {MONTH_NAMES.map((m, i) => (<SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
-          {canManage && (
-            <div className="flex justify-end shrink-0">
+            <div className="flex justify-end shrink-0 w-full md:w-auto">
               <Dialog open={createOpen} onOpenChange={(o) => {
                 setCreateOpen(o);
                 if (!o) { 
@@ -623,56 +668,62 @@ export default function ReportsPage() {
                 }
               }}>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="gap-2"><Plus className="h-4 w-4" /> New General Report</Button>
+                  <Button size="lg" className="gap-2 rounded-xl font-bold shadow-lg shadow-primary/20 w-full md:w-auto">
+                    <Plus className="h-5 w-5" /> New General Report
+                  </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-primary" />
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border-border/40 bg-background/95 backdrop-blur-2xl shadow-2xl p-0">
+                  <div className="p-6 border-b border-border/20 bg-primary/5">
+                    <DialogTitle className="font-serif text-2xl font-black text-primary flex items-center gap-2">
+                      <FileText className="h-6 w-6" />
                       {editReport ? "Edit Report" : "New General Report"}
                     </DialogTitle>
-                  </DialogHeader>
-                  <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">Auto-title: </span>
-                    {gTitle.trim() || `${roleLabel} Report – ${MONTH_NAMES[Number(gMonth) - 1]} ${gYear}`}
                   </div>
-                  <div className="space-y-4 pt-1">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Title <span className="text-muted-foreground">(leave blank to auto-generate)</span></Label>
-                      <Input placeholder="Optional custom title…" value={gTitle} onChange={(e) => setGTitle(e.target.value)} />
+                  <div className="p-6 space-y-6">
+                    <div className="rounded-xl border border-border/50 bg-muted/30 p-4 text-sm font-medium">
+                      <span className="text-muted-foreground uppercase tracking-widest text-[10px] font-black mr-2">Auto-title: </span>
+                      <span className="text-foreground">{gTitle.trim() || `${roleLabel} Report – ${MONTH_NAMES[Number(gMonth) - 1]} ${gYear}`}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Title <span className="text-muted-foreground/60 normal-case font-medium">(leave blank to auto-generate)</span></Label>
+                      <Input className="h-12 bg-muted/30 border-border/50 rounded-xl" placeholder="Optional custom title…" value={gTitle} onChange={(e) => setGTitle(e.target.value)} />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="space-y-2">
-                        <Label className="text-xs">Month</Label>
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Month</Label>
                         <Select value={gMonth} onValueChange={setGMonth}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>{MONTH_NAMES.map((m, i) => (<SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>))}</SelectContent>
+                          <SelectTrigger className="h-12 bg-muted/30 border-border/50 rounded-xl"><SelectValue /></SelectTrigger>
+                          <SelectContent className="rounded-xl max-h-[250px]">{MONTH_NAMES.map((m, i) => (<SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>))}</SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-xs">Year</Label>
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Year</Label>
                         <Select value={gYear} onValueChange={setGYear}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>{[currentYear, currentYear - 1, currentYear - 2].map((y) => (<SelectItem key={y} value={String(y)}>{y}</SelectItem>))}</SelectContent>
+                          <SelectTrigger className="h-12 bg-muted/30 border-border/50 rounded-xl"><SelectValue /></SelectTrigger>
+                          <SelectContent className="rounded-xl">{[currentYear, currentYear - 1, currentYear - 2].map((y) => (<SelectItem key={y} value={String(y)}>{y}</SelectItem>))}</SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</Label>
+                        <Select value={gStatus} onValueChange={setGStatus}>
+                          <SelectTrigger className="h-12 bg-muted/30 border-border/50 rounded-xl"><SelectValue /></SelectTrigger>
+                          <SelectContent className="rounded-xl"><SelectItem value="draft">Draft</SelectItem><SelectItem value="published">Published</SelectItem></SelectContent>
                         </Select>
                       </div>
                     </div>
+                    
                     <div className="space-y-2">
-                      <Label className="text-xs">Status</Label>
-                      <Select value={gStatus} onValueChange={setGStatus}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent><SelectItem value="draft">Draft</SelectItem><SelectItem value="published">Published</SelectItem></SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-semibold">Content (Rich Text Editor)</Label>
-                      <div className="bg-white text-black min-h-[400px] border rounded-md p-2 overflow-hidden prose-sm max-w-none shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Content</Label>
+                      <div className="bg-background text-foreground min-h-[400px] border border-border/50 rounded-2xl p-4 overflow-hidden shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20">
                         <BlockNoteView editor={editor} theme="light" />
                       </div>
                     </div>
-                    <div className="flex justify-end gap-2 pt-2">
-                      <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-                      <Button onClick={handleGeneralSave} disabled={gSaving}>
+                    
+                    <div className="flex justify-end gap-3 pt-4 border-t border-border/40">
+                      <Button variant="outline" className="h-12 rounded-xl" onClick={() => setCreateOpen(false)}>Cancel</Button>
+                      <Button onClick={handleGeneralSave} disabled={gSaving} className="h-12 rounded-xl font-bold shadow-lg px-8">
                         {gSaving ? "Saving…" : editReport ? "Update Report" : "Create Report"}
                       </Button>
                     </div>
@@ -680,168 +731,203 @@ export default function ReportsPage() {
                 </DialogContent>
               </Dialog>
             </div>
-          )}
           </div>
 
           {generalLoading || monthlyLoading ? (
-            <div className="text-center py-8 text-muted-foreground text-sm animate-pulse">Loading archive…</div>
+             <div className="grid gap-4">
+                {[1, 2, 3].map(i => (
+                   <div key={i} className="h-24 rounded-3xl bg-card/60 border border-border/40 animate-pulse"></div>
+                ))}
+             </div>
           ) : sortedArchiveYears.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground text-sm">
-              <ClipboardList className="h-12 w-12 mx-auto mb-3 opacity-20" />
-              Archive is empty.
+            <div className="text-center py-20 border border-dashed border-border/60 rounded-3xl bg-muted/10 backdrop-blur-sm">
+              <ClipboardList className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+              <h3 className="font-bold text-lg text-foreground">Archive is Empty</h3>
+              <p className="text-muted-foreground text-sm max-w-sm mx-auto mt-1">No reports match the current filters or none have been submitted yet.</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {sortedArchiveYears.map((year) => (
-                <div key={year} className="border rounded-xl overflow-hidden">
-                  <button onClick={() => toggleYear(year)}
-                    className="w-full flex items-center justify-between px-5 py-3 bg-muted/30 hover:bg-muted/50 transition-colors">
-                    <span className="font-semibold text-sm">{year} Tracker</span>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{Object.values(combinedReports[year]).flat().length} report(s)</span>
-                      {openYears.has(year) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                    </div>
-                  </button>
-                  {openYears.has(year) && (
-                    <div className="divide-y relative">
-                      {Object.keys(combinedReports[year]).map(Number).sort((a, b) => b - a).map((month) => (
-                        <div key={month}>
-                          <div className="px-5 py-2 bg-muted/10 text-xs font-semibold text-muted-foreground uppercase tracking-widest sticky top-0 backdrop-blur border-b z-10">
-                            {MONTH_NAMES[month - 1]}
-                          </div>
-                          {combinedReports[year][month].map((r: any) => {
-                            const isGeneral = r.__type === 'general';
-                            const sections = !isGeneral ? deserializeTemplate(r.content) : null;
-                            const preview = !isGeneral && sections
-                              ? [sections.classStream, sections.generalPerformance, sections.adminSupport].filter(Boolean).join(" · ").slice(0, 120)
-                              : r.content.slice(0, 120);
+            <div className="space-y-6">
+              <AnimatePresence>
+                {sortedArchiveYears.map((year) => (
+                  <motion.div key={year} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border border-border/40 bg-card/60 backdrop-blur-xl shadow-sm overflow-hidden">
+                    <button onClick={() => toggleYear(year)}
+                      className="w-full flex items-center justify-between p-6 bg-muted/20 hover:bg-muted/40 transition-colors">
+                      <span className="font-serif text-xl font-bold">{year} Archive</span>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="font-bold rounded-lg px-2 py-1">{Object.values(combinedReports[year]).flat().length} Reports</Badge>
+                        <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center border border-border/50 shadow-sm">
+                          {openYears.has(year) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </div>
+                      </div>
+                    </button>
+                    {openYears.has(year) && (
+                      <div className="divide-y divide-border/40">
+                        {Object.keys(combinedReports[year]).map(Number).sort((a, b) => b - a).map((month) => (
+                          <div key={month}>
+                            <div className="px-6 py-2.5 bg-background/80 text-[10px] font-black text-muted-foreground uppercase tracking-widest sticky top-0 backdrop-blur-xl border-y border-border/40 z-10 flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-primary/50"></div>
+                              {MONTH_NAMES[month - 1]}
+                            </div>
+                            {combinedReports[year][month].map((r: any) => {
+                              const isGeneral = r.__type === 'general';
+                              const sections = !isGeneral ? deserializeTemplate(r.content) : null;
+                              const preview = !isGeneral && sections
+                                ? [sections.classStream, sections.generalPerformance, sections.adminSupport].filter(Boolean).join(" · ").slice(0, 120)
+                                : r.content.slice(0, 120);
 
-                            return (
-                              <div key={`${r.__type}-${r.id}`} className={`px-5 py-3 flex items-start justify-between gap-4 hover:bg-muted/10 transition-colors ${isGeneral ? "bg-primary/5" : ""}`}>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    {!r.is_read && canManage && (
-                                      <Badge className="text-[9px] bg-red-100 text-red-700 border-red-200 animate-pulse">NEW</Badge>
-                                    )}
-                                    <span className="font-medium text-sm truncate">{r.title}</span>
+                              return (
+                                <div key={`${r.__type}-${r.id}`} className={`p-6 flex flex-col md:flex-row md:items-start justify-between gap-4 hover:bg-muted/30 transition-colors ${isGeneral ? "bg-primary/[0.02]" : ""}`}>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                                      {!r.is_read && canManage && (
+                                        <Badge className="text-[10px] uppercase tracking-widest font-black bg-rose-500/10 text-rose-600 border-rose-500/20 animate-pulse">NEW</Badge>
+                                      )}
+                                      <span className="font-bold text-base truncate pr-2">{r.title}</span>
+                                      {isGeneral ? (
+                                        <>
+                                          <Badge variant="outline" className={`text-[9px] uppercase font-black tracking-widest ${r.status === "published" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : ""}`}>
+                                            {r.status === "published" ? <CheckCircle className="h-3 w-3 mr-1" /> : null}
+                                            {r.status}
+                                          </Badge>
+                                          <Badge variant="outline" className="text-[9px] uppercase font-black tracking-widest bg-primary/10 text-primary border-primary/20">
+                                            <Star className="h-3 w-3 mr-1" />General
+                                          </Badge>
+                                          {r.forwarded_to && (
+                                            <Badge variant="outline" className="text-[9px] uppercase font-black tracking-widest bg-blue-500/10 text-blue-600 border-blue-500/20">
+                                              <Send className="h-3 w-3 mr-1" />Fwd: {r.forwarded_to.replace(/_/g, " ")}
+                                            </Badge>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <>
+                                          {r.owner_class && (
+                                            <Badge variant="outline" className="text-[9px] uppercase font-black tracking-widest bg-secondary/20 text-secondary-foreground border-secondary/30">
+                                              {r.owner_class} {r.owner_stream}
+                                            </Badge>
+                                          )}
+                                          {r.is_locked && (
+                                            <Badge variant="outline" className="text-[9px] uppercase font-black tracking-widest bg-amber-500/10 text-amber-600 border-amber-500/20">
+                                              <Lock className="h-3 w-3 mr-1" />Locked
+                                            </Badge>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-foreground/80 font-medium">By {r.author_name} <span className="text-muted-foreground/50 mx-1">•</span> <span className="text-xs uppercase tracking-wider text-muted-foreground">{r.owner_role ? r.owner_role.replace(/_/g, " ") : ""}</span></p>
+                                    {!isGeneral && <p className="text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed bg-muted/30 p-2 rounded-lg border border-border/40 font-mono text-[11px]">{preview}…</p>}
+                                  </div>
+                                  
+                                  <div className="flex gap-2 shrink-0 flex-wrap md:justify-end mt-4 md:mt-0">
                                     {isGeneral ? (
                                       <>
-                                        <Badge variant={r.status === "published" ? "default" : "outline"}
-                                          className={`text-[10px] ${r.status === "published" ? "bg-green-100 text-green-700 border-green-300" : ""}`}>
-                                          {r.status === "published" ? <CheckCircle className="h-2.5 w-2.5 mr-1" /> : null}
-                                          {r.status}
-                                        </Badge>
-                                        <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20">
-                                          <Star className="h-2.5 w-2.5 mr-1" />General Report
-                                        </Badge>
-                                        {r.forwarded_to && (
-                                          <Badge className="text-[10px] bg-blue-100 text-blue-700 border-blue-300">
-                                            <Send className="h-2.5 w-2.5 mr-1" />Forwarded to {r.forwarded_to.replace(/_/g, " ")}
-                                          </Badge>
+                                        <Button size="sm" variant="secondary" className="h-9 rounded-lg font-bold" onClick={() => { setViewReport(r); setViewOpen(true); }}>
+                                          <Eye className="h-4 w-4 mr-1.5" /> View
+                                        </Button>
+                                        <Button size="sm" variant="outline" className="h-9 rounded-lg font-bold" onClick={() => handleDownload(r)}>
+                                          <Download className="h-4 w-4 mr-1.5" /> PDF
+                                        </Button>
+                                        {canManage && (
+                                          <div className="flex gap-1 ml-2 pl-2 border-l border-border/50">
+                                            {!r.forwarded_to && (
+                                              <Button size="sm" variant="ghost" className="h-9 w-9 p-0 rounded-lg text-blue-600 hover:bg-blue-50" title="Forward to Office" onClick={() => { setForwardTarget(r); setForwardOpen(true); }}>
+                                                <Send className="h-4 w-4" />
+                                              </Button>
+                                            )}
+                                            <Button size="sm" variant="ghost" className="h-9 w-9 p-0 rounded-lg" title="Edit" onClick={() => openEdit(r)}>
+                                              <Edit3 className="h-4 w-4" />
+                                            </Button>
+                                            <AlertDialog>
+                                              <AlertDialogTrigger asChild>
+                                                <Button size="sm" variant="ghost" className="h-9 w-9 p-0 rounded-lg text-rose-500 hover:bg-rose-50" title="Delete">
+                                                  <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                              </AlertDialogTrigger>
+                                              <AlertDialogContent className="rounded-3xl border-border/40 backdrop-blur-xl">
+                                                <AlertDialogHeader>
+                                                  <AlertDialogTitle className="font-serif text-xl">Delete Report?</AlertDialogTitle>
+                                                  <AlertDialogDescription>Are you sure you want to delete report "{r.title}"?</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                  <AlertDialogCancel className="rounded-xl h-11 font-bold">Cancel</AlertDialogCancel>
+                                                  <AlertDialogAction onClick={() => handleDelete(r)} className="rounded-xl h-11 font-bold bg-rose-600 hover:bg-rose-700 text-white">Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                              </AlertDialogContent>
+                                            </AlertDialog>
+                                          </div>
                                         )}
                                       </>
                                     ) : (
                                       <>
-                                        {r.owner_class && (
-                                          <Badge className="text-[10px] bg-secondary/20 text-secondary-foreground border-secondary/30">
-                                            {r.owner_class} {r.owner_stream}
-                                          </Badge>
-                                        )}
-                                        {r.is_locked && (
-                                          <Badge className="text-[10px] bg-amber-100 text-amber-700 border-amber-300">
-                                            <Lock className="h-2.5 w-2.5 mr-1" />Locked
-                                          </Badge>
-                                        )}
+                                        <Button size="sm" variant="secondary" className="h-9 rounded-lg font-bold" onClick={() => { setViewMonthlyReport(r); setViewMonthlyOpen(true); }}>
+                                          <Eye className="h-4 w-4 mr-1.5" /> View
+                                        </Button>
+                                        <Button size="sm" variant="outline" className="h-9 rounded-lg font-bold" onClick={() => handleDownload(r)}>
+                                          <Download className="h-4 w-4 mr-1.5" /> PDF
+                                        </Button>
                                       </>
                                     )}
                                   </div>
-                                  <p className="text-xs text-muted-foreground mt-1">By {r.author_name} {r.owner_role ? `· ${r.owner_role.replace(/_/g, " ")}` : ""}</p>
-                                  {!isGeneral && <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{preview}…</p>}
                                 </div>
-                                <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
-                                  {isGeneral ? (
-                                    <>
-                                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="View"
-                                        onClick={() => { setViewReport(r); setViewOpen(true); }}><Eye className="h-3.5 w-3.5" /></Button>
-                                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Download"
-                                        onClick={() => handleDownload(r)}><Download className="h-3.5 w-3.5" /></Button>
-                                      {canManage && (
-                                        <>
-                                          {!r.forwarded_to && (
-                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700" title="Forward to Office"
-                                              onClick={() => { setForwardTarget(r); setForwardOpen(true); }}><Send className="h-3.5 w-3.5" /></Button>
-                                          )}
-                                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Edit" onClick={() => openEdit(r)}><Edit3 className="h-3.5 w-3.5" /></Button>
-                                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" title="Delete"
-                                            onClick={() => handleDelete(r)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                                        </>
-                                      )}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1"
-                                        onClick={() => { setViewMonthlyReport(r); setViewMonthlyOpen(true); }}>
-                                        <Eye className="h-3 w-3" /> View
-                                      </Button>
-                                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => handleDownload(r)}>
-                                        <Download className="h-3 w-3" /> Download
-                                      </Button>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           )}
-        </div>
+        </motion.div>
       )}
 
       {/* ─────────────────────────── SUBMISSION TRACKER TAB ─────────────────────────── */}
       {tab === "tracker" && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between bg-muted/20 p-4 rounded-xl border">
+        <motion.div variants={itemVariants} className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-card/60 backdrop-blur-xl p-6 rounded-3xl border border-border/40 shadow-sm gap-4">
             <div>
-              <h2 className="text-sm font-bold">Monthly Submission Tracker</h2>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Status for {MONTH_NAMES[currentMonth - 1]} {currentYear}</p>
+              <h2 className="font-serif text-2xl font-black text-foreground">Monthly Submission Tracker</h2>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="outline" className="text-[10px] uppercase font-black tracking-widest">{MONTH_NAMES[currentMonth - 1]} {currentYear}</Badge>
+                <span className="text-sm font-medium text-muted-foreground">Real-time status overview</span>
+              </div>
             </div>
-            <Button size="sm" variant="outline" className="gap-2" 
+            <Button size="lg" className="gap-2 rounded-xl font-bold shadow-lg shadow-amber-500/20 bg-amber-500 hover:bg-amber-600 text-white w-full sm:w-auto" 
               onClick={() => { setSelectedMissing(trackerData.filter(t => !t.submitted)); setReminderOpen(true); }}
               disabled={trackerData.filter(t => !t.submitted).length === 0}>
-              <Bell className="h-4 w-4" /> Remind All Missing
+              <Bell className="h-5 w-5" /> Remind All Missing
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {trackerLoading ? (
-               Array.from({length: 12}).map((_, i) => (
-                 <div key={i} className="h-20 border rounded-xl bg-muted/10 animate-pulse" />
+               Array.from({length: 15}).map((_, i) => (
+                 <div key={i} className="h-28 rounded-2xl bg-card/60 border border-border/40 animate-pulse"></div>
                ))
             ) : trackerData.map((item, idx) => (
-              <div key={idx} className={`p-3 rounded-xl border transition-all ${item.submitted ? "bg-green-50/30 border-green-200" : "bg-red-50/30 border-red-200"}`}>
-                <div className="flex justify-between items-start mb-2">
-                   <span className="text-xs font-bold">{item.class} {item.stream}</span>
+              <div key={idx} className={`p-4 rounded-2xl border shadow-sm transition-all flex flex-col justify-between h-full ${item.submitted ? "bg-emerald-500/5 border-emerald-500/20" : "bg-card/60 border-border/40"}`}>
+                <div className="flex justify-between items-start mb-3">
+                   <span className="text-sm font-black">{item.class} <span className="text-muted-foreground/60 font-medium ml-0.5">{item.stream}</span></span>
                    {item.submitted ? (
-                     <CheckCircle className="h-4 w-4 text-green-600" />
+                     <div className="h-6 w-6 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                       <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                     </div>
                    ) : (
-                     <AlertCircle className="h-4 w-4 text-red-600" />
+                     <div className="h-6 w-6 rounded-full bg-rose-500/10 flex items-center justify-center">
+                       <AlertCircle className="h-3.5 w-3.5 text-rose-600" />
+                     </div>
                    )}
                 </div>
                 {item.submitted ? (
-                  <p className="text-[10px] text-green-700 font-medium">Submitted</p>
+                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-500/20 justify-center py-1 mt-auto">Submitted</Badge>
                 ) : (
-                  <div className="flex flex-col gap-1">
-                    <p className="text-[10px] text-red-700 font-medium italic">Pending</p>
+                  <div className="flex flex-col gap-2 mt-auto">
+                    <Badge variant="outline" className="bg-rose-500/10 text-rose-700 border-rose-500/20 justify-center py-1">Pending</Badge>
                     <button 
                       onClick={() => { setSelectedMissing([item]); setReminderOpen(true); }}
-                      className="text-[9px] text-primary hover:underline text-left w-fit flex items-center gap-1">
-                      <Send className="h-2.5 w-2.5" /> Remind Cllr
+                      className="text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary/80 transition-colors flex items-center justify-center gap-1 bg-primary/5 py-1.5 rounded-lg w-full">
+                      <Send className="h-3 w-3" /> Remind
                     </button>
                   </div>
                 )}
@@ -850,32 +936,38 @@ export default function ReportsPage() {
           </div>
 
           {!trackerLoading && trackerData.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground text-sm">No tracking data available.</div>
+            <div className="text-center py-20 border border-dashed border-border/60 rounded-3xl bg-muted/10 backdrop-blur-sm">
+               <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+               <p className="font-medium text-foreground">No tracking data available for this period.</p>
+            </div>
           )}
-        </div>
+        </motion.div>
       )}
 
       {/* Reminder Dialog */}
       <Dialog open={reminderOpen} onOpenChange={setReminderOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-amber-600" />Send Reminders</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <p className="text-xs text-muted-foreground">
+        <DialogContent className="max-w-sm rounded-3xl border-border/40 bg-background/95 backdrop-blur-2xl shadow-2xl overflow-hidden p-0">
+          <div className="p-6 border-b border-border/20 bg-amber-500/5">
+            <DialogTitle className="font-serif text-2xl font-black text-amber-600 flex items-center gap-2">
+              <Bell className="h-6 w-6" /> Send Reminders
+            </DialogTitle>
+          </div>
+          <div className="p-6 space-y-6">
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 font-medium text-sm leading-relaxed">
               You are about to remind <strong>{selectedMissing.length}</strong> class(es) to submit their monthly reports.
-            </p>
+            </div>
             <div className="space-y-2">
-              <Label className="text-xs">Submission Deadline (Optional)</Label>
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Submission Deadline (Optional)</Label>
               <Input 
+                className="h-12 bg-muted/30 border-border/50 rounded-xl focus-visible:ring-amber-500/20"
                 placeholder="e.g. Tomorrow 5:00 PM" 
                 value={reminderDeadline} 
                 onChange={(e) => setReminderDeadline(e.target.value)} 
               />
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setReminderOpen(false)}>Cancel</Button>
-              <Button onClick={sendReminders}>Send Notifications</Button>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" className="h-11 rounded-xl w-full" onClick={() => setReminderOpen(false)}>Cancel</Button>
+              <Button onClick={sendReminders} className="h-11 rounded-xl w-full font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-lg">Send Now</Button>
             </div>
           </div>
         </DialogContent>
@@ -883,24 +975,29 @@ export default function ReportsPage() {
 
       {/* Forward Dialog */}
       <Dialog open={forwardOpen} onOpenChange={(o) => { setForwardOpen(o); if (!o) { setForwardTarget(null); setForwardTo(""); } }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Send className="h-5 w-5 text-blue-600" />Forward Report</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-sm rounded-3xl border-border/40 bg-background/95 backdrop-blur-2xl shadow-2xl overflow-hidden p-0">
+          <div className="p-6 border-b border-border/20 bg-blue-500/5">
+            <DialogTitle className="font-serif text-2xl font-black text-blue-600 flex items-center gap-2">
+              <Send className="h-6 w-6" /> Forward Report
+            </DialogTitle>
+          </div>
           {forwardTarget && (
-            <div className="space-y-4 pt-2">
-              <p className="text-xs text-muted-foreground">Forwarding: <strong>{forwardTarget.title}</strong></p>
+            <div className="p-6 space-y-6">
+              <div className="p-4 rounded-xl bg-muted/30 border border-border/50 text-sm">
+                <span className="text-muted-foreground block text-[10px] font-black uppercase tracking-widest mb-1">Target Report</span>
+                <strong className="text-foreground">{forwardTarget.title}</strong>
+              </div>
               <div className="space-y-2">
-                <Label className="text-xs">Select Target Office</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Target Office</Label>
                 <Select value={forwardTo} onValueChange={setForwardTo}>
-                  <SelectTrigger><SelectValue placeholder="Choose office…" /></SelectTrigger>
-                  <SelectContent>{ROLE_TARGETS.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}</SelectContent>
+                  <SelectTrigger className="h-12 bg-muted/30 border-border/50 rounded-xl focus-visible:ring-blue-500/20"><SelectValue placeholder="Choose office…" /></SelectTrigger>
+                  <SelectContent className="rounded-xl">{ROLE_TARGETS.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}</SelectContent>
                 </Select>
               </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setForwardOpen(false)}>Cancel</Button>
-                <Button onClick={handleForward} disabled={forwardSending}>
-                  {forwardSending ? "Sending…" : "Forward"}<Send className="ml-2 h-3.5 w-3.5" />
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="outline" className="h-11 rounded-xl w-full" onClick={() => setForwardOpen(false)}>Cancel</Button>
+                <Button onClick={handleForward} disabled={forwardSending} className="h-11 rounded-xl w-full font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
+                  {forwardSending ? "Sending…" : "Forward"} <Send className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -908,129 +1005,170 @@ export default function ReportsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* View Monthly Report Dialog (template renderer) */}
+      {/* View Monthly Report Dialog */}
       <Dialog open={viewMonthlyOpen} onOpenChange={setViewMonthlyOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              {viewMonthlyReport?.title}
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border-border/40 bg-background/95 backdrop-blur-2xl shadow-2xl p-0">
+          <div className="p-6 border-b border-border/20 bg-primary/5 sticky top-0 z-20 backdrop-blur-xl">
+            <DialogTitle className="font-serif text-2xl font-black text-primary flex items-center gap-3">
+              <FileText className="h-6 w-6" />
+              <span className="truncate pr-4">{viewMonthlyReport?.title}</span>
             </DialogTitle>
-          </DialogHeader>
-          {viewMonthlyReport && (() => {
-            const sections = deserializeTemplate(viewMonthlyReport.content);
-            return (
-              <div className="space-y-4">
-                <div className="flex gap-2 flex-wrap text-xs">
-                  <Badge variant="outline">{viewMonthlyReport.period_month_display} {viewMonthlyReport.period_year}</Badge>
-                  {viewMonthlyReport.is_locked && <Badge className="bg-amber-100 text-amber-700 border-amber-300"><Lock className="h-2.5 w-2.5 mr-1" />Locked</Badge>}
-                </div>
-                <p className="text-xs text-muted-foreground">By {viewMonthlyReport.author_name} &bull; {viewMonthlyReport.owner_role?.replace(/_/g, " ")}</p>
-                {sections ? (
-                  <div className="divide-y border rounded-lg overflow-hidden capitalize">
-                    <div className="px-4 py-3"><p className="text-[10px] font-bold uppercase tracking-widest text-primary/70 mb-1">Council Name</p><p className="text-sm">{sections.councilName}</p></div>
-                    <div className="px-4 py-3"><p className="text-[10px] font-bold uppercase tracking-widest text-primary/70 mb-1">Class & Stream</p><p className="text-sm">{sections.classStream}</p></div>
-                    <div className="px-4 py-3"><p className="text-[10px] font-bold uppercase tracking-widest text-primary/70 mb-1">Class Teacher</p><p className="text-sm">{sections.classTeacher}</p></div>
-                    <div className="px-4 py-3"><p className="text-[10px] font-bold uppercase tracking-widest text-primary/70 mb-1">General Performance</p><p className="text-sm whitespace-pre-wrap">{sections.generalPerformance}</p></div>
-                    <div className="px-4 py-3"><p className="text-[10px] font-bold uppercase tracking-widest text-primary/70 mb-1">General Challenges</p><p className="text-sm whitespace-pre-wrap">{sections.generalChallenges}</p></div>
-                    
-                    {(sections as any).challenges && (
-                       <div className="px-4 py-3">
-                         <p className="text-[10px] font-bold uppercase tracking-widest text-primary/70 mb-1">Specific Challenges</p>
-                         <div className="text-xs space-y-2">
-                           {((sections as any).challenges || []).map((c: any, i: number) => (
-                             <div key={i} className="border rounded p-2 bg-muted/20">
-                               <p><strong>Problem:</strong> {c.description}</p>
-                               <p><strong>When:</strong> {c.when}</p>
-                               <p><strong>Impact:</strong> {c.impact}</p>
-                             </div>
-                           ))}
+            {viewMonthlyReport && (
+               <div className="flex flex-wrap items-center gap-3 mt-3">
+                 <Badge variant="outline" className="text-[10px] uppercase font-black tracking-widest bg-background/50">{viewMonthlyReport.period_month_display} {viewMonthlyReport.period_year}</Badge>
+                 <span className="text-xs font-medium text-muted-foreground">By {viewMonthlyReport.author_name} • {viewMonthlyReport.owner_role?.replace(/_/g, " ")}</span>
+                 {viewMonthlyReport.is_locked && <Badge variant="outline" className="ml-auto bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px] uppercase font-black tracking-widest"><Lock className="h-3 w-3 mr-1" />Locked</Badge>}
+               </div>
+            )}
+          </div>
+          <div className="p-6">
+            {viewMonthlyReport && (() => {
+              const sections = deserializeTemplate(viewMonthlyReport.content);
+              return (
+                <div className="space-y-6">
+                  {sections ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                         <div className="p-4 rounded-2xl bg-muted/20 border border-border/50">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-primary/70 mb-1">Council Name</p>
+                            <p className="text-sm font-medium">{sections.councilName}</p>
                          </div>
-                       </div>
-                    )}
-
-                    {(sections as any).solutions && (
-                       <div className="px-4 py-3">
-                         <p className="text-[10px] font-bold uppercase tracking-widest text-primary/70 mb-1">Proposed Solutions</p>
-                         <div className="text-xs space-y-2">
-                           {((sections as any).solutions || []).map((s: any, i: number) => (
-                             <div key={i} className="border rounded p-2 bg-muted/20">
-                               <p><strong>Problem:</strong> {s.problem}</p>
-                               <p><strong>Solution:</strong> {s.description}</p>
-                               <p><strong>Benefit:</strong> {s.benefit}</p>
-                             </div>
-                           ))}
+                         <div className="p-4 rounded-2xl bg-muted/20 border border-border/50">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-primary/70 mb-1">Class & Stream</p>
+                            <p className="text-sm font-medium">{sections.classStream}</p>
                          </div>
-                       </div>
-                    )}
+                         <div className="p-4 rounded-2xl bg-muted/20 border border-border/50">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-primary/70 mb-1">Class Teacher</p>
+                            <p className="text-sm font-medium">{sections.classTeacher}</p>
+                         </div>
+                      </div>
 
-                    <div className="px-4 py-3"><p className="text-[10px] font-bold uppercase tracking-widest text-primary/70 mb-1">Admin Support Requests</p><p className="text-sm whitespace-pre-wrap">{sections.adminSupport}</p></div>
-                    <div className="px-4 py-3"><p className="text-[10px] font-bold uppercase tracking-widest text-primary/70 mb-1">Positive Highlights</p><p className="text-sm whitespace-pre-wrap">{sections.positiveHighlights}</p></div>
-                    
-                    <div className="px-4 py-3 bg-muted/30">
-                       <p className="text-[10px] font-bold uppercase tracking-widest text-primary/70 mb-1">Signatories</p>
-                       <div className="grid grid-cols-2 gap-2 text-xs">
-                          <p><strong>Male Cllr:</strong> {(sections as any).maleCouncillor || "—"}</p>
-                          <p><strong>Female Cllr:</strong> {(sections as any).femaleCouncillor || "—"}</p>
-                          <p><strong>Monitor:</strong> {(sections as any).monitor || "—"}</p>
-                          <p><strong>Monitress:</strong> {(sections as any).monitress || "—"}</p>
-                          <p><strong>Student 1:</strong> {(sections as any).student1 || "—"}</p>
-                          <p><strong>Student 2:</strong> {(sections as any).student2 || "—"}</p>
-                       </div>
+                      <div className="p-5 rounded-2xl bg-card/60 border border-border/40 shadow-sm">
+                         <p className="text-[10px] font-black uppercase tracking-widest text-primary/70 mb-3 flex items-center gap-2"><Star className="h-3 w-3" /> General Performance</p>
+                         <p className="text-sm leading-relaxed whitespace-pre-wrap">{sections.generalPerformance}</p>
+                      </div>
+
+                      <div className="p-5 rounded-2xl bg-card/60 border border-border/40 shadow-sm">
+                         <p className="text-[10px] font-black uppercase tracking-widest text-rose-500/70 mb-3 flex items-center gap-2"><AlertCircle className="h-3 w-3" /> General Challenges</p>
+                         <p className="text-sm leading-relaxed whitespace-pre-wrap">{sections.generalChallenges}</p>
+                      </div>
+                      
+                      {(sections as any).challenges && (
+                         <div className="p-5 rounded-2xl bg-card/60 border border-border/40 shadow-sm">
+                           <p className="text-[10px] font-black uppercase tracking-widest text-rose-500/70 mb-4">Specific Challenges</p>
+                           <div className="space-y-3">
+                             {((sections as any).challenges || []).map((c: any, i: number) => (
+                               <div key={i} className="rounded-xl p-4 bg-muted/30 border border-border/50 text-sm">
+                                 <div className="grid gap-2">
+                                    <div><span className="font-bold text-foreground">Problem:</span> <span className="text-muted-foreground">{c.description}</span></div>
+                                    <div><span className="font-bold text-foreground">When:</span> <span className="text-muted-foreground">{c.when}</span></div>
+                                    <div><span className="font-bold text-foreground">Impact:</span> <span className="text-muted-foreground">{c.impact}</span></div>
+                                 </div>
+                               </div>
+                             ))}
+                           </div>
+                         </div>
+                      )}
+
+                      {(sections as any).solutions && (
+                         <div className="p-5 rounded-2xl bg-card/60 border border-border/40 shadow-sm">
+                           <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500/70 mb-4">Proposed Solutions</p>
+                           <div className="space-y-3">
+                             {((sections as any).solutions || []).map((s: any, i: number) => (
+                               <div key={i} className="rounded-xl p-4 bg-muted/30 border border-border/50 text-sm">
+                                 <div className="grid gap-2">
+                                    <div><span className="font-bold text-foreground">For Problem:</span> <span className="text-muted-foreground">{s.problem}</span></div>
+                                    <div><span className="font-bold text-foreground">Solution:</span> <span className="text-muted-foreground">{s.description}</span></div>
+                                    <div><span className="font-bold text-foreground">Benefit:</span> <span className="text-muted-foreground">{s.benefit}</span></div>
+                                 </div>
+                               </div>
+                             ))}
+                           </div>
+                         </div>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div className="p-5 rounded-2xl bg-card/60 border border-border/40 shadow-sm">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-blue-500/70 mb-3">Admin Support Requests</p>
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{sections.adminSupport}</p>
+                         </div>
+                         <div className="p-5 rounded-2xl bg-card/60 border border-border/40 shadow-sm">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500/70 mb-3">Positive Highlights</p>
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{sections.positiveHighlights}</p>
+                         </div>
+                      </div>
+                      
+                      <div className="p-5 rounded-2xl bg-primary/5 border border-primary/10">
+                         <p className="text-[10px] font-black uppercase tracking-widest text-primary/70 mb-4">Signatories</p>
+                         <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-2 text-sm">
+                            <div><span className="text-muted-foreground text-[10px] uppercase font-black block mb-0.5">Male Cllr</span><span className="font-medium">{(sections as any).maleCouncillor || "—"}</span></div>
+                            <div><span className="text-muted-foreground text-[10px] uppercase font-black block mb-0.5">Female Cllr</span><span className="font-medium">{(sections as any).femaleCouncillor || "—"}</span></div>
+                            <div><span className="text-muted-foreground text-[10px] uppercase font-black block mb-0.5">Monitor</span><span className="font-medium">{(sections as any).monitor || "—"}</span></div>
+                            <div><span className="text-muted-foreground text-[10px] uppercase font-black block mb-0.5">Monitress</span><span className="font-medium">{(sections as any).monitress || "—"}</span></div>
+                            <div><span className="text-muted-foreground text-[10px] uppercase font-black block mb-0.5">Student 1</span><span className="font-medium">{(sections as any).student1 || "—"}</span></div>
+                            <div><span className="text-muted-foreground text-[10px] uppercase font-black block mb-0.5">Student 2</span><span className="font-medium">{(sections as any).student2 || "—"}</span></div>
+                         </div>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="border rounded-lg p-4 bg-muted/20 text-sm whitespace-pre-wrap font-mono">{viewMonthlyReport.content}</div>
-                )}
-                 <div className="flex justify-end gap-2 pt-2">
-                  {canManage && !viewMonthlyReport.is_read && (
-                    <Button size="sm" variant="default" onClick={() => markAsRead(viewMonthlyReport, 'monthly')}>
-                      Mark as Read
-                    </Button>
+                  ) : (
+                    <div className="border border-border/50 rounded-2xl p-6 bg-muted/20 text-sm whitespace-pre-wrap font-mono leading-relaxed">{viewMonthlyReport.content}</div>
                   )}
-                  <Button size="sm" variant="outline" onClick={() => handleDownload(viewMonthlyReport)}>
-                    <Download className="mr-2 h-3.5 w-3.5" /> Download PDF
-                  </Button>
+                  
+                  <div className="flex justify-end gap-3 pt-4 border-t border-border/40">
+                    {canManage && !viewMonthlyReport.is_read && (
+                      <Button className="h-11 rounded-xl px-6 font-bold" onClick={() => markAsRead(viewMonthlyReport, 'monthly')}>
+                        Mark as Read
+                      </Button>
+                    )}
+                    <Button variant="outline" className="h-11 rounded-xl px-6 font-bold gap-2" onClick={() => handleDownload(viewMonthlyReport)}>
+                      <Download className="h-4 w-4" /> Download PDF
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            );
-          })()}
+              );
+            })()}
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* View General Report Dialog */}
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />{viewReport?.title}
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border-border/40 bg-background/95 backdrop-blur-2xl shadow-2xl p-0">
+          <div className="p-6 border-b border-border/20 bg-primary/5 sticky top-0 z-20 backdrop-blur-xl">
+            <DialogTitle className="font-serif text-2xl font-black text-primary flex items-center gap-3">
+              <FileText className="h-6 w-6 shrink-0" />
+              <span className="truncate pr-4">{viewReport?.title}</span>
             </DialogTitle>
-          </DialogHeader>
-          {viewReport && (
-            <div className="space-y-4">
-              <div className="flex gap-2 flex-wrap text-xs">
-                <Badge variant="outline">{viewReport.period_month_display} {viewReport.period_year}</Badge>
-                <Badge variant={viewReport.status === "published" ? "default" : "outline"}>{viewReport.status}</Badge>
-                {viewReport.forwarded_to && <Badge className="bg-blue-100 text-blue-700 border-blue-300">Forwarded → {viewReport.forwarded_to.replace(/_/g, " ")}</Badge>}
+            {viewReport && (
+              <div className="flex flex-wrap items-center gap-3 mt-3">
+                <Badge variant="outline" className="text-[10px] uppercase font-black tracking-widest bg-background/50">{viewReport.period_month_display} {viewReport.period_year}</Badge>
+                <Badge variant={viewReport.status === "published" ? "default" : "outline"} className="text-[10px] uppercase font-black tracking-widest">{viewReport.status}</Badge>
+                {viewReport.forwarded_to && <Badge variant="outline" className="text-[10px] uppercase font-black tracking-widest bg-blue-500/10 text-blue-600 border-blue-500/20"><Send className="h-3 w-3 mr-1"/> Fwd: {viewReport.forwarded_to.replace(/_/g, " ")}</Badge>}
+                <span className="text-xs font-medium text-muted-foreground ml-auto">By {viewReport.author_name} • {viewReport.owner_role?.replace(/_/g, " ")}</span>
               </div>
-              <div className="text-xs text-muted-foreground">By {viewReport.author_name} · {viewReport.owner_role?.replace(/_/g, " ")}</div>
-              <div className="border rounded-lg p-5 bg-card prose-sm max-w-none shadow-sm">
-                <BlockNoteRenderer data={viewReport.content} />
-              </div>
-               <div className="flex justify-end gap-2 pt-2">
-                {canManage && !viewReport.is_read && (
-                  <Button size="sm" variant="default" onClick={() => markAsRead(viewReport, 'general')}>
-                    Mark as Read
+            )}
+          </div>
+          <div className="p-6 sm:p-8">
+            {viewReport && (
+              <div className="space-y-8">
+                <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-10 shadow-sm min-h-[500px]">
+                  <BlockNoteRenderer data={viewReport.content} />
+                </div>
+                 <div className="flex justify-end gap-3 pt-4 border-t border-border/40">
+                  {canManage && !viewReport.is_read && (
+                    <Button className="h-11 rounded-xl px-6 font-bold" onClick={() => markAsRead(viewReport, 'general')}>
+                      Mark as Read
+                    </Button>
+                  )}
+                  <Button variant="outline" className="h-11 rounded-xl px-6 font-bold gap-2" onClick={() => handleDownload(viewReport)}>
+                    <Download className="h-4 w-4" /> Download PDF
                   </Button>
-                )}
-                <Button size="sm" variant="outline" onClick={() => handleDownload(viewReport)}>
-                  <Download className="mr-2 h-3.5 w-3.5" /> Download PDF
-                </Button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }
