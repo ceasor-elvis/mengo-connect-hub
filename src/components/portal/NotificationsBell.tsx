@@ -220,6 +220,19 @@ export default function NotificationsBell() {
               </div>
             )}
           </ScrollArea>
+          <div className="p-2 border-t bg-muted/20">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs font-bold text-primary hover:bg-primary/10 h-8 justify-center"
+              onClick={() => {
+                setPopoverOpen(false);
+                navigate("/portal/notifications");
+              }}
+            >
+              View all in Notifications Page →
+            </Button>
+          </div>
         </PopoverContent>
       </Popover>
 

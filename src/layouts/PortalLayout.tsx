@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Calendar, FileText, AlertTriangle, Users,
   MessageSquare, DollarSign, Vote, LogOut, Menu, X, Activity, Network, UserPlus, Lock, Settings, Scale, Shield, ShieldCheck,
-  Target, Video, BarChart3, PiggyBank, ClipboardList, ImageIcon
+  Target, Video, BarChart3, PiggyBank, ClipboardList, ImageIcon, Bell
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import SystemUpdateModal from "@/components/portal/SystemUpdateModal";
 import ForcePasswordChange from "@/components/portal/ForcePasswordChange";
+import SecurityQuestionsModal from "@/components/portal/SecurityQuestionsModal";
 
 type AppRole = string;
 
@@ -42,7 +43,8 @@ const sidebarGroups: NavGroup[] = [
     category: "Overview",
     items: [
       { label: "Dashboard", path: "/portal", icon: LayoutDashboard, permission: "view_dashboard" },
-      { label: "Hierarchy Tree", path: "/portal/hierarchy", icon: Network, permission: "view_hierarchy" },
+      { label: "Notifications", path: "/portal/notifications", icon: Bell, permission: "view_dashboard" },
+      { label: "Hierarchy Structure", path: "/portal/hierarchy", icon: Network, permission: "view_hierarchy" },
       { label: "Strategic Action Plan", path: "/portal/action-plan", icon: Target, permission: "view_action_plan" },
     ]
   },
@@ -203,6 +205,7 @@ export default function PortalLayout() {
   const [meetTime, setMeetTime] = useState("");
   const [meetNote, setMeetNote] = useState("");
   const [meetSending, setMeetSending] = useState(false);
+  const [securityModalOpen, setSecurityModalOpen] = useState(false);
 
   const handleSendMeetingRequest = async () => {
     if (!meetDate || !meetTime) {
@@ -438,10 +441,34 @@ export default function PortalLayout() {
           )}
         </div>
 
+        {/* Security Questions Setup Reminder Banner */}
+        {profile && (profile as any).has_security_questions === false && !profile.requires_password_change && (
+          <div className="bg-emerald-500/10 border-b border-emerald-500/20 px-4 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-emerald-900 dark:text-emerald-200">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>
+                <strong>Account Recovery Setup:</strong> You have not configured your security questions yet. Configure them now for instant self-service password resets.
+              </span>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => setSecurityModalOpen(true)}
+              className="h-7 text-[11px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+            >
+              Setup Security Questions
+            </Button>
+          </div>
+        )}
+
         <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6 pb-20 lg:pb-6">
           <Outlet />
         </main>
       </div>
+
+      <SecurityQuestionsModal
+        open={securityModalOpen}
+        onOpenChange={setSecurityModalOpen}
+      />
     </div>
   );
 }

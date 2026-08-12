@@ -444,9 +444,10 @@ function CouncilBoardPreviewWrapper({ config }: { config: any }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/users/all-profiles/")
+    // Fast, lightweight councillors endpoint (avoids 75KB all-profiles bottleneck)
+    api.get("/users/councillors/")
       .then(({ data }) => {
-        const all: any[] = Array.isArray(data) ? data : [];
+        const all: any[] = Array.isArray(data) ? data : data.results || [];
         const filtered = all
           .filter(p => p.role && p.role !== "adminabsolute")
           .sort((a, b) => (BOARD_ROLE_ORDER[a.role] ?? 99) - (BOARD_ROLE_ORDER[b.role] ?? 99));
@@ -762,16 +763,22 @@ export default function HomePage() {
               transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
               className="lg:col-span-5 relative w-full aspect-[4/3] sm:aspect-[16/10] lg:aspect-[4/5] rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-black/40"
             >
-              {/* Slideshow image transitions */}
-              {activeSlides.map((img, index) => (
-                <motion.div
-                  key={`${img}-${index}`}
-                  style={{ backgroundImage: `url('${img}')` }}
-                  className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-[2000ms] ease-in-out ${
-                    index === currentImageIndex ? "opacity-100 scale-105" : "opacity-0 scale-100"
-                  }`}
-                />
-              ))}
+              {/* Slideshow image transitions — Lazy DOM: only render active and next slide */}
+              {activeSlides.map((img, index) => {
+                const isActive = index === currentImageIndex;
+                const isNext = index === (currentImageIndex + 1) % activeSlides.length;
+                if (!isActive && !isNext) return null;
+
+                return (
+                  <div
+                    key={`${img}-${index}`}
+                    style={{ backgroundImage: `url('${img}')` }}
+                    className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-[1200ms] ease-in-out ${
+                      isActive ? "opacity-100 scale-105" : "opacity-0 scale-100"
+                    }`}
+                  />
+                );
+              })}
 
               {/* Shadow vignette gradients overlays */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10 pointer-events-none" />
@@ -785,13 +792,13 @@ export default function HomePage() {
                 </p>
               </div>
 
-              {/* Subtle slideshow page indicators */}
+              {/* Subtle slideshow page indicators (Composited opacity/transform) */}
               <div className="absolute top-6 right-6 flex gap-1.5 z-20">
                 {activeSlides.map((_, i) => (
                   <div 
                     key={i} 
-                    className={`h-1 rounded-full transition-all duration-300 ${
-                      i === currentImageIndex ? "w-4 bg-gold" : "w-1 bg-white/30"
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      i === currentImageIndex ? "w-4 bg-gold opacity-100" : "w-1.5 bg-white/40 opacity-40"
                     }`}
                   />
                 ))}

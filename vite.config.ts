@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'script-defer',
       includeAssets: ['mengo-logo.png'],
       workbox: {
         maximumFileSizeToCacheInBytes: 5000000, // Increase limit to 5MB to handle larger bundles
@@ -52,40 +53,41 @@ export default defineConfig(({ mode }) => ({
     })
   ].filter(Boolean),
   build: {
-    // rollupOptions: {
-    //   output: {
-    //     manualChunks(id) {
-    //       if (id.includes('node_modules')) {
-    //         // Group core React libraries together to avoid circularities between them
-    //         if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom') || id.includes('@remix-run')) {
-    //           return 'vendor-react';
-    //         }
-    //         // Group heavy editor libraries
-    //         if (id.includes('@blocknote') || id.includes('@mantine') || id.includes('@emotion')) {
-    //           return 'vendor-editor';
-    //         }
-    //         // Group visualization libraries
-    //         if (id.includes('recharts') || id.includes('d3')) {
-    //            return 'vendor-charts';
-    //         }
-    //         // Group UI/Icon libraries
-    //         if (id.includes('lucide-react') || id.includes('@radix-ui')) {
-    //           return 'vendor-ui';
-    //         }
-    //         // Group document processing libraries
-    //         if (id.includes('xlsx') || id.includes('docx') || id.includes('jspdf') || id.includes('html2canvas')) {
-    //           return 'vendor-docs';
-    //         }
-    //         // Group animation libraries
-    //         if (id.includes('framer-motion') || id.includes('@react-spring') || id.includes('@use-gesture')) {
-    //           return 'vendor-animation';
-    //         }
-    //         // Everything else in node_modules goes to vendor
-    //         return 'vendor';
-    //       }
-    //     },
-    //   },
-    // },
+    cssCodeSplit: true,
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            // Group core React libraries
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom') || id.includes('@remix-run')) {
+              return 'vendor-react';
+            }
+            // Group heavy rich text editor libraries
+            if (id.includes('@blocknote') || id.includes('@mantine') || id.includes('@tiptap') || id.includes('prosemirror')) {
+              return 'vendor-editor';
+            }
+            // Group visualization and charts libraries
+            if (id.includes('recharts') || id.includes('d3')) {
+              return 'vendor-charts';
+            }
+            // Group document / PDF export libraries
+            if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('docx') || id.includes('xlsx')) {
+              return 'vendor-docs';
+            }
+            // Group animation libraries
+            if (id.includes('framer-motion')) {
+              return 'vendor-motion';
+            }
+            // Group UI primitives
+            if (id.includes('@radix-ui') || id.includes('lucide-react')) {
+              return 'vendor-ui';
+            }
+            return 'vendor-misc';
+          }
+        },
+      },
+    },
   },
   resolve: {
     alias: {

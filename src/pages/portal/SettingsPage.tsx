@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Lock, ShieldAlert, LogOut, ImagePlus, Settings2, Fingerprint, ShieldCheck } from "lucide-react";
+import { Loader2, Lock, ShieldAlert, LogOut, ImagePlus, Settings2, Fingerprint, ShieldCheck, KeyRound, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { motion } from "framer-motion";
+import SecurityQuestionsModal from "@/components/portal/SecurityQuestionsModal";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -38,6 +39,7 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
+  const [isSecurityQuestionsModalOpen, setIsSecurityQuestionsModalOpen] = useState(false);
   
   // Council Config state
   const [orgName, setOrgName] = useState("");
@@ -313,6 +315,46 @@ export default function SettingsPage() {
           </Card>
         </motion.div>
 
+        {/* Security Questions & Account Recovery */}
+        <motion.div variants={itemVariants}>
+          <Card className="border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xl shadow-lg relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-5">
+              <ShieldCheck className="w-32 h-32 text-emerald-500" />
+            </div>
+            <CardHeader className="relative z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="font-serif font-black text-xl text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                    <KeyRound className="w-5 h-5 text-emerald-600" />
+                    Security Questions & Self-Service Recovery
+                  </CardTitle>
+                  <CardDescription className="text-xs font-medium text-emerald-600/70 dark:text-emerald-400/70 mt-1">
+                    Instant password recovery method when you forget your login credentials.
+                  </CardDescription>
+                </div>
+                {(profile as any)?.has_security_questions && (
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Configured
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 relative z-10">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                By setting up security questions, you can immediately reset your own password on the login screen at any time without waiting for administrative approval.
+              </p>
+              <Button
+                variant="outline"
+                className="h-12 rounded-xl w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 font-bold text-xs"
+                onClick={() => setIsSecurityQuestionsModalOpen(true)}
+              >
+                <KeyRound className="w-4 h-4 mr-2" />
+                {(profile as any)?.has_security_questions ? "Update Security Questions" : "Configure Security Questions Now"}
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* Organization Settings — Chairperson only */}
         {(isAdmin || ['chairperson', 'general_secretary', 'adminabsolute'].includes(profile?.role || '')) && (
           <motion.div variants={itemVariants}>
@@ -394,6 +436,11 @@ export default function SettingsPage() {
           </motion.div>
         )}
       </motion.div>
+
+      <SecurityQuestionsModal
+        open={isSecurityQuestionsModalOpen}
+        onOpenChange={setIsSecurityQuestionsModalOpen}
+      />
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { Users, Award, Shield, User, Star, Landmark } from "lucide-react";
 import mengoBadge from "@/assets/mengo-badge.jpg";
-import HierarchyTree from "@/components/portal/HierarchyTree";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
